@@ -3,6 +3,28 @@
 Every entry gets an **Intent** and a **Result**. A Result is only marked
 confirmed once actually verified, and can honestly say FAILED.
 
+## 0.1.0-dev.6 — 2026-09-29 (change history, guides; 0.1.0 ready for testing) — NOT YET TESTED BY WALTER
+
+**Intent:** make the audit trail readable (AT-18), and give Walter what
+he needs to install and test 0.1.0.
+
+**Result:**
+- `GET /api/audit` (needs `audit.read`): who, what, when, from which
+  installation, the command ID and the change details for each record.
+  Only this organization's entries are returned, and there is no write
+  path.
+- **Historial de cambios** panel on each Event and product page, shown
+  only to people with `audit.read`.
+- Fix: photos now need `attachment.manage`, the permission meant for
+  them, which the inventory operator profile includes. They previously
+  needed `inventory.manage`, which contradicted that profile. Tested: an
+  operator can set a photo, a viewer can't.
+- New `docs/INSTALL.md` and `docs/USER_GUIDE.md` (ROADMAP B-001, B-002).
+- Tests: 89/89 (domain 10, server 79).
+- Checked in the browser (dev run): the history shows "Evento creado" and
+  "Evento modificado" with the user and time.
+- Checked in Docker dev.6: health ok, the history API answers.
+
 ## 0.1.0-dev.5 — 2026-09-29 (step 2c: Event products and reservations) — NOT YET TESTED BY WALTER
 
 **Intent:** an Event lists the products it needs (the workbook's

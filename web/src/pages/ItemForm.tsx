@@ -13,6 +13,7 @@ import {
 import { checkFields, describeFailure, useCommandSender } from "../forms.js";
 import { hasKey, useT, type TextKey } from "../i18n.js";
 import { go } from "../router.js";
+import { AuditPanel } from "./AuditPanel.js";
 import { MovementTable } from "./MovementTable.js";
 
 interface FormState {
@@ -88,7 +89,21 @@ const fieldMessage = (field: string): TextKey => (hasKey(`err.field.${field}`) ?
 
 type PhotoState = { kind: "idle" } | { kind: "saving" } | { kind: "saved" } | { kind: "failed"; message: TextKey };
 
-export function ItemForm({ itemId, canManage, canMove, canCorrect }: { itemId?: string; canManage: boolean; canMove: boolean; canCorrect: boolean }) {
+export function ItemForm({
+  itemId,
+  canManage,
+  canMove,
+  canCorrect,
+  canAudit = false,
+  canPhoto = false,
+}: {
+  itemId?: string;
+  canManage: boolean;
+  canMove: boolean;
+  canCorrect: boolean;
+  canAudit?: boolean;
+  canPhoto?: boolean;
+}) {
   const t = useT();
   const send = useCommandSender();
   const [record, setRecord] = useState<ItemRecord | null>(null);
@@ -246,7 +261,7 @@ export function ItemForm({ itemId, canManage, canMove, canCorrect }: { itemId?: 
               ) : (
                 <div className="photo-empty">{record.photo && imageBroken ? t("item.photoMissing") : t("item.noPhoto")}</div>
               )}
-              {canManage && (
+              {canPhoto && (
                 <div className="row">
                   <label className="button file">
                     {t("item.choosePhoto")}
@@ -429,6 +444,7 @@ export function ItemForm({ itemId, canManage, canMove, canCorrect }: { itemId?: 
           <MovementTable movements={history} canCorrect={canCorrect} onChanged={() => void load()} />
         </section>
       )}
+      {record && canAudit && <AuditPanel recordType="inventory_item" recordId={record.id} version={record.version} />}
     </>
   );
 }

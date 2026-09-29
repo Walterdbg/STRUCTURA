@@ -65,7 +65,7 @@ export function App() {
     else if (route.name === "inventory") body = <InventoryList canManage={can("inventory.manage")} canMove={can("movement.post")} />;
     else if (route.name === "itemNew") body = <ItemForm key="new" canManage={can("inventory.manage")} canMove={can("movement.post")} canCorrect={can("movement.correct")} />;
     else if (route.name === "item")
-      body = <ItemForm key={route.id} itemId={route.id} canManage={can("inventory.manage")} canMove={can("movement.post")} canCorrect={can("movement.correct")} />;
+      body = <ItemForm key={route.id} itemId={route.id} canManage={can("inventory.manage")} canMove={can("movement.post")} canCorrect={can("movement.correct")} canAudit={can("audit.read")} canPhoto={can("attachment.manage")} />;
     else if (route.name === "locations") body = <Locations canManage={can("inventory.manage")} />;
     else if (route.name === "movements") body = <MovementsList canMove={can("movement.post")} canCorrect={can("movement.correct")} />;
     else if (route.name === "movementNew") body = <MovementForm key={route.itemId ?? "any"} presetItemId={route.itemId} />;

@@ -5,8 +5,8 @@
 | Field | Value |
 | --- | --- |
 | Project | STRUCTURA (ChatGPT project name: "Inventario") |
-| Roadmap version | `1.8.0` |
-| Current application version/build | `0.1.0-dev.5` (accounts, Events, inventory, reservations; not yet tested by Walter) |
+| Roadmap version | `1.9.0` |
+| Current application version/build | `0.1.0-dev.6`: 0.1.0 feature-complete, READY FOR TEST by Walter |
 | Last updated | 2026-09-29 |
 | Document owner | Walter |
 | Current environment | Development (Docker on Walter's PC, port 8095) |
@@ -24,6 +24,7 @@
 | 1.6.0 | 2026-09-29 | Claude (for Walter) | Step 2a done: accounts, permissions, Events (build 0.1.0-dev.3, 51/51 tests). dev.2 superseded (built twice; version rule). W-002 split into 2b/2c | W-002 |
 | 1.7.0 | 2026-09-29 | Claude (for Walter) | Step 2b done: catalog, photos, locations, movement ledger and corrections (build 0.1.0-dev.4, 70/70 tests) | W-002 |
 | 1.8.0 | 2026-09-29 | Claude (for Walter) | Step 2c done: Event products, availability check, confirm/cancel with both end days included (build 0.1.0-dev.5, 84/84 tests) | W-002 |
+| 1.9.0 | 2026-09-29 | Claude (for Walter) | Change history view, photo permission fix, INSTALL + USER_GUIDE (build 0.1.0-dev.6, 89/89 tests). W-002 done; 0.1.0 handed to Walter for testing (T-001..T-006). Known limitations listed | W-002, B-001, B-002 |
 
 ## Project Objective
 
@@ -65,6 +66,7 @@ sections 2.2, 3 and 21.1.
 | C-001 | Specification package placed in the project | 44 files extracted to `docs/STRUCTURA_Documentation_Package/`; SHA-256 of S7a–S7h matches `SOURCE_MANIFEST.json` (Working_Log_2026-09-29 entry 002) | N/A (documentation) | COMPLETED |
 | C-002 | Standard project documentation set created | README, CHANGELOG, ROADMAP, docs/BUSINESS_RULES.md, daily log (Working_Log_2026-09-29 entry 003) | N/A (documentation) | COMPLETED |
 | C-006 | 0.1.0 step 2b: locations, catalog (27TS fields), product photos, append-only movement ledger, corrections, stock figures, backups include files | 70/70 tests incl. AT-02, AT-03, AT-05, AT-28, AT-36 cases; browser check; Docker volume + backup check (Working_Log_2026-09-29 entry 009) | 0.1.0-dev.4 | COMPLETED |
+| C-008 | 0.1.0 change history (audit.read API + screen panel), photo permission aligned with the operator profile, install and user guides | 89/89 tests incl. AT-18 cases; browser + Docker checks (Working_Log_2026-09-29 entry 011) | 0.1.0-dev.6 | COMPLETED |
 | C-007 | 0.1.0 step 2c: Event inventory lines, availability (both end days, repair excluded, no double count, overdue stock blocks), confirm/cancel, re-check on changes | 84/84 tests incl. AT-04, AT-31, DST case; browser check; Docker check on PostgreSQL 17 (Working_Log_2026-09-29 entry 010) | 0.1.0-dev.5 | COMPLETED |
 | C-005 | 0.1.0 step 2a: own staff accounts, sessions, capabilities/presets, Events (create/edit/search, version check, tenant isolation) | 51/51 tests incl. AT-01 and AT-28 cases; browser check on Docker (Working_Log_2026-09-29 entry 008) | 0.1.0-dev.3 | COMPLETED |
 | C-004 | 0.1.0 step 1: skeleton (domain/server/web, Docker, migration 001, command handling, CI) | 32/32 tests; typecheck/build clean; Docker health check + append-only refusal on real PostgreSQL 17 (Working_Log_2026-09-29 entry 007) | 0.1.0-dev.1 | COMPLETED |
@@ -74,19 +76,37 @@ sections 2.2, 3 and 21.1.
 
 | ID | Work item | Current state | Remaining work | Owner | Status |
 | --- | --- | --- | --- | --- | --- |
-| W-002 | 0.1.0 step 2: spec Phase 1 features | 2a, 2b, 2c done (C-005..C-007) | History view of the audit trail (audit.read) for AT-18, then hand 0.1.0 to Walter for testing | Claude | IN PROGRESS |
+| — | None | — | — | — | — |
 
 ### Ready for test
 
+Walter tests the build running on his PC (see docs/USER_GUIDE.md; sign in with his own account created by the setup command in docs/INSTALL.md step 3). Each test is a yes/no.
+
 | ID | Work item | Test required | Build | Status |
 | --- | --- | --- | --- | --- |
-| — | None | — | — | — |
+| T-001 | Accounts (DEC-013) | Sign in; add a user with the *Operador de inventario* profile; sign in as that user and confirm they can record a movement but not create a product | 0.1.0-dev.6 | READY FOR TEST |
+| T-002 | Events (UC-13, AT-01) | Create an Event with only a provisional name, no customer; set event date, departure and expected return; reopen it and check the three dates stayed separate | 0.1.0-dev.6 | READY FOR TEST |
+| T-003 | Catalog and photos (UC-12, AT-05, AT-36) | Create two products, one with a barcode starting with 0; give each a photo; switch between them and check each keeps its own photo and the barcode keeps its 0 | 0.1.0-dev.6 | READY FOR TEST |
+| T-004 | Movements (UC-03, AT-02, AT-03) | Create a warehouse and an event location; move part of a product's stock with no trip; try to move more than is there (must be refused); correct a movement and check the original stays, marked *Corregido* | 0.1.0-dev.6 | READY FOR TEST |
+| T-005 | Reservations (UC-21, AT-04, AT-31) | Confirm Event A holding all of a product until day 14; an Event B starting day 14 must be refused; starting day 15 must confirm | 0.1.0-dev.6 | READY FOR TEST |
+| T-006 | Change history (AT-18) | Open *Historial de cambios* on an Event and a product; check who/what/when is shown | 0.1.0-dev.6 | READY FOR TEST |
 
 ## Known Defects
 
 | ID | Defect | Severity | Reproduction/evidence | Current status | Target |
 | --- | --- | --- | --- | --- | --- |
-| — | None (no code yet) | — | — | — | — |
+| — | None open. DEFECT-001 (saved Event stayed in edit mode) fixed and verified in dev.3 | — | Working_Log_2026-09-29 | CLOSED | — |
+
+### Known limitations (by design in 0.1.0, not defects)
+
+| ID | Limitation | Planned resolution |
+| --- | --- | --- |
+| L-001 | Sign-in throttling is kept in memory; a restart clears it | Move to the database with the local engine (Phase 4) |
+| L-002 | Stock sent to an event location counts against that Event's reservation only when the movement names the Event | Explicit dispatch/return commands (Phase 3) |
+| L-003 | Files are stored on a disk folder on both engines | S3-compatible adapter for the cloud at first cloud deployment |
+| L-004 | Quantity tracking only; individual (serial) assets not yet | Assets module (later 0.x) |
+| L-005 | If the database transaction fails after a photo's bytes were stored, an unreferenced file stays on disk (never shown) | Cleanup job with the worker queue (pg-boss) |
+| L-006 | Only cloud mode is tested; ENGINE_MODE=local runs the same app without sync yet | Phase 4 |
 
 ## Approved Decisions
 
@@ -123,16 +143,16 @@ not an approved schedule.
 
 ### Immediate priorities
 
-1. Read the use cases and 27TS sources that Phase 1 depends on (UC-03, 08, 12, 13, 21; S7a, S7b).
-2. 0.1.0 step 2: spec Phase 1 features (W-002).
+1. Walter tests 0.1.0-dev.6 (T-001..T-006). Fixes go into a bumped dev build.
+2. On approval: freeze 0.1.0 (drop the -dev suffix, merge to `main`, tag) and start the next pipeline, whose name Walter approves first.
 3. Phase 0 remainder: decision register, policy schema, workbook source mapping (spec 16.1).
 
 ### Near-term work
 
 | Priority | Item | Dependency | Acceptance condition | Status |
 | --- | --- | --- | --- | --- |
-| 1 | Phase 0: architecture baseline (stack ADR, decision register, policy schema, workbook source mapping) | P-004 | Decision precedence preserved; no guessed answers for 32/36 | PLANNED |
-| 2 | Phase 1: tenants, identity/scopes, Event CRUD, catalog + photos, locations, movement ledger, reservations, audit | Phase 0 | AT-01–05, AT-18, AT-28 pass | PLANNED |
+| 1 | Phase 0: architecture baseline (stack ADR, decision register, policy schema, workbook source mapping) | P-004 | Decision precedence preserved; no guessed answers for 32/36 | IN PROGRESS (stack ADR approved, DEC-011; workbook columns mapped for the catalog) |
+| 2 | Phase 1: tenants, identity/scopes, Event CRUD, catalog + photos, locations, movement ledger, reservations, audit | Phase 0 | AT-01–05, AT-18, AT-28 pass | READY FOR TEST (0.1.0-dev.6, T-001..T-006) |
 | 3 | Phase 2: quotes/approvals, independent invoices, payments, services, calendars | Phase 1 | AT-11–16, AT-27 pass | PLANNED |
 | 4 | Phase 3: optional trips, partial delivery/returns, maps (POIs/routes), evidence | Phase 1 | AT-06–10, AT-29 pass | PLANNED |
 | 5 | Phase 4: local engine, entitlements, authority delegation, sync, restricted exports, metering | Phases 1–3 | AT-19–24, AT-30 pass under fault injection | PLANNED |
@@ -143,15 +163,13 @@ not an approved schedule.
 
 | ID | Item | Reason deferred | Revisit condition |
 | --- | --- | --- | --- |
-| B-001 | `docs/INSTALL.md` | Nothing installable yet | First installable build (local engine or server) |
-| B-002 | `docs/USER_GUIDE.md` | No workflows usable yet | First usable build |
 | B-003 | Migration of the 27TS workbook data (spec 16.1) | Needs the Phase 1 ledger and import job | Phase 5, or earlier if Walter asks |
 
 ## Build and Deployment Status
 
 | Environment | Current build | Deployment date | Verification | Status |
 | --- | --- | --- | --- | --- |
-| Development | `0.1.0-dev.5` | 2026-09-29 | 84/84 tests; browser + Docker checks | Running on Walter's PC (port 8095) |
+| Development | `0.1.0-dev.6` | 2026-09-29 | 89/89 tests; browser + Docker checks | Running on Walter's PC (http://127.0.0.1:8095), waiting for Walter's tests |
 | Test | None | — | — | Not started |
 | Production | None | — | — | Not started |
 
@@ -166,6 +184,9 @@ not an approved schedule.
 | `STRUCTURA_Documentation_Package.zip` | Original delivered package, unchanged | SUPPORTING | DEC-001 | CURRENT |
 | `docs/BUSINESS_RULES.md` | Workflow rules + STRUCTURA rules | AUTHORITATIVE | — | CURRENT |
 | `docs/ARCHITECTURE.md` | Stack ADR / architecture plan | AUTHORITATIVE | DEC-011 | CURRENT |
+| `docs/INSTALL.md` | How to install, where data lives | AUTHORITATIVE | ex B-001 | CURRENT |
+| `docs/USER_GUIDE.md` | How to use 0.1.0, workflow by workflow | AUTHORITATIVE | ex B-002 | CURRENT |
+| `CHANGELOG.md` | Version history (Intent / Result) | AUTHORITATIVE | — | CURRENT |
 | `docs/daily-logs/Working_Log_2026-09-29.txt` | Daily working log | SUPPORTING | — | CURRENT |
 
 ## Superseded or Rejected Documents
@@ -187,11 +208,12 @@ not an approved schedule.
   - Accounts, permissions and Events, build `0.1.0-dev.3`: 51/51 tests, browser-checked (C-005).
   - Catalog, photos, locations and movement ledger, build `0.1.0-dev.4`: 70/70 tests, browser + Docker checks (C-006).
   - Event products and reservations, build `0.1.0-dev.5`: 84/84 tests, browser + Docker checks (C-007).
+  - Change history, guides, build `0.1.0-dev.6`: 89/89 tests (C-008).
 - Still in progress:
-  - None.
+  - None. 0.1.0 is READY FOR TEST (T-001..T-006).
 - Defects added or remaining:
-  - None.
+  - DEFECT-001 found and fixed the same day. Version-rule breach recorded (dev.2 built twice; superseded by dev.3).
 - Deployment result:
-  - No deployment.
+  - Local development deployment only (Docker on Walter's PC), dev.6 running.
 - First priority for next workday:
-  - 0.1.0 step 2: Phase 1 features (W-002).
+  - Walter's test results on T-001..T-006.

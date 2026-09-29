@@ -81,8 +81,9 @@ export function inventoryRoutes(app: FastifyInstance, db: Db, config: Config, st
     (_req, body, done) => done(null, body)
   );
 
+  // Photos need attachment.manage (the inventory operator profile has it).
   app.put("/api/items/:id/photo", { bodyLimit: MAX_PHOTO_BYTES }, async (req) => {
-    const auth = requireCapability(req, "inventory.manage");
+    const auth = requireCapability(req, "attachment.manage");
     const id = idParam(req);
     const h = photoHeaders.safeParse(req.headers);
     if (!h.success) throw new DomainError("validation", "Missing command headers for the photo upload");
@@ -104,7 +105,7 @@ export function inventoryRoutes(app: FastifyInstance, db: Db, config: Config, st
 
   app.post("/api/items/:id/photo/remove", async (req) => {
     const id = idParam(req);
-    const { ctx, cmd } = commandRequest(req, "inventory.manage", z.object({}).passthrough(), config.deploymentId);
+    const { ctx, cmd } = commandRequest(req, "attachment.manage", z.object({}).passthrough(), config.deploymentId);
     return removeItemPhoto(db, ctx, id, cmd);
   });
 

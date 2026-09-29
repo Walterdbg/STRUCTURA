@@ -3,6 +3,7 @@ import { eventFields } from "@structura/domain";
 import { ApiError, api, newCommand, send, type Command, type EventRecord, type Me, type Member } from "../api.js";
 import { errorKey, hasKey, useT, type TextKey } from "../i18n.js";
 import { go } from "../router.js";
+import { AuditPanel } from "./AuditPanel.js";
 import { EventLines } from "./EventLines.js";
 
 interface FormState {
@@ -281,6 +282,9 @@ export function EventForm({ me, eventId }: { me: Me; eventId?: string }) {
         canCommit={me.capabilities.includes("reservation.commit")}
         onChanged={() => void load()}
       />
+    )}
+    {record && me.capabilities.includes("audit.read") && (
+      <AuditPanel recordType="event" recordId={record.id} version={record.version} />
     )}
     </>
   );

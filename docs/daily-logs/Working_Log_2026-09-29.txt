@@ -189,6 +189,23 @@ Roadmap section: Completed (C-007); In progress (W-002); Build status
 
 ---
 
+[011]
+Time: 2026-09-29
+Area / feature: 0.1.0 - change history, guides, hand-off for testing
+Request or objective: Finish 0.1.0 (AT-18 readable history) and prepare Walter's test.
+Action taken: GET /api/audit (audit.read, tenant-scoped, read-only) and a Historial de cambios panel on Event and product pages. Wrote docs/INSTALL.md and docs/USER_GUIDE.md. While writing the guide, found that photos checked inventory.manage although the inventory operator profile is meant to handle photos (attachment.manage). Aligned the server and the screen to attachment.manage and added a test.
+Files created: server/src/audit.ts, server/test/audit.test.ts, web/src/pages/AuditPanel.tsx, docs/INSTALL.md, docs/USER_GUIDE.md
+Files modified: server app + inventory routes, server inventory test, web App/EventForm/ItemForm/i18n/styles, all package.json (0.1.0-dev.6), CHANGELOG, ROADMAP (v1.9.0), README
+Decision made: None needing approval.
+Verification performed: 89/89 tests. Dev run in the browser: history panel shows created/edited with user and time. Docker dev.6: health ok, audit API answers.
+Result: PASS
+Observed issue: Photo permission mismatch (above), fixed before the build.
+Follow-up required: Walter tests T-001..T-006 on dev.6.
+Roadmap update required: YES (done: v1.9.0)
+Roadmap section: Completed (C-008); Ready for test (T-001..T-006); Known limitations; Document Register
+
+---
+
 
 DEFECTS DISCOVERED TODAY
 ========================
@@ -240,14 +257,14 @@ DEPLOYMENT / BUILD RECORD
 =========================
 
 Deployment performed: YES (local development only)
-Build/version: 0.1.0-dev.1
+Build/version: 0.1.0-dev.1, dev.2 (built twice, superseded), dev.3, dev.4, dev.5, dev.6 (current)
 Environment: Development - Docker on Walter's PC, http://127.0.0.1:8095
-Deployment time: 2026-09-29 ~17:19
-Deployment result: PASS (Claude's checks); NOT TESTED by Walter
-Verification performed: /api/health, migration log, backup log, append-only refusal, bilingual screen
+Deployment time: dev.1 ~17:19 ... dev.6 latest, 2026-09-29
+Deployment result: PASS (Claude's checks on each build); NOT TESTED by Walter
+Verification performed: per build, /api/health version + migration log; dev.4 photo volume + backup of files; dev.5 reservations on PostgreSQL 17; dev.6 audit API
 Rollback required: NO
-Deployment documents: CHANGELOG.md 0.1.0-dev.1 entry
-Notes: Skeleton only, no business features for Walter to test yet.
+Deployment documents: CHANGELOG.md entries 0.1.0-dev.1 .. dev.6
+Notes: The dev database holds only synthetic data (admin@structura.test, password in data/dev-credentials.txt, gitignored). Walter creates his own organization with the setup command (docs/INSTALL.md step 3).
 
 
 END-OF-DAY RECONCILIATION
@@ -255,12 +272,14 @@ END-OF-DAY RECONCILIATION
 
 Ended at: (open; log not yet closed)
 
-Completed and verified:
+Completed and verified (by Claude's tests and checks):
 - Package extracted, checksums confirmed (C-001)
 - Standard documentation set created (C-002)
+- Repo and branches (C-003)
+- 0.1.0 skeleton, accounts/Events, inventory, reservations, history (C-004..C-008), 89/89 tests
 
 Implemented but not fully tested:
--
+- All of 0.1.0 is waiting on Walter's own tests T-001..T-006 (ROADMAP "Ready for test")
 
 Still in progress:
 -
@@ -280,9 +299,9 @@ Documents superseded or rejected:
 Roadmap sections updated:
 - All (initial roadmap)
 
-Roadmap version after update: 1.5.0
+Roadmap version after update: 1.9.0
 
 First action for next workday:
-- 0.1.0 step 2 (W-002): read UC-03/08/12/13/21 and S7a/S7b, then identity + Event creation
+- Walter's results on T-001..T-006; fixes go into 0.1.0-dev.7
 
 End-of-day review completed by:

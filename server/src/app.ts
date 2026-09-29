@@ -4,6 +4,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 import fastifyCookie from "@fastify/cookie";
 import fastifyStatic from "@fastify/static";
 import { isDomainError, type ErrorKind } from "@structura/domain";
+import { auditRoutes } from "./audit.js";
 import { SESSION_COOKIE, loadSession } from "./auth.js";
 import type { Config } from "./config.js";
 import type { Db } from "./db.js";
@@ -64,6 +65,7 @@ export async function buildApp({ db, config, logger = true, store }: AppOptions)
   identityRoutes(app, db, config);
   eventRoutes(app, db, config);
   inventoryRoutes(app, db, config, files);
+  auditRoutes(app, db);
 
   app.get("/api/health", async (_req, reply) => {
     let database: "ok" | "unavailable" = "ok";

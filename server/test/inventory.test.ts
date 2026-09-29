@@ -311,6 +311,28 @@ describe("product photos (UC-12, AT-05)", () => {
     expect(res.statusCode).toBe(400);
   });
 
+  it("an inventory operator can set photos (attachment.manage); a viewer can't", async () => {
+    await setup();
+    const A = await item({ name: "A" });
+    await post(w.app, t.cookie, "/api/members", { email: "op3@example.test", displayName: "Op", password: "operator-pass-3", preset: "inventory_operator" });
+    await post(w.app, t.cookie, "/api/members", { email: "v3@example.test", displayName: "V", password: "viewer-pass-33", preset: "viewer_auditor" });
+    const put = (cookie: string, version: number) =>
+      w.app.inject({
+        method: "PUT",
+        url: `/api/items/${A.id}/photo`,
+        headers: {
+          cookie,
+          "content-type": "image/png",
+          "x-command-id": uuidv7(),
+          "x-occurred-at": new Date().toISOString(),
+          "x-expected-version": String(version),
+        },
+        payload: PNG_A,
+      });
+    expect((await put(await login(w.app, "op3@example.test", "operator-pass-3"), A.version)).statusCode).toBe(200);
+    expect((await put(await login(w.app, "v3@example.test", "viewer-pass-33"), A.version + 1)).statusCode).toBe(403);
+  });
+
   it("another organization can't open the photo", async () => {
     await setup();
     const A = await item({ name: "A" });

@@ -48,6 +48,9 @@ PostgreSQL) and `npm run build`.
 | [docs/STRUCTURA_Documentation_Package/STRUCTURA_References/](docs/STRUCTURA_Documentation_Package/STRUCTURA_References/README.md) | Source material: the 27TS inventory workbook, SOP, QA report, barcode specs, conversation excerpts |
 | `STRUCTURA_Documentation_Package.zip` | The original package as delivered, kept unchanged |
 | [docs/BUSINESS_RULES.md](docs/BUSINESS_RULES.md) | Development workflow rules plus STRUCTURA-specific rules |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Approved stack and architecture plan |
+| [docs/INSTALL.md](docs/INSTALL.md) | How to install, where the data lives |
+| [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | How to use it, workflow by workflow |
 | `docs/daily-logs/` | Daily working logs (`Working_Log_YYYY-MM-DD.txt`) |
 
 ## Rules that must not be broken
