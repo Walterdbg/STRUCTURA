@@ -20,8 +20,9 @@ or payroll.
 ## Status
 
 Documentation only. No code, no build yet. Standalone product (not built
-on CITYTRI Hub), built with Docker and JavaScript/Node. The rest of the
-stack is still to be decided. Repo:
+on CITYTRI Hub): Docker, Node + TypeScript, PostgreSQL, and a Linux box
+for the onsite server. The detailed stack is proposed in
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), awaiting approval. Repo:
 [Walterdbg/STRUCTURA](https://github.com/Walterdbg/STRUCTURA). Work
 happens on `development/0.1.0`. See
 [ROADMAP.md](ROADMAP.md) for what's next and [CHANGELOG.md](CHANGELOG.md)

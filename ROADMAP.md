@@ -5,7 +5,7 @@
 | Field | Value |
 | --- | --- |
 | Project | STRUCTURA (ChatGPT project name: "Inventario") |
-| Roadmap version | `1.2.0` |
+| Roadmap version | `1.3.0` |
 | Current application version/build | None yet. No code exists. Version line `0.1.0` approved. |
 | Last updated | 2026-09-29 |
 | Document owner | Walter |
@@ -18,6 +18,7 @@
 | 1.0.0 | 2026-09-29 | Claude (for Walter) | Initial roadmap, created from the STRUCTURA documentation package (spec v1.3) | N/A |
 | 1.1.0 | 2026-09-29 | Claude (for Walter) | Walter approved repo/branch/version names and standalone architecture (P-001..P-003 → DEC-004..DEC-006); repo created and pushed | P-001, P-002, P-003 |
 | 1.2.0 | 2026-09-29 | Claude (for Walter) | Walter set the solution type: Docker + JavaScript/Node (DEC-007); P-004 narrowed to the remaining stack details | P-004 |
+| 1.3.0 | 2026-09-29 | Claude (for Walter) | Walter approved TypeScript, PostgreSQL on both sides, and a Linux onsite box (DEC-008..DEC-010). Stack ADR proposed in docs/ARCHITECTURE.md. New pending questions P-009..P-011 | P-004 |
 
 ## Project Objective
 
@@ -89,12 +90,18 @@ sections 2.2, 3 and 21.1.
 | DEC-005 | 2026-09-29 | Application version line `0.1.0`; test builds `0.1.0-dev.1`, `0.1.0-dev.2`, … | Approved by Walter (was P-002) | Versioning |
 | DEC-006 | 2026-09-29 | STRUCTURA is standalone. It is not built on CITYTRI Hub's platform | Walter's decision (was P-003) | Architecture / Phase 0 |
 | DEC-007 | 2026-09-29 | Solution type: Docker containers, JavaScript/Node | Walter's decision | Architecture / Phase 0 |
+| DEC-008 | 2026-09-29 | Code is written in TypeScript (still Node; refines DEC-007) | Catches rule mistakes at build time; same as the Hub. Approved by Walter | Architecture |
+| DEC-009 | 2026-09-29 | PostgreSQL on both the cloud and the local engine | Same data rules on both sides; simpler sync. Approved by Walter | Architecture / sync |
+| DEC-010 | 2026-09-29 | The onsite local engine runs on a small Linux box with the free Docker Engine, not Docker Desktop on Windows. The code stays independent of the box | Reliability, and Docker Desktop licensing. Approved by Walter | Local engine / deployment |
 
 ## Pending Decisions
 
 | ID | Question | Options or constraint | Needed by | Owner |
 | --- | --- | --- | --- | --- |
-| P-004 | Remaining stack details (spec Phase 0, gap G-08) | Fixed: standalone (DEC-006), Docker + JavaScript/Node (DEC-007). Still open, for an ADR: relational database, web/API framework, UI approach, how the local engine is packaged and run onsite, cloud hosting | Phase 0 exit | Walter + Claude |
+| P-004 | Stack ADR (spec Phase 0, gap G-08) | Proposed in `docs/ARCHITECTURE.md` sections 2, 3 and 5 (Fastify, React/Vite, pg-boss, decimal.js, Leaflet; same image for both engines; 0.1.0 = Phase 1 in cloud mode) | Phase 0 exit | Walter + Claude |
+| P-009 | Interface language(s) | Proposed: Spanish and English, Spanish default (source material is Spanish) | Before UI work in 0.1.0 | Walter |
+| P-010 | Staff sign-in method | Proposed: STRUCTURA's own accounts first; Microsoft/Google sign-in later | Before Phase 1 identity work | Walter |
+| P-011 | Cloud hosting provider and onsite mini-PC model | Not blocking 0.1.0 | Phase 4 / first cloud deployment | Walter |
 | P-005 | Licensing policy values (gap G-07) | Pricing, plans, capacity limits, offline grace period. The spec says: configuration only, never invented | Phase 4 | Walter |
 | P-006 | Tax, rounding, currency and retention settings (gap G-10) | Must be explicit configurable policies | Phase 2 | Walter |
 | P-007 | Meaning of answers 32, 33 context and 36 default (gaps G-03–G-05) | Unrecoverable from sources. Build as configurable; confirm only if Walter recalls | Before claiming those policies are implemented | Walter |
@@ -107,9 +114,9 @@ not an approved schedule.
 
 ### Immediate priorities
 
-1. Phase 0 on `development/0.1.0`: write the stack ADR within Docker + Node (P-004) and propose it to Walter.
-2. Phase 0: decision register and policy schema.
-3. Phase 0: workbook source mapping (spec 16.1).
+1. Walter approves or changes `docs/ARCHITECTURE.md` (P-004) and answers P-009, P-010.
+2. Then 0.1.0 step 1: project skeleton, Docker files, first migration.
+3. Phase 0 remainder: decision register, policy schema, workbook source mapping (spec 16.1).
 
 ### Near-term work
 
@@ -149,6 +156,7 @@ not an approved schedule.
 | `docs/STRUCTURA_Documentation_Package/START_HERE.md` | Package entry point | SUPPORTING | DEC-001 | CURRENT |
 | `STRUCTURA_Documentation_Package.zip` | Original delivered package, unchanged | SUPPORTING | DEC-001 | CURRENT |
 | `docs/BUSINESS_RULES.md` | Workflow rules + STRUCTURA rules | AUTHORITATIVE | — | CURRENT |
+| `docs/ARCHITECTURE.md` | Stack ADR / architecture plan | SUPPORTING (proposal until approved) | P-004 | PROPOSED |
 | `docs/daily-logs/Working_Log_2026-09-29.txt` | Daily working log | SUPPORTING | — | CURRENT |
 
 ## Superseded or Rejected Documents
@@ -173,4 +181,4 @@ not an approved schedule.
 - Deployment result:
   - No deployment.
 - First priority for next workday:
-  - Phase 0: draft the stack ADR for Walter (P-004).
+  - Walter reviews docs/ARCHITECTURE.md (P-004, P-009, P-010).

@@ -104,6 +104,23 @@ Roadmap section: Approved Decisions; Pending Decisions
 
 ---
 
+[006]
+Time: 2026-09-29
+Area / feature: Architecture
+Request or objective: Walter asked whether there was a better option than Docker + JS before starting. Claude recommended keeping Docker + Node with three adjustments. Walter: "I APPROVE THE 3 ADJUSTMENTS"
+Action taken: Recorded DEC-008 (TypeScript), DEC-009 (PostgreSQL on cloud and local) and DEC-010 (onsite Linux box with Docker Engine). Wrote the stack ADR proposal docs/ARCHITECTURE.md, aligned with CITYTRI Hub's stack (Fastify, React/Vite, pg, Vitest/PGlite, jose) but sharing no code with it. Roadmap v1.3.0; added P-009 (language), P-010 (sign-in), P-011 (hosting/mini-PC).
+Files created: docs/ARCHITECTURE.md
+Files modified: ROADMAP.md, this log
+Decision made: DEC-008..DEC-010, approved by Walter. The ADR itself is PROPOSED, not approved.
+Verification performed: N/A (document)
+Result: PASS
+Observed issue: None
+Follow-up required: Walter approves ARCHITECTURE.md sections 2, 3, 5 and answers P-009, P-010
+Roadmap update required: YES (done: v1.3.0)
+Roadmap section: Approved Decisions; Pending Decisions; Document Register; Immediate priorities
+
+---
+
 
 DEFECTS DISCOVERED TODAY
 ========================
@@ -138,6 +155,7 @@ README.md | Project purpose | AUTHORITATIVE | 003 | RETAIN
 CHANGELOG.md | Version history | AUTHORITATIVE | 003 | RETAIN
 ROADMAP.md | Authoritative roadmap v1.0.0 | AUTHORITATIVE | 003 | RETAIN
 docs/BUSINESS_RULES.md | Workflow + project rules | AUTHORITATIVE | 003 | RETAIN
+docs/ARCHITECTURE.md | Stack ADR proposal | SUPPORTING (proposed) | 006 | RETAIN
 STRUCTURA_Implementation_Specification.md v1.1 (root) | Old spec | SUPERSEDED by v1.3 | 001 | Removed by Walter
 
 
@@ -185,9 +203,9 @@ Documents superseded or rejected:
 Roadmap sections updated:
 - All (initial roadmap)
 
-Roadmap version after update: 1.2.0
+Roadmap version after update: 1.3.0
 
 First action for next workday:
-- Phase 0: draft the stack ADR for Walter (P-004)
+- Walter reviews docs/ARCHITECTURE.md (P-004) and answers P-009, P-010
 
 End-of-day review completed by:
