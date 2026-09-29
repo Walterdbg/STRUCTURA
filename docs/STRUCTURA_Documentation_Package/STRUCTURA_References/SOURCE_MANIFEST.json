@@ -1,0 +1,66 @@
+[
+  {
+    "id": "S7a",
+    "title": "September 2026 inventory operating guide",
+    "original_path": "D:\\Exo Panama Projects 2025\\27TSPanama\\Projecto de inventario\\EXCEL APP\\27TS_Inventario_Package3\\README_27TS_Inventario.md",
+    "packaged_path": "STRUCTURA_References/Local_Files/S7a_README_27TS_Inventario.md",
+    "bytes": 7157,
+    "sha256": "f369494650c42e1f363f3c28cebd69e6cffff07fb360809905443672083123b6"
+  },
+  {
+    "id": "S7b",
+    "title": "Current inventory prototype workbook",
+    "original_path": "D:\\Exo Panama Projects 2025\\27TSPanama\\Projecto de inventario\\EXCEL APP\\27TS_Inventario_Package3\\27TS_Inventario.xlsm",
+    "packaged_path": "STRUCTURA_References/Local_Files/S7b_27TS_Inventario.xlsm",
+    "bytes": 355223,
+    "sha256": "f4b36d0ffa54a5701d6785aa2c1db9f8e0ea7c40968d88351af7f4ada8390a10"
+  },
+  {
+    "id": "S7c",
+    "title": "Inventory SOP v0.2",
+    "original_path": "D:\\Exo Panama Projects 2025\\27TSPanama\\PROCEDIMIENTO OPERATIVO ESTÁNDARv0.2.docx",
+    "packaged_path": "STRUCTURA_References/Local_Files/S7c_PROCEDIMIENTO OPERATIVO ESTÁNDARv0.2.docx",
+    "bytes": 18610,
+    "sha256": "ce05b55460919627f5b66581df36b957dc248e03c6b439e3d7e4a4a7840e95b4"
+  },
+  {
+    "id": "S7d",
+    "title": "Inventory import QA report",
+    "original_path": "D:\\Exo Panama Projects 2025\\27TSPanama\\Projecto de inventario\\Reporte SQA_Interface de carga de inventario.docx",
+    "packaged_path": "STRUCTURA_References/Local_Files/S7d_Reporte SQA_Interface de carga de inventario.docx",
+    "bytes": 16259,
+    "sha256": "191007343d7a3546e259dab707d26afba50d30eba90ec844a3754ecca5e74304"
+  },
+  {
+    "id": "S7e",
+    "title": "November 2025 inventory export",
+    "original_path": "D:\\01-Walter Danilo FILES\\2025 - Finally\\Exo Panama Projects 2025\\INVENTARIO\\Inventario en sistema (Referencia Interna y Barcodes)_17-Nov-2025.xlsx",
+    "packaged_path": "STRUCTURA_References/Local_Files/S7e_Inventario en sistema (Referencia Interna y Barcodes)_17-Nov-2025.xlsx",
+    "bytes": 38426,
+    "sha256": "9d92a9a4054d2c791043bf7a8b8a8cf1179bfac65fe2f762e58452711407a760"
+  },
+  {
+    "id": "S7f",
+    "title": "Legacy barcode specification",
+    "original_path": "D:\\01-Walter Danilo FILES\\2025 - Finally\\Exo Panama Projects 2025\\INVENTARIO\\27ts Barcode Specification.docx",
+    "packaged_path": "STRUCTURA_References/Local_Files/S7f_27ts Barcode Specification.docx",
+    "bytes": 18357,
+    "sha256": "737c443dc1e9190c9d69388ace472d5a2189012629358d5f83d5c1b19b3575b9"
+  },
+  {
+    "id": "S7g",
+    "title": "Legacy barcode implementation guide",
+    "original_path": "D:\\01-Walter Danilo FILES\\2025 - Finally\\Exo Panama Projects 2025\\27TS barcode Excel Implementation Guide.docx",
+    "packaged_path": "STRUCTURA_References/Local_Files/S7g_27TS barcode Excel Implementation Guide.docx",
+    "bytes": 20680,
+    "sha256": "ed103705533c4eafdba8500db35d1670429cf82c24e34c7810d278e729b2000f"
+  },
+  {
+    "id": "S7h",
+    "title": "Earlier product import template",
+    "original_path": "D:\\Exo Panama Projects 2025\\27TSPanama\\Projecto de inventario\\Odoo Template fot bulk upload\\Final\\odoo_product_import_full.xlsx",
+    "packaged_path": "STRUCTURA_References/Local_Files/S7h_odoo_product_import_full.xlsx",
+    "bytes": 19535,
+    "sha256": "b2bfb4baf05b0c614c1094ffe4be40cbe199df81714b12d9af88d894d5f933ed"
+  }
+]
