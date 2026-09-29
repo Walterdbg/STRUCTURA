@@ -27,6 +27,8 @@ services:
       DATABASE_URL: postgres://structura:${DB_PASSWORD}@structura-db:5432/structura
       ENGINE_MODE: ${ENGINE_MODE:-cloud}
       DEPLOYMENT_ID: ${DEPLOYMENT_ID:?Set DEPLOYMENT_ID in .env}
+    volumes:
+      - structura-files:/data/files
     ports:
       # BIND_ADDRESS 127.0.0.1 = this computer only; 0.0.0.0 on the onsite box.
       - "${BIND_ADDRESS:-127.0.0.1}:${PORT:-8080}:8080"
@@ -43,6 +45,7 @@ services:
       KEEP: ${BACKUP_KEEP:-14}
     volumes:
       - ./docker/backup.sh:/backup.sh:ro
+      - structura-files:/data/files:ro
       - ${BACKUP_DIR:-./backups}:/backups
     depends_on:
       structura-db:
@@ -51,3 +54,4 @@ services:
 
 volumes:
   structura-pgdata:
+  structura-files:

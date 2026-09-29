@@ -17,6 +17,8 @@ export interface Config {
   // Send the session cookie only over HTTPS. Off by default because the
   // onsite box serves plain HTTP on the event LAN (ARCHITECTURE.md 6).
   cookieSecure: boolean;
+  // Managed files (product photos). A Docker volume in production.
+  filesDir: string;
 }
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -46,8 +48,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     host: env.HOST ?? "0.0.0.0",
     port,
     appVersion: readVersion(),
-    webDir: env.WEB_DIR || null,
+    webDir: env.WEB_DIR ? path.resolve(env.WEB_DIR) : null,
     migrationsDir: path.join(here, "..", "migrations"),
     cookieSecure: env.COOKIE_SECURE === "true",
+    filesDir: env.FILES_DIR || path.resolve("data", "files"),
   };
 }

@@ -5,6 +5,11 @@ import { LocaleContext, loadLocale, saveLocale, translate } from "./i18n.js";
 import { useRoute } from "./router.js";
 import { EventForm } from "./pages/EventForm.js";
 import { EventsList } from "./pages/EventsList.js";
+import { InventoryList } from "./pages/InventoryList.js";
+import { ItemForm } from "./pages/ItemForm.js";
+import { Locations } from "./pages/Locations.js";
+import { MovementForm } from "./pages/MovementForm.js";
+import { MovementsList } from "./pages/MovementsList.js";
 import { Login } from "./pages/Login.js";
 import { Members } from "./pages/Members.js";
 import { SystemStatus } from "./pages/SystemStatus.js";
@@ -57,6 +62,13 @@ export function App() {
     // key: a different Event (or "new") always starts from a fresh form.
     if (route.name === "eventNew") body = <EventForm key="new" me={me} />;
     else if (route.name === "event") body = <EventForm key={route.id} me={me} eventId={route.id} />;
+    else if (route.name === "inventory") body = <InventoryList canManage={can("inventory.manage")} canMove={can("movement.post")} />;
+    else if (route.name === "itemNew") body = <ItemForm key="new" canManage={can("inventory.manage")} canMove={can("movement.post")} canCorrect={can("movement.correct")} />;
+    else if (route.name === "item")
+      body = <ItemForm key={route.id} itemId={route.id} canManage={can("inventory.manage")} canMove={can("movement.post")} canCorrect={can("movement.correct")} />;
+    else if (route.name === "locations") body = <Locations canManage={can("inventory.manage")} />;
+    else if (route.name === "movements") body = <MovementsList canMove={can("movement.post")} canCorrect={can("movement.correct")} />;
+    else if (route.name === "movementNew") body = <MovementForm key={route.itemId ?? "any"} presetItemId={route.itemId} />;
     else if (route.name === "members" && can("tenant.admin")) body = <Members />;
     else body = <EventsList canCreate={can("event.manage")} />;
   }
@@ -78,6 +90,15 @@ export function App() {
           <nav className="nav">
             <a href="#/events" className={route.name.startsWith("event") ? "active" : ""}>
               {t("nav.events")}
+            </a>
+            <a href="#/inventory" className={route.name === "inventory" || route.name.startsWith("item") ? "active" : ""}>
+              {t("nav.inventory")}
+            </a>
+            <a href="#/movements" className={route.name.startsWith("movement") ? "active" : ""}>
+              {t("nav.movements")}
+            </a>
+            <a href="#/locations" className={route.name === "locations" ? "active" : ""}>
+              {t("nav.locations")}
             </a>
             {session.me.capabilities.includes("tenant.admin") && (
               <a href="#/members" className={route.name === "members" ? "active" : ""}>

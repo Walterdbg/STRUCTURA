@@ -9,6 +9,8 @@ import type { Config } from "./config.js";
 import type { Db } from "./db.js";
 import { eventRoutes } from "./events/routes.js";
 import { identityRoutes } from "./identity/routes.js";
+import { inventoryRoutes } from "./inventory/routes.js";
+import { filesystemStore, type FileStore } from "./storage.js";
 
 // Each error kind keeps its own HTTP status, so a client never mistakes a
 // refused command for a saved one (spec 18.1).
@@ -31,9 +33,11 @@ export interface AppOptions {
   db: Db;
   config: Config;
   logger?: boolean;
+  store?: FileStore;
 }
 
-export async function buildApp({ db, config, logger = true }: AppOptions): Promise<FastifyInstance> {
+export async function buildApp({ db, config, logger = true, store }: AppOptions): Promise<FastifyInstance> {
+  const files = store ?? filesystemStore(config.filesDir);
   const app = Fastify({ logger });
 
   app.setErrorHandler((err, req, reply) => {
@@ -59,6 +63,7 @@ export async function buildApp({ db, config, logger = true }: AppOptions): Promi
 
   identityRoutes(app, db, config);
   eventRoutes(app, db, config);
+  inventoryRoutes(app, db, config, files);
 
   app.get("/api/health", async (_req, reply) => {
     let database: "ok" | "unavailable" = "ok";

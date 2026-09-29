@@ -1,20 +1,42 @@
 import { useEffect, useState } from "react";
 
-// Hash routes (#/events, #/events/new, #/events/<id>, #/members), so the
-// same built files work in the cloud and on the onsite box with no
-// server-side routing rules.
+// Hash routes, so the same built files work in the cloud and on the onsite
+// box with no server-side routing rules.
 export type Route =
   | { name: "events" }
   | { name: "eventNew" }
   | { name: "event"; id: string }
+  | { name: "inventory" }
+  | { name: "itemNew" }
+  | { name: "item"; id: string }
+  | { name: "locations" }
+  | { name: "movements" }
+  | { name: "movementNew"; itemId?: string }
   | { name: "members" };
 
 export function parseRoute(hash: string): Route {
-  const parts = hash.replace(/^#\/?/, "").split("/").filter(Boolean);
-  if (parts[0] === "events" && parts[1] === "new") return { name: "eventNew" };
-  if (parts[0] === "events" && parts[1]) return { name: "event", id: parts[1] };
-  if (parts[0] === "members") return { name: "members" };
-  return { name: "events" };
+  const [path = "", query = ""] = hash.replace(/^#\/?/, "").split("?");
+  const parts = path.split("/").filter(Boolean);
+  const params = new URLSearchParams(query);
+  switch (parts[0]) {
+    case "events":
+      if (parts[1] === "new") return { name: "eventNew" };
+      if (parts[1]) return { name: "event", id: parts[1] };
+      return { name: "events" };
+    case "inventory":
+      if (parts[1] === "new") return { name: "itemNew" };
+      if (parts[1]) return { name: "item", id: parts[1] };
+      return { name: "inventory" };
+    case "locations":
+      return { name: "locations" };
+    case "movements":
+      if (parts[1] === "new") return { name: "movementNew", itemId: params.get("item") ?? undefined };
+      return { name: "movements" };
+    case "members":
+      return { name: "members" };
+    default:
+      return { name: "events" };
+  }
 }
 
 export function useRoute(): Route {

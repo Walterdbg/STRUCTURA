@@ -26,7 +26,9 @@ COPY --from=build /app/domain/dist domain/dist
 COPY --from=build /app/server/dist server/dist
 COPY server/migrations server/migrations
 COPY --from=build /app/web/dist web/dist
-ENV WEB_DIR=/app/web/dist PORT=8080
+ENV WEB_DIR=/app/web/dist PORT=8080 FILES_DIR=/data/files
+# Managed files (product photos) live on a volume mounted here.
+RUN mkdir -p /data/files && chown node:node /data/files
 EXPOSE 8080
 USER node
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s \

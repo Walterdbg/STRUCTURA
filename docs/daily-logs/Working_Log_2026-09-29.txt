@@ -155,6 +155,23 @@ Roadmap section: Completed (C-005); In progress (W-002); Build status
 
 ---
 
+[009]
+Time: 2026-09-29
+Area / feature: 0.1.0 step 2b - catalog, photos, locations, movement ledger
+Request or objective: Continue alone. INV-01/INV-02, UC-03, UC-08, UC-12; AT-02, AT-03, AT-05, AT-36.
+Action taken: Read the 27TS workbook tables and value lists (read-only, no macros): tblProducts, tblMovements, tblEvents, tblRentalItems, Listas. Migration 003; ledger service (the only code path that changes stock); catalog/locations/photos/movements/corrections API; filesystem file store with atomic writes; photo check by content; screens for Inventory, product, Locations, Movements, New movement; files volume and backup of files; dev-only in-memory starter (server/dist/cli/dev.js).
+Files created: server/migrations/003_inventory.sql, server/src/inventory/{ledger,service,routes}.ts, server/src/storage.ts, server/src/cli/dev.ts, server/vitest.config.ts, server/test/inventory.test.ts, domain/src/inventory.ts, web/src/forms.ts, web/src/pages/{InventoryList,ItemForm,Locations,MovementForm,MovementsList,MovementTable}.tsx
+Files modified: domain index, server app/config, web api/i18n/router/App/styles, Dockerfile, docker-compose.yml, docker/backup.sh, all package.json (0.1.0-dev.4), CHANGELOG, ROADMAP (v1.7.0)
+Decision made: None needing approval. Workbook "Salida alquiler" / "Retorno alquiler" are left for the Phase 3 Event dispatch/return commands; until then a plain transfer can move stock to an event location.
+Verification performed: 70/70 tests (test timeout raised to 30 s: PGlite start-up plus scrypt took over 5 s on the first test). Dev run in the browser: stock figures, photo, positions, history; a 9-of-6 transfer refused in Spanish with nothing moved; a 2-unit transfer updated to 4/2/1. Docker dev.4: health ok, migration 003 applied, photo still served after an app restart, backup wrote .dump + _files.tar.
+Result: PASS
+Observed issue: First dev-run start failed because WEB_DIR must be an absolute path; config now resolves it. Movement dates used the browser's format; they now follow the chosen language.
+Follow-up required: Step 2c (Event inventory lines, reservations with both end days, confirm/cancel), then audit reads.
+Roadmap update required: YES (done: v1.7.0)
+Roadmap section: Completed (C-006); In progress (W-002); Build status
+
+---
+
 
 DEFECTS DISCOVERED TODAY
 ========================

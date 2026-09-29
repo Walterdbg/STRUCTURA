@@ -3,6 +3,60 @@
 Every entry gets an **Intent** and a **Result**. A Result is only marked
 confirmed once actually verified, and can honestly say FAILED.
 
+## 0.1.0-dev.4 — 2026-09-29 (step 2b: catalog, photos, locations, movement ledger) — NOT YET TESTED BY WALTER
+
+**Intent:** standard inventory entry, search and location tracking
+through ordinary screens (INV-01, UC-03, UC-08), product photos that
+always stay with the right product (UC-12, AT-05), and a movement ledger
+where mistakes are corrected, never erased (AT-03).
+
+**Result:**
+- Migration `003_inventory.sql` adds:
+  - locations: a flat list typed as warehouse, event, repair or other
+  - a catalog with the 27TS workbook fields
+  - attachments
+  - an append-only movement ledger (movements and lines)
+  - stock positions that can never go negative
+- Catalog: barcodes are stored as text, so leading zeros are kept. A
+  category change never recodes a barcode (AT-36). A duplicate barcode is
+  refused, naming the product that already has it. Distinct products can
+  share a name and are found by reference. Every product has a unit and
+  the decimals it allows (Unidad 0, Galón 3…). A price needs a currency.
+- The "Cantidad inicial" is recorded as an opening-balance movement,
+  never as an editable total. Total / en almacén / en eventos / en
+  reparación are calculated from stock positions.
+- Movement types map to the workbook's list: receipt, adjustment in and
+  out (written reason required), location change (UC-03, no Trip), to
+  repair, back from repair, consumption, write-off. A correction posts a
+  linked reverse movement once, and the original is kept.
+- Movements refuse to take more than is at the source and change nothing
+  when refused, including the other lines. A retry with the same command
+  ID moves the stock only once.
+- Photos (UC-12):
+  - only JPEG, PNG or WebP up to 10 MB, checked by content, not by name
+  - stored before being recorded; a storage failure reports an error and
+    the product keeps its previous photo
+  - each photo is bound to its product's ID
+  - another organization gets "not found"
+- Docker: photos go on a new `structura-files` volume. The nightly backup
+  now writes the database dump plus a files archive (spec 18.3).
+- Screens (Spanish/English): Inventory (search, photo thumbnails, the
+  four stock figures), product page (photo, stock by location, history
+  with Corregir), Locations, New movement (shows what's available at the
+  source) and the Movements list.
+- Development only: `server/dist/cli/dev.js` runs the app on an in-memory
+  database for checking screens without spending a version number.
+- Tests: 70/70 (domain 10, server 60).
+- Checked in the browser (dev run, synthetic data):
+  - the list shows the correct stock figures and the barcode's leading
+    zero
+  - the product page shows its photo, stock by location and history
+  - a transfer of 9 with 6 available is refused in Spanish and nothing
+    moves
+  - a transfer of 2 then shows 4 in the warehouse and 2 at the event
+- Checked in Docker dev.4: health ok, migration 003 applied, the photo is
+  still served after an app restart, and the backup wrote both parts.
+
 ## 0.1.0-dev.3 — 2026-09-29 (step 2a: accounts, permissions, Events) — NOT YET TESTED BY WALTER
 
 **Intent:** staff sign in with STRUCTURA's own accounts (DEC-013), and
