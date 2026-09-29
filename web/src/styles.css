@@ -123,3 +123,5 @@ dl.stock { grid-template-columns: max-content max-content; font-size: 1rem; }
 .line select { flex: 2 1 220px; }
 .line input { flex: 1 1 100px; width: auto; }
 .line .unit { min-width: 48px; }
+.flush { margin: 0; }
+.card ul { margin: 4px 0 0; padding-left: 20px; }

@@ -62,3 +62,48 @@ export type EventFields = z.infer<typeof eventFields>;
 
 // Metadata edits are allowed while the Event is still being planned.
 export const EDITABLE_STATES: readonly FulfillmentState[] = ["draft", "confirmed"];
+// The workbook's CANCELAR EVENTO: only before anything left the warehouse.
+export const CANCELLABLE_STATES: readonly FulfillmentState[] = ["draft", "confirmed"];
+
+// What the Event asks for (workbook "Detalle Alquiler"). Quantities are
+// text decimals, like every quantity in STRUCTURA.
+export const eventLinesFields = z.object({
+  lines: z
+    .array(
+      z.object({
+        itemId: z.string().uuid(),
+        quantity: z
+          .string()
+          .trim()
+          .regex(/^\d+(\.\d{1,6})?$/, "Enter a positive number")
+          .refine((s) => /[1-9]/.test(s), "Quantity must be greater than zero"),
+        notes: z
+          .string()
+          .max(1000)
+          .transform((s) => s.trim() || null)
+          .nullable()
+          .optional()
+          .transform((s) => s ?? null),
+      })
+    )
+    .max(500)
+    .superRefine((lines, ctx) => {
+      const seen = new Set<string>();
+      lines.forEach((l, i) => {
+        if (seen.has(l.itemId)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [i, "itemId"], message: "Item listed twice" });
+        seen.add(l.itemId);
+      });
+    }),
+});
+export type EventLinesFields = z.infer<typeof eventLinesFields>;
+
+export const eventActionFields = z.object({
+  note: z
+    .string()
+    .max(2000)
+    .transform((s) => s.trim() || null)
+    .nullable()
+    .optional()
+    .transform((s) => s ?? null),
+});
+export type EventActionFields = z.infer<typeof eventActionFields>;

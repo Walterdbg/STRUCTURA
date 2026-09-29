@@ -172,6 +172,23 @@ Roadmap section: Completed (C-006); In progress (W-002); Build status
 
 ---
 
+[010]
+Time: 2026-09-29
+Area / feature: 0.1.0 step 2c - Event products and reservations
+Request or objective: Continue alone. UC-21, AT-04, AT-31; workbook NUEVO ALQUILER / VALIDAR / CANCELAR EVENTO.
+Action taken: Migration 004 (event_inventory_lines, reservations with a guard trigger). Availability calculation: capacity excludes repair; other Events' daily peak subtracted; stock at event locations counted once (attributed to an Event's reservation via movement.event_id); overdue stock keeps blocking. Commands: set lines, confirm, cancel; a date change on a confirmed Event re-checks availability. "Productos del evento" section on the Event page.
+Files created: server/migrations/004_reservations.sql, server/src/events/{availability,reservations}.ts, server/test/reservations.test.ts, web/src/pages/EventLines.tsx
+Files modified: domain events.ts, server events/service.ts + routes.ts, web EventForm/i18n/styles, all package.json (0.1.0-dev.5), CHANGELOG, ROADMAP (v1.8.0)
+Decision made: None needing approval. Design choice (spec class D): stock moved to an event location with an Event reference counts against that Event's reservation up to the reserved quantity. Recorded in CHANGELOG; Phase 3 dispatch will make that link explicit.
+Verification performed: 84/84 tests (14 new). Dev run in the browser: day-14 overlap showed 2 available, refused at 3 with the product listed, confirmed at 2. Docker dev.5 on PostgreSQL 17: migration 004 applied, day-14 case refused (409).
+Result: PASS
+Observed issue: The refusal message reused the movement wording ("no se movió nada"). Fixed before the build to "No se reservó nada; las reservas anteriores siguen igual".
+Follow-up required: History (audit) view for AT-18; then 0.1.0 ready for Walter's testing.
+Roadmap update required: YES (done: v1.8.0)
+Roadmap section: Completed (C-007); In progress (W-002); Build status
+
+---
+
 
 DEFECTS DISCOVERED TODAY
 ========================

@@ -5,8 +5,8 @@
 | Field | Value |
 | --- | --- |
 | Project | STRUCTURA (ChatGPT project name: "Inventario") |
-| Roadmap version | `1.7.0` |
-| Current application version/build | `0.1.0-dev.4` (accounts, Events, inventory; not yet tested by Walter) |
+| Roadmap version | `1.8.0` |
+| Current application version/build | `0.1.0-dev.5` (accounts, Events, inventory, reservations; not yet tested by Walter) |
 | Last updated | 2026-09-29 |
 | Document owner | Walter |
 | Current environment | Development (Docker on Walter's PC, port 8095) |
@@ -23,6 +23,7 @@
 | 1.5.0 | 2026-09-29 | Claude (for Walter) | 0.1.0 step 1 done: skeleton build 0.1.0-dev.1, 32/32 tests, verified in Docker (C-004). Step 2 (Phase 1 features) next | W-001 |
 | 1.6.0 | 2026-09-29 | Claude (for Walter) | Step 2a done: accounts, permissions, Events (build 0.1.0-dev.3, 51/51 tests). dev.2 superseded (built twice; version rule). W-002 split into 2b/2c | W-002 |
 | 1.7.0 | 2026-09-29 | Claude (for Walter) | Step 2b done: catalog, photos, locations, movement ledger and corrections (build 0.1.0-dev.4, 70/70 tests) | W-002 |
+| 1.8.0 | 2026-09-29 | Claude (for Walter) | Step 2c done: Event products, availability check, confirm/cancel with both end days included (build 0.1.0-dev.5, 84/84 tests) | W-002 |
 
 ## Project Objective
 
@@ -64,6 +65,7 @@ sections 2.2, 3 and 21.1.
 | C-001 | Specification package placed in the project | 44 files extracted to `docs/STRUCTURA_Documentation_Package/`; SHA-256 of S7a–S7h matches `SOURCE_MANIFEST.json` (Working_Log_2026-09-29 entry 002) | N/A (documentation) | COMPLETED |
 | C-002 | Standard project documentation set created | README, CHANGELOG, ROADMAP, docs/BUSINESS_RULES.md, daily log (Working_Log_2026-09-29 entry 003) | N/A (documentation) | COMPLETED |
 | C-006 | 0.1.0 step 2b: locations, catalog (27TS fields), product photos, append-only movement ledger, corrections, stock figures, backups include files | 70/70 tests incl. AT-02, AT-03, AT-05, AT-28, AT-36 cases; browser check; Docker volume + backup check (Working_Log_2026-09-29 entry 009) | 0.1.0-dev.4 | COMPLETED |
+| C-007 | 0.1.0 step 2c: Event inventory lines, availability (both end days, repair excluded, no double count, overdue stock blocks), confirm/cancel, re-check on changes | 84/84 tests incl. AT-04, AT-31, DST case; browser check; Docker check on PostgreSQL 17 (Working_Log_2026-09-29 entry 010) | 0.1.0-dev.5 | COMPLETED |
 | C-005 | 0.1.0 step 2a: own staff accounts, sessions, capabilities/presets, Events (create/edit/search, version check, tenant isolation) | 51/51 tests incl. AT-01 and AT-28 cases; browser check on Docker (Working_Log_2026-09-29 entry 008) | 0.1.0-dev.3 | COMPLETED |
 | C-004 | 0.1.0 step 1: skeleton (domain/server/web, Docker, migration 001, command handling, CI) | 32/32 tests; typecheck/build clean; Docker health check + append-only refusal on real PostgreSQL 17 (Working_Log_2026-09-29 entry 007) | 0.1.0-dev.1 | COMPLETED |
 | C-003 | Git repository set up | `main` and `development/0.1.0` pushed to `Walterdbg/STRUCTURA`; confirmed with `git ls-remote` (Working_Log_2026-09-29 entry 004) | N/A (documentation) | COMPLETED |
@@ -72,7 +74,7 @@ sections 2.2, 3 and 21.1.
 
 | ID | Work item | Current state | Remaining work | Owner | Status |
 | --- | --- | --- | --- | --- | --- |
-| W-002 | 0.1.0 step 2: spec Phase 1 features | 2a and 2b done (C-005, C-006) | 2c: Event inventory lines, reservations with both end days included, confirm/cancel. Then audit reads. AT-02–05, AT-18 | Claude | IN PROGRESS |
+| W-002 | 0.1.0 step 2: spec Phase 1 features | 2a, 2b, 2c done (C-005..C-007) | History view of the audit trail (audit.read) for AT-18, then hand 0.1.0 to Walter for testing | Claude | IN PROGRESS |
 
 ### Ready for test
 
@@ -149,7 +151,7 @@ not an approved schedule.
 
 | Environment | Current build | Deployment date | Verification | Status |
 | --- | --- | --- | --- | --- |
-| Development | `0.1.0-dev.4` | 2026-09-29 | 70/70 tests; browser + Docker checks | Running on Walter's PC (port 8095) |
+| Development | `0.1.0-dev.5` | 2026-09-29 | 84/84 tests; browser + Docker checks | Running on Walter's PC (port 8095) |
 | Test | None | — | — | Not started |
 | Production | None | — | — | Not started |
 
@@ -184,6 +186,7 @@ not an approved schedule.
   - Skeleton build `0.1.0-dev.1`: 32/32 tests, verified in Docker (C-004).
   - Accounts, permissions and Events, build `0.1.0-dev.3`: 51/51 tests, browser-checked (C-005).
   - Catalog, photos, locations and movement ledger, build `0.1.0-dev.4`: 70/70 tests, browser + Docker checks (C-006).
+  - Event products and reservations, build `0.1.0-dev.5`: 84/84 tests, browser + Docker checks (C-007).
 - Still in progress:
   - None.
 - Defects added or remaining:

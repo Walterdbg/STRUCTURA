@@ -3,6 +3,7 @@ import { eventFields } from "@structura/domain";
 import { ApiError, api, newCommand, send, type Command, type EventRecord, type Me, type Member } from "../api.js";
 import { errorKey, hasKey, useT, type TextKey } from "../i18n.js";
 import { go } from "../router.js";
+import { EventLines } from "./EventLines.js";
 
 interface FormState {
   designation: string;
@@ -164,6 +165,7 @@ export function EventForm({ me, eventId }: { me: Me; eventId?: string }) {
   );
 
   return (
+    <>
     <section className="card">
       <div className="row between">
         <h2>{record ? (editing ? t("events.editTitle") : record.designation) : t("events.newTitle")}</h2>
@@ -272,5 +274,14 @@ export function EventForm({ me, eventId }: { me: Me; eventId?: string }) {
         )}
       </form>
     </section>
+    {record && !editing && (
+      <EventLines
+        event={record}
+        canManage={canEdit}
+        canCommit={me.capabilities.includes("reservation.commit")}
+        onChanged={() => void load()}
+      />
+    )}
+    </>
   );
 }

@@ -3,6 +3,47 @@
 Every entry gets an **Intent** and a **Result**. A Result is only marked
 confirmed once actually verified, and can honestly say FAILED.
 
+## 0.1.0-dev.5 — 2026-09-29 (step 2c: Event products and reservations) — NOT YET TESTED BY WALTER
+
+**Intent:** an Event lists the products it needs (the workbook's
+"NUEVO ALQUILER" lines), checks availability for its dates (VALIDAR), and
+confirming it commits the stock, with both the departure and the return
+day included (UC-21, AT-04, AT-31).
+
+**Result:**
+- Migration `004_reservations.sql`: Event inventory lines and
+  reservations. A reservation never moves stock. The database refuses
+  deleting a reservation or changing it, except to close it (released /
+  cancelled / fulfilled, with who and when).
+- Availability for [departure, expected return], both days included:
+  - Capacity is everything owned except what is in repair.
+  - Subtracted: the largest daily total of other Events' reservations.
+  - Also subtracted: stock sitting at an event location that no
+    reservation explains, and stock still out for an Event whose expected
+    return has passed. An expected return date never creates a receipt.
+  - Stock moved to an event location *for* an Event is covered by that
+    Event's reservation, so it is not counted twice.
+- Confirm (Borrador → Confirmado) needs both rental dates and at least
+  one product. It refuses and lists every product that doesn't fit, and
+  nothing is reserved. Commitments per product are serialized, so two
+  people confirming at once can't overbook.
+- Editing the products or the rental dates of a confirmed Event re-checks
+  availability. If the change doesn't fit it is refused and the previous
+  reservations stand.
+- Cancel (Borrador/Confirmado only) releases the reservations. History is
+  kept. A cancelled Event can't be cancelled again.
+- Dates are local calendar days; checked across the New York
+  daylight-saving change (2026-11-01).
+- Screens (Spanish/English): "Productos del evento" on the Event page,
+  with requested / reserved / available per product,
+  **Confirmar (reservar)** and **Cancelar evento**.
+- Tests: 84/84 (domain 10, server 74).
+- Checked in the browser (dev run): with 5 of 7 mics reserved for 10–14
+  October, an Event starting on the 14th shows 2 available, is refused at
+  3 (listing requested 3 / available 2) and confirms at 2.
+- Checked in Docker dev.5: migration 004 applied, and the day-14 case is
+  refused on real PostgreSQL 17.
+
 ## 0.1.0-dev.4 — 2026-09-29 (step 2b: catalog, photos, locations, movement ledger) — NOT YET TESTED BY WALTER
 
 **Intent:** standard inventory entry, search and location tracking

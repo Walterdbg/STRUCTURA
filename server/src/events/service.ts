@@ -2,6 +2,7 @@ import { DomainError, EDITABLE_STATES, uuidv7, type EventFields, type Fulfillmen
 import { executeCommand, type CommandContext, type CommandResult } from "../commands.js";
 import type { Db } from "../db.js";
 import type { ParsedCommand } from "../http.js";
+import { commitReservations } from "./reservations.js";
 
 export interface EventRecord {
   id: string;
@@ -208,7 +209,16 @@ export async function updateEvent(
         ]
       );
       if (!rows[0]) throw new DomainError("stale_version", "Someone else changed this Event. Reload it and try again.");
-      const after = await getEvent(t, ctx.tenantId, id);
+      let after = await getEvent(t, ctx.tenantId, id);
+      // New rental dates on a confirmed Event: its reservations must fit
+      // the new dates too, or the edit is refused (UC-21).
+      if (
+        before.fulfillmentState === "confirmed" &&
+        (before.departureDate !== after.departureDate || before.expectedReturnDate !== after.expectedReturnDate)
+      ) {
+        await commitReservations(t, ctx, after, cmd.commandId);
+        after = await getEvent(t, ctx.tenantId, id);
+      }
       return {
         result: after,
         audit: [{ action: "event.updated", recordType: "event", recordId: id, change: { before, after: f } }],
