@@ -29,8 +29,11 @@ const nested: Db["tx"] = () => {
 };
 
 // NUMERIC (1700) stays text in both drivers, so money and quantities go
-// straight into decimal.js without ever becoming a JS number.
+// straight into decimal.js without ever becoming a JS number. DATE (1082)
+// stays text too: a calendar day must not become a JS Date at local
+// midnight and shift by the server's timezone.
 pg.types.setTypeParser(1700, (v) => v);
+pg.types.setTypeParser(1082, (v) => v);
 
 export async function openDb(databaseUrl: string | null): Promise<Db> {
   if (databaseUrl) {
@@ -53,7 +56,7 @@ export async function openDb(databaseUrl: string | null): Promise<Db> {
   }
   // No DATABASE_URL: in-memory PGlite, for tests and quick local runs only.
   const { PGlite, types } = await import("@electric-sql/pglite");
-  const lite = new PGlite({ parsers: { [types.NUMERIC]: (v: string) => v } });
+  const lite = new PGlite({ parsers: { [types.NUMERIC]: (v: string) => v, [types.DATE]: (v: string) => v } });
   const tx: Db["tx"] = (fn) => lite.transaction((t) => fn(wrap(t, (sql) => t.exec(sql), nested, async () => {})));
   return wrap(lite, (sql) => lite.exec(sql), tx, () => lite.close());
 }

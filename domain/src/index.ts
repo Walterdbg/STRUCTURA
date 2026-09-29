@@ -6,3 +6,5 @@ export * from "./ids.js";
 export * from "./decimal.js";
 export * from "./command.js";
 export * from "./locale.js";
+export * from "./capabilities.js";
+export * from "./events.js";

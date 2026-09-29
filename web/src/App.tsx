@@ -1,87 +1,106 @@
 import { useCallback, useEffect, useState } from "react";
 import { LOCALES, type Locale } from "@structura/domain";
-import { loadLocale, saveLocale, translate, type TextKey } from "./i18n.js";
+import { ApiError, api, type Me } from "./api.js";
+import { LocaleContext, loadLocale, saveLocale, translate } from "./i18n.js";
+import { useRoute } from "./router.js";
+import { EventForm } from "./pages/EventForm.js";
+import { EventsList } from "./pages/EventsList.js";
+import { Login } from "./pages/Login.js";
+import { Members } from "./pages/Members.js";
+import { SystemStatus } from "./pages/SystemStatus.js";
 
-interface Health {
-  status: "ok" | "degraded";
-  version: string;
-  engineMode: "cloud" | "local";
-  deploymentId: string;
-}
-
-type HealthState = { kind: "checking" } | { kind: "unreachable" } | { kind: "loaded"; health: Health };
+type Session = { kind: "loading" } | { kind: "signedOut" } | { kind: "signedIn"; me: Me };
 
 export function App() {
   const [locale, setLocale] = useState<Locale>(loadLocale);
-  const [health, setHealth] = useState<HealthState>({ kind: "checking" });
-  const t = (key: TextKey) => translate(locale, key);
+  const [session, setSession] = useState<Session>({ kind: "loading" });
+  const route = useRoute();
+  const t = (k: Parameters<typeof translate>[1]) => translate(locale, k);
 
-  const check = useCallback(async () => {
-    setHealth({ kind: "checking" });
+  const refresh = useCallback(async () => {
     try {
-      const res = await fetch("/api/health");
-      const body = (await res.json()) as Health;
-      setHealth({ kind: "loaded", health: body });
-    } catch {
-      setHealth({ kind: "unreachable" });
+      setSession({ kind: "signedIn", me: await api.me() });
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) setSession({ kind: "signedOut" });
+      else setSession({ kind: "signedOut" });
     }
   }, []);
 
   useEffect(() => {
-    void check();
-  }, [check]);
+    void refresh();
+  }, [refresh]);
 
   useEffect(() => {
     document.documentElement.lang = locale;
     saveLocale(locale);
   }, [locale]);
 
-  return (
-    <div className="page">
-      <header className="top">
-        <div>
-          <h1>STRUCTURA</h1>
-          <p className="tagline">{t("app.tagline")}</p>
-        </div>
-        <label className="lang">
-          <span>{t("language.label")}</span>
-          <select value={locale} onChange={(e) => setLocale(e.target.value as Locale)}>
-            {LOCALES.map((l) => (
-              <option key={l} value={l}>
-                {l === "es" ? "Español" : "English"}
-              </option>
-            ))}
-          </select>
-        </label>
-      </header>
+  const languagePicker = (
+    <label className="lang">
+      <span>{t("language.label")}</span>
+      <select value={locale} onChange={(e) => setLocale(e.target.value as Locale)}>
+        {LOCALES.map((l) => (
+          <option key={l} value={l}>
+            {l === "es" ? "Español" : "English"}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
 
-      <section className="card" aria-live="polite">
-        <h2>{t("status.title")}</h2>
-        {health.kind === "checking" && <p>{t("status.checking")}</p>}
-        {health.kind === "unreachable" && (
-          <p className="bad">
-            {t("status.unreachable")}{" "}
-            <button type="button" onClick={() => void check()}>
-              {t("status.retry")}
-            </button>
-          </p>
-        )}
-        {health.kind === "loaded" && (
-          <>
-            <p className={health.health.status === "ok" ? "good" : "bad"}>
-              {t(health.health.status === "ok" ? "status.ok" : "status.degraded")}
+  let body: JSX.Element;
+  if (session.kind === "loading") body = <p>{t("common.loading")}</p>;
+  else if (session.kind === "signedOut") body = <Login onSignedIn={refresh} />;
+  else {
+    const me = session.me;
+    const can = (c: string) => me.capabilities.includes(c as never);
+    // key: a different Event (or "new") always starts from a fresh form.
+    if (route.name === "eventNew") body = <EventForm key="new" me={me} />;
+    else if (route.name === "event") body = <EventForm key={route.id} me={me} eventId={route.id} />;
+    else if (route.name === "members" && can("tenant.admin")) body = <Members />;
+    else body = <EventsList canCreate={can("event.manage")} />;
+  }
+
+  return (
+    <LocaleContext.Provider value={locale}>
+      <div className="page">
+        <header className="top">
+          <div>
+            <h1>STRUCTURA</h1>
+            <p className="tagline">
+              {session.kind === "signedIn" ? session.me.tenant.name : t("app.tagline")}
             </p>
-            <dl>
-              <dt>{t("status.version")}</dt>
-              <dd>{health.health.version}</dd>
-              <dt>{t("status.engine")}</dt>
-              <dd>{t(health.health.engineMode === "local" ? "engine.local" : "engine.cloud")}</dd>
-              <dt>{t("status.deployment")}</dt>
-              <dd>{health.health.deploymentId}</dd>
-            </dl>
-          </>
+          </div>
+          {languagePicker}
+        </header>
+
+        {session.kind === "signedIn" && (
+          <nav className="nav">
+            <a href="#/events" className={route.name.startsWith("event") ? "active" : ""}>
+              {t("nav.events")}
+            </a>
+            {session.me.capabilities.includes("tenant.admin") && (
+              <a href="#/members" className={route.name === "members" ? "active" : ""}>
+                {t("nav.members")}
+              </a>
+            )}
+            <span className="spacer" />
+            <span className="who">{session.me.user.displayName}</span>
+            <button
+              type="button"
+              onClick={async () => {
+                await api.logout().catch(() => {});
+                setSession({ kind: "signedOut" });
+              }}
+            >
+              {t("nav.signOut")}
+            </button>
+          </nav>
         )}
-      </section>
-    </div>
+
+        <main>{body}</main>
+        <SystemStatus />
+      </div>
+    </LocaleContext.Provider>
   );
 }

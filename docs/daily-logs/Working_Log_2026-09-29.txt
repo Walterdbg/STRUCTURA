@@ -138,11 +138,37 @@ Roadmap section: Completed (C-004); In progress (W-002); Build and Deployment St
 
 ---
 
+[008]
+Time: 2026-09-29
+Area / feature: 0.1.0 step 2a - accounts, permissions, Events
+Request or objective: Continue alone (Walter). Implement DEC-013 own accounts and UC-13/AT-01 Event creation.
+Action taken: Migration 002 (password hash, sessions, capabilities, events). Sign-in/out/me with throttle, members (admin adds users with presets), Events create/edit/list/get with version check and tenant isolation. Setup CLI server/dist/cli/bootstrap.js. Bilingual screens: sign-in, Events list, Event form, Users. Read UC-03/08/12/13/21 and S7a first.
+Files created: server/migrations/002_identity_events.sql, server/src/{auth,http}.ts, server/src/events/*, server/src/identity/*, server/src/cli/bootstrap.ts, server/test/{session,identity.test,events.test}.ts, domain/src/{capabilities,events}.ts, web/src/{api,router}.ts, web/src/pages/*
+Files modified: domain errors/index, server app/config/db, web App/i18n/styles, all package.json (0.1.0-dev.3), CHANGELOG, ROADMAP (v1.6.0)
+Decision made: None needing approval. Synthetic dev account admin@structura.test created on the local dev database; its password is only in data/dev-credentials.txt (gitignored).
+Verification performed: 51/51 tests; typecheck clean; CI for 0.1.0-dev.1 green on GitHub. Browser on Docker dev.3: sign-in; a return date before departure is flagged on the right field with the input kept; saving opens the saved record; the list shows separate dates; no sideways scroll at 375px.
+Result: PASS
+Observed issue: DEFECT-001 (see below), fixed. VERSION RULE BREACH: 0.1.0-dev.2 was rebuilt with that fix under the same number. Never handed off; superseded by dev.3 (same code, new number). Going forward, screen iteration runs locally without a version, and Docker is built once per version.
+Follow-up required: Step 2b (catalog, photos, locations, movements)
+Roadmap update required: YES (done: v1.6.0)
+Roadmap section: Completed (C-005); In progress (W-002); Build status
+
+---
+
 
 DEFECTS DISCOVERED TODAY
 ========================
 
-None.
+[DEFECT-001]
+Time: 2026-09-29 (entry 008)
+Area: Web - Event form
+Description: After creating an Event, the page moved to the new Event but stayed in edit mode
+Steps to reproduce: Crear evento -> fill -> Guardar
+Expected behavior: The saved Event opens in view mode, with an Editar button
+Actual behavior: The edit form stayed open under the new Event's address
+Severity: Low
+Status: VERIFIED (fixed: the form reloads for each Event, web/src/App.tsx; browser-checked on dev.3)
+Related files or evidence: web/src/App.tsx
 
 
 DECISIONS MADE TODAY

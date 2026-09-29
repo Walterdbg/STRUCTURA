@@ -11,6 +11,14 @@ export const ERROR_KINDS = [
   "schema_incompatible",
   // Same command ID sent again with different data (integration contract).
   "idempotency_conflict",
+  // Record doesn't exist, or belongs to another tenant: the two are never
+  // told apart, so IDs can't be probed across tenants (AT-17, AT-28).
+  "not_found",
+  // No valid session.
+  "unauthenticated",
+  // The request can't be applied in the record's current state, e.g.
+  // editing an Event that already left the warehouse.
+  "invalid_state",
 ] as const;
 
 export type ErrorKind = (typeof ERROR_KINDS)[number];
