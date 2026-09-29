@@ -1,0 +1,74 @@
+import fs from "node:fs";
+import path from "node:path";
+import Fastify, { type FastifyInstance } from "fastify";
+import fastifyStatic from "@fastify/static";
+import { isDomainError, type ErrorKind } from "@structura/domain";
+import type { Config } from "./config.js";
+import type { Db } from "./db.js";
+
+// Each error kind keeps its own HTTP status, so a client never mistakes a
+// refused command for a saved one (spec 18.1).
+const STATUS: Record<ErrorKind, number> = {
+  validation: 400,
+  permission_denied: 403,
+  license_restricted: 403,
+  stale_version: 409,
+  insufficient_availability: 409,
+  idempotency_conflict: 409,
+  schema_incompatible: 409,
+  missing_evidence: 422,
+  provider_failure: 502,
+};
+
+export interface AppOptions {
+  db: Db;
+  config: Config;
+  logger?: boolean;
+}
+
+export async function buildApp({ db, config, logger = true }: AppOptions): Promise<FastifyInstance> {
+  const app = Fastify({ logger });
+
+  app.setErrorHandler((err, req, reply) => {
+    if (isDomainError(err)) {
+      return reply.status(STATUS[err.kind]).send({ error: err.kind, message: err.message, details: err.details });
+    }
+    // Fastify's own request errors (bad JSON, too large) keep their 4xx code.
+    const status = (err as { statusCode?: number }).statusCode;
+    if (status && status >= 400 && status < 500) {
+      return reply.status(status).send({ error: "validation", message: (err as Error).message });
+    }
+    req.log.error(err);
+    return reply.status(500).send({ error: "internal", message: "Unexpected server error" });
+  });
+
+  app.get("/api/health", async (_req, reply) => {
+    let database: "ok" | "unavailable" = "ok";
+    try {
+      await db.query("SELECT 1");
+    } catch {
+      database = "unavailable";
+    }
+    return reply.status(database === "ok" ? 200 : 503).send({
+      app: "STRUCTURA",
+      status: database === "ok" ? "ok" : "degraded",
+      version: config.appVersion,
+      engineMode: config.engineMode,
+      deploymentId: config.deploymentId,
+      database,
+    });
+  });
+
+  // The built web app, with every non-API path falling back to index.html.
+  if (config.webDir && fs.existsSync(path.join(config.webDir, "index.html"))) {
+    await app.register(fastifyStatic, { root: config.webDir });
+    app.setNotFoundHandler((req, reply) => {
+      if (req.url.startsWith("/api/")) {
+        return reply.status(404).send({ error: "not_found", message: "Unknown API path" });
+      }
+      return reply.sendFile("index.html");
+    });
+  }
+
+  return app;
+}

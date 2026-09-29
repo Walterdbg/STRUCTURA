@@ -1,7 +1,7 @@
 # STRUCTURA — Architecture Plan (stack ADR)
 
-**Status:** PROPOSED, 2026-09-29. Sections marked **[APPROVE]** need
-Walter's yes or no before any code is written.
+**Status:** APPROVED by Walter, 2026-09-29 (ROADMAP DEC-011). Sections 2, 3 and 5 were
+marked **[APPROVE]** and are approved as written.
 **Branch:** `development/0.1.0`
 **Implements:** ROADMAP P-004 (spec Phase 0, gap G-08)
 
@@ -117,7 +117,14 @@ Version line `0.1.0` (DEC-005). Test builds are Docker images tagged
 | JavaScript on the onsite box can be read by whoever controls that machine | Accepted by the spec (15.2). Licenses are enforced with signed files and server checks, not by hiding code |
 | Docker Engine on the mini-PC needs a documented setup | A setup guide goes in `docs/INSTALL.md` (backlog B-001) with the first onsite build |
 
-## 7. Needs Walter's answer
+## 7. Walter's answers (2026-09-29)
+
+- Sections 2, 3 and 5: approved (DEC-011).
+- Interface: Spanish and English, Spanish default (DEC-012).
+- Sign-in: own accounts first (DEC-013).
+- Still open: hosting provider and mini-PC model (ROADMAP P-011).
+
+### Original questions, as asked
 
 1. Approve sections 2, 3 and 5, or say what to change.
 2. **Interface language.** The source material is in Spanish (27TS

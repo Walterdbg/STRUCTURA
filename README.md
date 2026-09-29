@@ -28,6 +28,16 @@ happens on `development/0.1.0`. See
 [ROADMAP.md](ROADMAP.md) for what's next and [CHANGELOG.md](CHANGELOG.md)
 for history.
 
+## Run it (development)
+
+1. Copy `.env.example` to `.env` and set `DB_PASSWORD` and a free `PORT`.
+2. `docker compose up -d --build`
+3. Open `http://127.0.0.1:<PORT>/`. The status page shows the version and
+   engine.
+
+Without Docker: `npm install`, then `npm test` (runs on an in-memory
+PostgreSQL) and `npm run build`.
+
 ## Where things are
 
 | Path | What it is |

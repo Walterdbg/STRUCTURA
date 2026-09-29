@@ -5,11 +5,11 @@
 | Field | Value |
 | --- | --- |
 | Project | STRUCTURA (ChatGPT project name: "Inventario") |
-| Roadmap version | `1.3.0` |
-| Current application version/build | None yet. No code exists. Version line `0.1.0` approved. |
+| Roadmap version | `1.5.0` |
+| Current application version/build | `0.1.0-dev.1` (skeleton, not yet tested by Walter) |
 | Last updated | 2026-09-29 |
 | Document owner | Walter |
-| Current environment | Documentation only. No Development, Test or Production environment yet. |
+| Current environment | Development (Docker on Walter's PC, port 8095) |
 
 ## Version Control
 
@@ -19,6 +19,8 @@
 | 1.1.0 | 2026-09-29 | Claude (for Walter) | Walter approved repo/branch/version names and standalone architecture (P-001..P-003 → DEC-004..DEC-006); repo created and pushed | P-001, P-002, P-003 |
 | 1.2.0 | 2026-09-29 | Claude (for Walter) | Walter set the solution type: Docker + JavaScript/Node (DEC-007); P-004 narrowed to the remaining stack details | P-004 |
 | 1.3.0 | 2026-09-29 | Claude (for Walter) | Walter approved TypeScript, PostgreSQL on both sides, and a Linux onsite box (DEC-008..DEC-010). Stack ADR proposed in docs/ARCHITECTURE.md. New pending questions P-009..P-011 | P-004 |
+| 1.4.0 | 2026-09-29 | Claude (for Walter) | Walter approved the architecture plan, Spanish + English, and own accounts first (P-004, P-009, P-010 → DEC-011..DEC-013). 0.1.0 step 1 started | P-004, P-009, P-010 |
+| 1.5.0 | 2026-09-29 | Claude (for Walter) | 0.1.0 step 1 done: skeleton build 0.1.0-dev.1, 32/32 tests, verified in Docker (C-004). Step 2 (Phase 1 features) next | W-001 |
 
 ## Project Objective
 
@@ -59,13 +61,14 @@ sections 2.2, 3 and 21.1.
 | --- | --- | --- | --- | --- |
 | C-001 | Specification package placed in the project | 44 files extracted to `docs/STRUCTURA_Documentation_Package/`; SHA-256 of S7a–S7h matches `SOURCE_MANIFEST.json` (Working_Log_2026-09-29 entry 002) | N/A (documentation) | COMPLETED |
 | C-002 | Standard project documentation set created | README, CHANGELOG, ROADMAP, docs/BUSINESS_RULES.md, daily log (Working_Log_2026-09-29 entry 003) | N/A (documentation) | COMPLETED |
+| C-004 | 0.1.0 step 1: skeleton (domain/server/web, Docker, migration 001, command handling, CI) | 32/32 tests; typecheck/build clean; Docker health check + append-only refusal on real PostgreSQL 17 (Working_Log_2026-09-29 entry 007) | 0.1.0-dev.1 | COMPLETED |
 | C-003 | Git repository set up | `main` and `development/0.1.0` pushed to `Walterdbg/STRUCTURA`; confirmed with `git ls-remote` (Working_Log_2026-09-29 entry 004) | N/A (documentation) | COMPLETED |
 
 ### In progress
 
 | ID | Work item | Current state | Remaining work | Owner | Status |
 | --- | --- | --- | --- | --- | --- |
-| — | None | — | — | — | — |
+| W-002 | 0.1.0 step 2: spec Phase 1 features | Not started | Identity with own accounts (DEC-013), Event creation, catalog + photos, locations, movement ledger, reservations, audit reads; AT-01–05, AT-18, AT-28 | Claude | PLANNED |
 
 ### Ready for test
 
@@ -93,14 +96,14 @@ sections 2.2, 3 and 21.1.
 | DEC-008 | 2026-09-29 | Code is written in TypeScript (still Node; refines DEC-007) | Catches rule mistakes at build time; same as the Hub. Approved by Walter | Architecture |
 | DEC-009 | 2026-09-29 | PostgreSQL on both the cloud and the local engine | Same data rules on both sides; simpler sync. Approved by Walter | Architecture / sync |
 | DEC-010 | 2026-09-29 | The onsite local engine runs on a small Linux box with the free Docker Engine, not Docker Desktop on Windows. The code stays independent of the box | Reliability, and Docker Desktop licensing. Approved by Walter | Local engine / deployment |
+| DEC-011 | 2026-09-29 | `docs/ARCHITECTURE.md` is approved as the stack ADR, including the 0.1.0 build order (section 5) | Approved by Walter (was P-004) | Architecture |
+| DEC-012 | 2026-09-29 | Interface in Spanish and English from day one; Spanish is the default | Approved by Walter (was P-009); source material is Spanish | UI |
+| DEC-013 | 2026-09-29 | Staff sign in with STRUCTURA's own accounts (email + password) first; Microsoft/Google sign-in later | Approved by Walter (was P-010) | Identity |
 
 ## Pending Decisions
 
 | ID | Question | Options or constraint | Needed by | Owner |
 | --- | --- | --- | --- | --- |
-| P-004 | Stack ADR (spec Phase 0, gap G-08) | Proposed in `docs/ARCHITECTURE.md` sections 2, 3 and 5 (Fastify, React/Vite, pg-boss, decimal.js, Leaflet; same image for both engines; 0.1.0 = Phase 1 in cloud mode) | Phase 0 exit | Walter + Claude |
-| P-009 | Interface language(s) | Proposed: Spanish and English, Spanish default (source material is Spanish) | Before UI work in 0.1.0 | Walter |
-| P-010 | Staff sign-in method | Proposed: STRUCTURA's own accounts first; Microsoft/Google sign-in later | Before Phase 1 identity work | Walter |
 | P-011 | Cloud hosting provider and onsite mini-PC model | Not blocking 0.1.0 | Phase 4 / first cloud deployment | Walter |
 | P-005 | Licensing policy values (gap G-07) | Pricing, plans, capacity limits, offline grace period. The spec says: configuration only, never invented | Phase 4 | Walter |
 | P-006 | Tax, rounding, currency and retention settings (gap G-10) | Must be explicit configurable policies | Phase 2 | Walter |
@@ -114,8 +117,8 @@ not an approved schedule.
 
 ### Immediate priorities
 
-1. Walter approves or changes `docs/ARCHITECTURE.md` (P-004) and answers P-009, P-010.
-2. Then 0.1.0 step 1: project skeleton, Docker files, first migration.
+1. Read the use cases and 27TS sources that Phase 1 depends on (UC-03, 08, 12, 13, 21; S7a, S7b).
+2. 0.1.0 step 2: spec Phase 1 features (W-002).
 3. Phase 0 remainder: decision register, policy schema, workbook source mapping (spec 16.1).
 
 ### Near-term work
@@ -142,7 +145,7 @@ not an approved schedule.
 
 | Environment | Current build | Deployment date | Verification | Status |
 | --- | --- | --- | --- | --- |
-| Development | None (branch `development/0.1.0` exists, docs only) | — | — | Not started |
+| Development | `0.1.0-dev.1` | 2026-09-29 | 32/32 tests; Docker health check | Running on Walter's PC (port 8095) |
 | Test | None | — | — | Not started |
 | Production | None | — | — | Not started |
 
@@ -156,7 +159,7 @@ not an approved schedule.
 | `docs/STRUCTURA_Documentation_Package/START_HERE.md` | Package entry point | SUPPORTING | DEC-001 | CURRENT |
 | `STRUCTURA_Documentation_Package.zip` | Original delivered package, unchanged | SUPPORTING | DEC-001 | CURRENT |
 | `docs/BUSINESS_RULES.md` | Workflow rules + STRUCTURA rules | AUTHORITATIVE | — | CURRENT |
-| `docs/ARCHITECTURE.md` | Stack ADR / architecture plan | SUPPORTING (proposal until approved) | P-004 | PROPOSED |
+| `docs/ARCHITECTURE.md` | Stack ADR / architecture plan | AUTHORITATIVE | DEC-011 | CURRENT |
 | `docs/daily-logs/Working_Log_2026-09-29.txt` | Daily working log | SUPPORTING | — | CURRENT |
 
 ## Superseded or Rejected Documents
@@ -174,6 +177,7 @@ not an approved schedule.
   - Specification package extracted into the project with checksums confirmed (C-001).
   - Standard documentation set created (C-002).
   - Repo `Walterdbg/STRUCTURA` initialized; `main` and `development/0.1.0` pushed (C-003).
+  - Skeleton build `0.1.0-dev.1`: 32/32 tests, verified in Docker (C-004).
 - Still in progress:
   - None.
 - Defects added or remaining:
@@ -181,4 +185,4 @@ not an approved schedule.
 - Deployment result:
   - No deployment.
 - First priority for next workday:
-  - Walter reviews docs/ARCHITECTURE.md (P-004, P-009, P-010).
+  - 0.1.0 step 2: Phase 1 features (W-002).

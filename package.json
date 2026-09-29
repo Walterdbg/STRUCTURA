@@ -1,0 +1,14 @@
+{
+  "name": "structura",
+  "version": "0.1.0-dev.1",
+  "private": true,
+  "description": "STRUCTURA - event-centered inventory, services and commercial operations platform",
+  "workspaces": ["domain", "server", "web"],
+  "scripts": {
+    "build": "npm run build -w domain && npm run build -w web && npm run build -w server",
+    "typecheck": "npm run build -w domain && npm run typecheck -w server && npm run typecheck -w web",
+    "test": "npm run build -w domain && npm test -w domain && npm test -w server",
+    "dev:server": "npm run dev -w server",
+    "dev:web": "npm run dev -w web"
+  }
+}

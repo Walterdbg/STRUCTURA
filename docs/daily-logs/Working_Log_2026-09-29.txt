@@ -121,6 +121,23 @@ Roadmap section: Approved Decisions; Pending Decisions; Document Register; Immed
 
 ---
 
+[007]
+Time: 2026-09-29
+Area / feature: 0.1.0 step 1 - skeleton
+Request or objective: Walter approved the architecture plan (DEC-011), Spanish + English (DEC-012) and own accounts first (DEC-013). He asked Claude to continue alone.
+Action taken: Built domain/server/web workspaces, migration 001_foundation.sql, executeCommand (atomic change + audit + outbox + command log, idempotent), health API, bilingual status screen, Dockerfile, docker-compose (db, app, backup) and GitHub Actions CI. Version 0.1.0-dev.1. Walter reminded Claude that STRUCTURA is not part of the Hub: no Hub code or data is used (saved as a memory).
+Files created: package.json, tsconfig.base.json, .gitignore, .dockerignore, .env.example, Dockerfile, docker-compose.yml, docker/backup.sh, .github/workflows/ci.yml, domain/*, server/*, web/*
+Files modified: .gitattributes, ROADMAP.md (v1.4.0, v1.5.0), CHANGELOG.md, README.md, docs/ARCHITECTURE.md (status APPROVED)
+Decision made: Local port 8095 on this PC (8080 is used by another Docker app, 8090 by Wondershare). Kept only in the uncommitted .env.
+Verification performed: npm test 32/32 PASS (domain 10, server 22); typecheck and build clean; docker compose up; /api/health = 0.1.0-dev.1, database ok; migration applied; a DELETE on audit_entries was refused by real PostgreSQL 17; first backup written; screen checked in Spanish (default) and English (persists after reload). Dev database volume then reset to remove the probe rows.
+Result: PASS
+Observed issue: First typecheck failed (decimal.js import form, then an unknown-typed error in the error handler). Both fixed before the passing run.
+Follow-up required: CI result on GitHub not yet seen (gh CLI not installed). 0.1.0 step 2 (W-002).
+Roadmap update required: YES (done: v1.5.0)
+Roadmap section: Completed (C-004); In progress (W-002); Build and Deployment Status
+
+---
+
 
 DEFECTS DISCOVERED TODAY
 ========================
@@ -162,15 +179,15 @@ STRUCTURA_Implementation_Specification.md v1.1 (root) | Old spec | SUPERSEDED by
 DEPLOYMENT / BUILD RECORD
 =========================
 
-Deployment performed: NO
-Build/version: None
-Environment: None
-Deployment time: N/A
-Deployment result: NOT TESTED
-Verification performed: N/A
+Deployment performed: YES (local development only)
+Build/version: 0.1.0-dev.1
+Environment: Development - Docker on Walter's PC, http://127.0.0.1:8095
+Deployment time: 2026-09-29 ~17:19
+Deployment result: PASS (Claude's checks); NOT TESTED by Walter
+Verification performed: /api/health, migration log, backup log, append-only refusal, bilingual screen
 Rollback required: NO
-Deployment documents: None
-Notes: No code exists yet.
+Deployment documents: CHANGELOG.md 0.1.0-dev.1 entry
+Notes: Skeleton only, no business features for Walter to test yet.
 
 
 END-OF-DAY RECONCILIATION
@@ -203,9 +220,9 @@ Documents superseded or rejected:
 Roadmap sections updated:
 - All (initial roadmap)
 
-Roadmap version after update: 1.3.0
+Roadmap version after update: 1.5.0
 
 First action for next workday:
-- Walter reviews docs/ARCHITECTURE.md (P-004) and answers P-009, P-010
+- 0.1.0 step 2 (W-002): read UC-03/08/12/13/21 and S7a/S7b, then identity + Event creation
 
 End-of-day review completed by:

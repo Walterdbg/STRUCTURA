@@ -1,0 +1,53 @@
+# STRUCTURA - start with:  docker compose up -d --build
+# Settings come from .env next to this file (copy .env.example).
+# The same file runs the cloud engine or the onsite engine: set ENGINE_MODE.
+
+name: structura
+
+services:
+  structura-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: structura
+      POSTGRES_USER: structura
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+    volumes:
+      - structura-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U structura -d structura"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+    # No ports published: only the STRUCTURA containers can reach the database.
+
+  structura-app:
+    build: .
+    environment:
+      DATABASE_URL: postgres://structura:${DB_PASSWORD}@structura-db:5432/structura
+      ENGINE_MODE: ${ENGINE_MODE:-cloud}
+      DEPLOYMENT_ID: ${DEPLOYMENT_ID:?Set DEPLOYMENT_ID in .env}
+    ports:
+      # BIND_ADDRESS 127.0.0.1 = this computer only; 0.0.0.0 on the onsite box.
+      - "${BIND_ADDRESS:-127.0.0.1}:${PORT:-8080}:8080"
+    depends_on:
+      structura-db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  structura-backup:
+    image: postgres:17-alpine
+    entrypoint: ["sh", "/backup.sh"]
+    environment:
+      PGPASSWORD: ${DB_PASSWORD}
+      KEEP: ${BACKUP_KEEP:-14}
+    volumes:
+      - ./docker/backup.sh:/backup.sh:ro
+      - ${BACKUP_DIR:-./backups}:/backups
+    depends_on:
+      structura-db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  structura-pgdata:
