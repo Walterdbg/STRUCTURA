@@ -221,6 +221,17 @@ Severity: Low
 Status: VERIFIED (fixed: the form reloads for each Event, web/src/App.tsx; browser-checked on dev.3)
 Related files or evidence: web/src/App.tsx
 
+[DEFECT-002]
+Time: 2026-09-29 (reported by Walter, end of day)
+Area: Web - sign-in and all forms
+Description: Pressing Entrar with an empty field shows the browser's own bubble "Please fill out this field" in English, even with Spanish selected
+Steps to reproduce: Open http://127.0.0.1:8095, leave the email empty, press Entrar
+Expected behavior: The message follows the chosen language (Spanish/English, DEC-012)
+Actual behavior: Browser-native message in the browser's language
+Severity: Low
+Status: OPEN - to fix in 0.1.0-dev.7 (replace native "required" checks with STRUCTURA's own messages)
+Related files or evidence: Walter's screenshot; web/src/pages/Login.tsx, Members.tsx, Locations.tsx (use the HTML "required" attribute)
+
 
 DECISIONS MADE TODAY
 ====================
@@ -270,7 +281,9 @@ Notes: The dev database holds only synthetic data (admin@structura.test, passwor
 END-OF-DAY RECONCILIATION
 =========================
 
-Ended at: (open; log not yet closed)
+Ended at: 2026-09-29, end of day (Walter: "That is all for today"). Log CLOSED.
+
+Also today (not numbered work items): Walter installed the GitHub CLI (gh) at Claude's request so pull requests can be opened from here; it is installed but not yet signed in (gh auth login pending). No pull request was created - an accidental "Create PR" click; Walter agreed to skip it until 0.1.0 is approved. Walter opened the app at http://127.0.0.1:8095 and reported DEFECT-002.
 
 Completed and verified (by Claude's tests and checks):
 - Package extracted, checksums confirmed (C-001)
@@ -288,7 +301,7 @@ Blocked:
 - None (git repo set up in entry 004)
 
 Known defects remaining:
-- None
+- DEFECT-002 (browser's English "Please fill out this field"), low, for dev.7
 
 Documents retained:
 - See register above
@@ -302,6 +315,6 @@ Roadmap sections updated:
 Roadmap version after update: 1.9.0
 
 First action for next workday:
-- Walter's results on T-001..T-006; fixes go into 0.1.0-dev.7
+- Walter's results on T-001..T-006; fixes (incl. DEFECT-002) go into 0.1.0-dev.7
 
-End-of-day review completed by:
+End-of-day review completed by: Claude, 2026-09-29

@@ -5,7 +5,7 @@
 | Field | Value |
 | --- | --- |
 | Project | STRUCTURA (ChatGPT project name: "Inventario") |
-| Roadmap version | `1.9.0` |
+| Roadmap version | `1.9.1` |
 | Current application version/build | `0.1.0-dev.6`: 0.1.0 feature-complete, READY FOR TEST by Walter |
 | Last updated | 2026-09-29 |
 | Document owner | Walter |
@@ -25,6 +25,7 @@
 | 1.7.0 | 2026-09-29 | Claude (for Walter) | Step 2b done: catalog, photos, locations, movement ledger and corrections (build 0.1.0-dev.4, 70/70 tests) | W-002 |
 | 1.8.0 | 2026-09-29 | Claude (for Walter) | Step 2c done: Event products, availability check, confirm/cancel with both end days included (build 0.1.0-dev.5, 84/84 tests) | W-002 |
 | 1.9.0 | 2026-09-29 | Claude (for Walter) | Change history view, photo permission fix, INSTALL + USER_GUIDE (build 0.1.0-dev.6, 89/89 tests). W-002 done; 0.1.0 handed to Walter for testing (T-001..T-006). Known limitations listed | W-002, B-001, B-002 |
+| 1.9.1 | 2026-09-29 | Claude (for Walter) | End of day: DEFECT-002 added (browser's English required-field message), log closed | D-002 |
 
 ## Project Objective
 
@@ -95,7 +96,8 @@ Walter tests the build running on his PC (see docs/USER_GUIDE.md; sign in with h
 
 | ID | Defect | Severity | Reproduction/evidence | Current status | Target |
 | --- | --- | --- | --- | --- | --- |
-| — | None open. DEFECT-001 (saved Event stayed in edit mode) fixed and verified in dev.3 | — | Working_Log_2026-09-29 | CLOSED | — |
+| D-002 | Empty required field shows the browser's own English bubble ("Please fill out this field") even in Spanish | Low | Walter's screenshot; Working_Log_2026-09-29 DEFECT-002 | OPEN | 0.1.0-dev.7 |
+| D-001 | Saved Event stayed in edit mode | Low | Working_Log_2026-09-29 DEFECT-001 | CLOSED (fixed in dev.3) | — |
 
 ### Known limitations (by design in 0.1.0, not defects)
 
@@ -212,7 +214,7 @@ not an approved schedule.
 - Still in progress:
   - None. 0.1.0 is READY FOR TEST (T-001..T-006).
 - Defects added or remaining:
-  - DEFECT-001 found and fixed the same day. Version-rule breach recorded (dev.2 built twice; superseded by dev.3).
+  - DEFECT-001 found and fixed the same day. DEFECT-002 open (for dev.7). Version-rule breach recorded (dev.2 built twice; superseded by dev.3).
 - Deployment result:
   - Local development deployment only (Docker on Walter's PC), dev.6 running.
 - First priority for next workday:
