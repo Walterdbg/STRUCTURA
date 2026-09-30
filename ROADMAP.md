@@ -5,9 +5,9 @@
 | Field | Value |
 | --- | --- |
 | Project | STRUCTURA (ChatGPT project name: "Inventario") |
-| Roadmap version | `1.9.1` |
+| Roadmap version | `1.10.0` |
 | Current application version/build | `0.1.0-dev.6`: 0.1.0 feature-complete, READY FOR TEST by Walter |
-| Last updated | 2026-09-29 |
+| Last updated | 2026-09-30 |
 | Document owner | Walter |
 | Current environment | Development (Docker on Walter's PC, port 8095) |
 
@@ -26,6 +26,7 @@
 | 1.8.0 | 2026-09-29 | Claude (for Walter) | Step 2c done: Event products, availability check, confirm/cancel with both end days included (build 0.1.0-dev.5, 84/84 tests) | W-002 |
 | 1.9.0 | 2026-09-29 | Claude (for Walter) | Change history view, photo permission fix, INSTALL + USER_GUIDE (build 0.1.0-dev.6, 89/89 tests). W-002 done; 0.1.0 handed to Walter for testing (T-001..T-006). Known limitations listed | W-002, B-001, B-002 |
 | 1.9.1 | 2026-09-29 | Claude (for Walter) | End of day: DEFECT-002 added (browser's English required-field message), log closed | D-002 |
+| 1.10.0 | 2026-09-30 | Claude (for Walter) | Walter added a read-only AI help assistant running on the tenant's own machine (DEC-014); timing and cloud-tenant hosting pending (P-012, P-013) | DEC-014 |
 
 ## Project Objective
 
@@ -127,12 +128,15 @@ Walter tests the build running on his PC (see docs/USER_GUIDE.md; sign in with h
 | DEC-011 | 2026-09-29 | `docs/ARCHITECTURE.md` is approved as the stack ADR, including the 0.1.0 build order (section 5) | Approved by Walter (was P-004) | Architecture |
 | DEC-012 | 2026-09-29 | Interface in Spanish and English from day one; Spanish is the default | Approved by Walter (was P-009); source material is Spanish | UI |
 | DEC-013 | 2026-09-29 | Staff sign in with STRUCTURA's own accounts (email + password) first; Microsoft/Google sign-in later | Approved by Walter (was P-010) | Identity |
+| DEC-014 | 2026-09-30 | Add a basic AI help assistant: it helps people search and find content and gives usage guidance. It **never changes anything** (read-only, no actions), answers only from STRUCTURA's own content (user guide + the records the asking person may see) and cites where each answer came from. The model runs **on the tenant's own machine** (option A, e.g. Ollama in Docker); no question or data goes to an outside AI service. Internet remains required for STRUCTURA; the model and its updates are downloaded over it. Built in two steps: plain search first, then the assistant on top | Walter's direction. The spec (21.1) listed AI automation as not in the baseline; this is new owner direction of higher precedence (spec 1.1), limited to read-only help | New module: search + assistant |
 
 ## Pending Decisions
 
 | ID | Question | Options or constraint | Needed by | Owner |
 | --- | --- | --- | --- | --- |
-| P-011 | Cloud hosting provider and onsite mini-PC model | Not blocking 0.1.0 | Phase 4 / first cloud deployment | Walter |
+| P-011 | Cloud hosting provider and onsite mini-PC model | Not blocking 0.1.0. DEC-014 adds a need: the machine running the local AI model needs roughly 8 GB of memory or more | Phase 4 / first cloud deployment | Walter |
+| P-012 | When to build the assistant (DEC-014) | Proposed: version 0.2.0, right after 0.1.0 is approved, before Phase 2 (quotes/invoices) | After 0.1.0 approval | Walter |
+| P-013 | Where the model runs for tenants who only use the cloud engine (no own box) | Proposed: on STRUCTURA's cloud server, so data still never goes to an outside AI service | Before building the assistant | Walter |
 | P-005 | Licensing policy values (gap G-07) | Pricing, plans, capacity limits, offline grace period. The spec says: configuration only, never invented | Phase 4 | Walter |
 | P-006 | Tax, rounding, currency and retention settings (gap G-10) | Must be explicit configurable policies | Phase 2 | Walter |
 | P-007 | Meaning of answers 32, 33 context and 36 default (gaps G-03–G-05) | Unrecoverable from sources. Build as configurable; confirm only if Walter recalls | Before claiming those policies are implemented | Walter |
@@ -166,6 +170,7 @@ not an approved schedule.
 | ID | Item | Reason deferred | Revisit condition |
 | --- | --- | --- | --- |
 | B-003 | Migration of the 27TS workbook data (spec 16.1) | Needs the Phase 1 ledger and import job | Phase 5, or earlier if Walter asks |
+| B-004 | Search box + read-only AI help assistant (DEC-014): step 1 plain search across records and the user guide, step 2 local model answering with links | Waiting on 0.1.0 approval and P-012/P-013 | Walter decides P-012 |
 
 ## Build and Deployment Status
 

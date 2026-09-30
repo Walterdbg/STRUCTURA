@@ -1,0 +1,73 @@
+DAILY DEVELOPMENT WORKING LOG
+=============================
+
+Date: 2026-09-30
+Project: STRUCTURA
+Application version/build at start: 0.1.0-dev.6 (READY FOR TEST, running at http://127.0.0.1:8095)
+Roadmap version at start: 1.9.1
+Primary goal for today: Walter's tests of 0.1.0 (T-001..T-006); AI assistant decision
+Started at: 2026-09-30
+Working by: Claude, for Walter
+
+
+PROTECTED BASELINE / DO NOT BREAK
+---------------------------------
+- Locked requirements in spec v1.3 sections 2.2, 3 and 21.1 (see docs/BUSINESS_RULES.md)
+- Documented gaps G-01..G-10 stay open; no invented answers
+- 0.1.0-dev.6 is the build under test: no changes to it; fixes go into dev.7
+
+
+WORK ENTRIES
+============
+
+[001]
+Time: 2026-09-30, morning
+Area / feature: AI help assistant (new)
+Request or objective: Walter asked how to add a basic AI agent to help people search and find content and give usage guidance, never doing things, using only the local files.
+Action taken: Explained the design (read-only, same permission checks as the user, answers only from STRUCTURA's content with links) and the model-location choice: A = on the machine, B = Claude API. Walter chose A: "as in the tenant designed machine / device. but we require internet". Recorded DEC-014; added P-012 (when), P-013 (cloud-only tenants), B-004; noted the memory need on P-011. Walter also asked whether STRUCTURA is a web app: confirmed yes (DEC-011: browser-based, served by the cloud engine or the tenant's onsite box, nothing installed on users' devices).
+Files created: docs/daily-logs/Working_Log_2026-09-30.txt
+Files modified: ROADMAP.md (v1.10.0)
+Decision made: DEC-014 (Walter). Flagged: spec 21.1 had AI automation outside the baseline; Walter's direction takes precedence (spec 1.1), limited to read-only help.
+Verification performed: N/A (decision)
+Result: PASS
+Observed issue: None
+Follow-up required: Walter answers P-012 (timing) and P-013 (cloud-only tenants); Walter's 0.1.0 tests
+Roadmap update required: YES (done: v1.10.0)
+Roadmap section: Approved Decisions; Pending Decisions; Backlog
+
+---
+
+
+DEFECTS DISCOVERED TODAY
+========================
+
+None yet. Open from yesterday: DEFECT-002 (for dev.7).
+
+
+DECISIONS MADE TODAY
+====================
+
+[DECISION-001]
+Decision: DEC-014 - read-only AI help assistant, model on the tenant's own machine, internet still required
+Reason: Help people search and use the app without sending data to an outside AI service
+Approved by: Walter
+Affected area: New search + assistant module
+Roadmap update required: YES (done)
+
+
+DOCUMENT REGISTER
+=================
+
+docs/daily-logs/Working_Log_2026-09-30.txt | Daily working log | SUPPORTING | 001 | RETAIN
+
+
+DEPLOYMENT / BUILD RECORD
+=========================
+
+Deployment performed: NO (0.1.0-dev.6 unchanged, still running)
+
+
+END-OF-DAY RECONCILIATION
+=========================
+
+Ended at: (open)
