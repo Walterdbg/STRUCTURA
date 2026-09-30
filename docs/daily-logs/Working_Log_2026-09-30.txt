@@ -54,6 +54,23 @@ Roadmap section: Approved Decisions; Pending Decisions
 
 ---
 
+[003]
+Time: 2026-09-30
+Area / feature: Security - encryption of local data
+Request or objective: Walter: every local data repository must be encrypted. Records and files (signatures, inventory updates made offline) live in an encrypted folder the app uses. No direct access unless exported with our tool. The AI can read them to answer with the latest local data. Help content and other tenant data can live there, off the web.
+Action taken: Recorded DEC-016 (requirement) and flagged the honest limit from spec 15.2 (can't stop full admin control of a running, unlocked box; mitigated by locking the box down as an appliance). Proposed a two-layer design as P-014 (encrypted volume with TPM-sealed key + app-level per-tenant file encryption, encrypted backups, exports only via the tool). Added L-007: 0.1.0 photos and backups are not encrypted yet; test data only.
+Files created: None
+Files modified: ROADMAP.md (v1.11.0), this log
+Decision made: DEC-016 (Walter's requirement). The design is PROPOSED (P-014), not approved.
+Verification performed: N/A (decision)
+Result: PASS
+Observed issue: 0.1.0 does not meet DEC-016 yet (L-007)
+Follow-up required: Walter approves or changes P-014; P-012 still open
+Roadmap update required: YES (done: v1.11.0)
+Roadmap section: Approved Decisions; Pending Decisions; Known limitations
+
+---
+
 
 DEFECTS DISCOVERED TODAY
 ========================
@@ -76,6 +93,13 @@ Decision: DEC-015 - "outside" means outside our environment / secure connection 
 Reason: Walter's clarification of DEC-014
 Approved by: Walter
 Affected area: Search + assistant hosting
+Roadmap update required: YES (done)
+
+[DECISION-003]
+Decision: DEC-016 - all local stores of tenant data encrypted; access only via the app or its export tool; AI reads inside the encrypted area
+Reason: Walter's security requirement
+Approved by: Walter
+Affected area: Local engine, storage, backups, exports, AI
 Roadmap update required: YES (done)
 
 
