@@ -71,6 +71,23 @@ Roadmap section: Approved Decisions; Pending Decisions; Known limitations
 
 ---
 
+[004]
+Time: 2026-09-30
+Area / feature: Roadmap - placement of the assistant
+Request or objective: Walter: the assistant comes after version 1 [read as 0.1.0, confirming the proposal]; add it to the roadmap at the end of Phase 1; keep the naming.
+Action taken: Recorded DEC-017 (was P-012): search + assistant = version 0.2.0, the last part of Phase 1, after 0.1.0 is approved and frozen. Added it to the near-term plan as row 2b; removed B-004 from the backlog. Naming unchanged.
+Files created: None
+Files modified: ROADMAP.md (v1.12.0), this log
+Decision made: DEC-017 (Walter)
+Verification performed: N/A
+Result: PASS
+Observed issue: None
+Follow-up required: P-014 (encryption design) still waiting for Walter's explicit yes; 0.1.0 tests
+Roadmap update required: YES (done: v1.12.0)
+Roadmap section: Approved Decisions; Pending Decisions; Near-term work; Backlog
+
+---
+
 
 DEFECTS DISCOVERED TODAY
 ========================
@@ -100,6 +117,13 @@ Decision: DEC-016 - all local stores of tenant data encrypted; access only via t
 Reason: Walter's security requirement
 Approved by: Walter
 Affected area: Local engine, storage, backups, exports, AI
+Roadmap update required: YES (done)
+
+[DECISION-004]
+Decision: DEC-017 - search + assistant is version 0.2.0, end of Phase 1, after 0.1.0 approval
+Reason: Walter's decision
+Approved by: Walter
+Affected area: Roadmap / versioning
 Roadmap update required: YES (done)
 
 
