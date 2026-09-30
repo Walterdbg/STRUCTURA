@@ -88,6 +88,23 @@ Roadmap section: Approved Decisions; Pending Decisions; Near-term work; Backlog
 
 ---
 
+[005]
+Time: 2026-09-30
+Area / feature: Security - encryption design approval and scope
+Request or objective: Walter approved the encryption design. The folders where files are kept before submission are not encrypted; system data and files uploaded through the tool are. He asked me to review whether everything needs encrypting (best: only core data; photos if easy and simple).
+Action taken: Reviewed and recommended: layer 1 (encrypted storage area) for everything, since it costs nothing per file and already covers photos; layer 2 (per-file app encryption) only for core data (signatures, delivery evidence, record attachments, offline captures, backups, exports); product photos layer 1 only; users' source folders out of scope. Recorded DEC-018 (was P-014). Updated L-007 and the 0.2.0 plan row.
+Files created: None
+Files modified: ROADMAP.md (v1.13.0), this log
+Decision made: DEC-018 (Walter approved the design; scope from his instruction plus Claude's review)
+Verification performed: N/A
+Result: PASS
+Observed issue: None
+Follow-up required: Walter's 0.1.0 tests
+Roadmap update required: YES (done: v1.13.0)
+Roadmap section: Approved Decisions; Pending Decisions; Known limitations; Near-term work
+
+---
+
 
 DEFECTS DISCOVERED TODAY
 ========================
@@ -124,6 +141,13 @@ Decision: DEC-017 - search + assistant is version 0.2.0, end of Phase 1, after 0
 Reason: Walter's decision
 Approved by: Walter
 Affected area: Roadmap / versioning
+Roadmap update required: YES (done)
+
+[DECISION-005]
+Decision: DEC-018 - encryption design approved: layer 1 for everything; layer 2 only for core data; product photos layer 1 only; users' source folders out of scope
+Reason: Walter's approval with scope; per-file encryption kept to core data
+Approved by: Walter
+Affected area: Storage, backups, exports, local engine
 Roadmap update required: YES (done)
 
 
