@@ -37,6 +37,23 @@ Roadmap section: Approved Decisions; Pending Decisions; Backlog
 
 ---
 
+[002]
+Time: 2026-09-30
+Area / feature: AI help assistant - hosting boundary
+Request or objective: Walter: "outside=outside our environment / secure connections paths"
+Action taken: Recorded DEC-015, which clarifies DEC-014: the model may run anywhere inside our environment (tenant box, or STRUCTURA's cloud server), reached only over secure connections; never a third-party AI service. P-013 removed as resolved.
+Files created: None
+Files modified: ROADMAP.md (v1.10.1), this log
+Decision made: DEC-015 (Walter)
+Verification performed: N/A (decision)
+Result: PASS
+Observed issue: None
+Follow-up required: P-012 (timing) still open
+Roadmap update required: YES (done: v1.10.1)
+Roadmap section: Approved Decisions; Pending Decisions
+
+---
+
 
 DEFECTS DISCOVERED TODAY
 ========================
@@ -52,6 +69,13 @@ Decision: DEC-014 - read-only AI help assistant, model on the tenant's own machi
 Reason: Help people search and use the app without sending data to an outside AI service
 Approved by: Walter
 Affected area: New search + assistant module
+Roadmap update required: YES (done)
+
+[DECISION-002]
+Decision: DEC-015 - "outside" means outside our environment / secure connection paths; resolves P-013
+Reason: Walter's clarification of DEC-014
+Approved by: Walter
+Affected area: Search + assistant hosting
 Roadmap update required: YES (done)
 
 
