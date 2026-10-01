@@ -5,7 +5,7 @@
 | Field | Value |
 | --- | --- |
 | Project | STRUCTURA (ChatGPT project name: "Inventario") |
-| Roadmap version | `1.20.0` |
+| Roadmap version | `1.21.0` |
 | Current application version/build | `0.1.0-dev.9`: + Google maps (needs key), course tools 1-5; READY FOR TEST |
 | Last updated | 2026-09-30 |
 | Document owner | Walter |
@@ -40,6 +40,7 @@
 | 1.18.0 | 2026-09-30 | Claude (for Walter) | Build 0.1.0-dev.8: event maps, courses add-on, plans/tiers (DEC-024), place search on for testing (DEC-025, was P-016), timezones with offset and time; tests T-009, T-010 | DEC-024, DEC-025 |
 | 1.19.0 | 2026-09-30 | Claude (for Walter) | Walter chose Google for maps (DEC-026, supersedes DEC-025 for search) and ordered course tools 1-5 (DEC-027); building in 0.1.0-dev.9; Google key pending from Walter | DEC-026, DEC-027 |
 | 1.20.0 | 2026-09-30 | Claude (for Walter) | Build 0.1.0-dev.9: Google connection (search, streets + satellite, routing, elevation; through our server; OpenStreetMap fallback) and course tools 1-5; tests T-011..T-015; L-008 (Google logo), P-017 (Google key) | DEC-026, DEC-027 |
+| 1.21.0 | 2026-10-01 | Claude (for Walter) | Google key in place (P-017 closed): Google Cloud project STRUCTURA (structura-510315) under the ratioillustrata.com organization, free trial billing; key restricted to the 4 APIs and rotated. Live server checks of T-011..T-013 passed; Walter's screen tests still to do. New P-018 (trial ends 2026-12-31, daily quotas, lock key to server IP) | P-017 |
 
 ## Project Objective
 
@@ -108,9 +109,9 @@ Walter tests the build running on his PC (see docs/USER_GUIDE.md; sign in with h
 | T-007 | My account (D-009) | Click your name (👤) at the top: change the language and save (the whole screen changes, also after signing in again); change your password. Under Usuarios, switch a user off and give a user a new password | 0.1.0-dev.9 | READY FOR TEST |
 | T-008 | Map location (DEC-021, DEC-025) | On an Event, type a place in Lugar del evento and choose a suggestion (or click the map), drag the pin, save; reopen and check the point and name stayed | 0.1.0-dev.9 | READY FOR TEST |
 | T-009 | Event map (DEC-022, AT-07) | On an Event's Mapa del evento: add a stage point and a water station, draw a small area (bar storage), draw a delivery route with Terminar and mark it preferred; reopen and check everything stayed | 0.1.0-dev.9 | READY FOR TEST |
-| T-011 | Google maps (DEC-026) - after the key is in .env | Search "PH Palmas Bellas" in Lugar del evento and choose it; switch Mapa / Satélite on both maps | 0.1.0-dev.9 | WAITING FOR KEY |
-| T-012 | Follow streets (DEC-027 item 1) - needs the key | Draw a delivery route with Seguir calles on: the line follows the streets; use Ajustar a calles on an existing route | 0.1.0-dev.9 | WAITING FOR KEY |
-| T-013 | Elevation for drawn courses (item 2) - needs the key | Draw a course: the elevation profile appears by itself | 0.1.0-dev.9 | WAITING FOR KEY |
+| T-011 | Google maps (DEC-026) - after the key is in .env | Search "PH Palmas Bellas" in Lugar del evento and choose it; switch Mapa / Satélite on both maps | 0.1.0-dev.9 | READY FOR TEST (live server check PASS 2026-10-01: search found PH Palmas Bellas, streets + satellite pictures, copyright line) |
+| T-012 | Follow streets (DEC-027 item 1) - needs the key | Draw a delivery route with Seguir calles on: the line follows the streets; use Ajustar a calles on an existing route | 0.1.0-dev.9 | READY FOR TEST (live server check PASS 2026-10-01: walking route along streets, 3.3 km) |
+| T-013 | Elevation for drawn courses (item 2) - needs the key | Draw a course: the elevation profile appears by itself | 0.1.0-dev.9 | READY FOR TEST (live server check PASS 2026-10-01: heights returned) |
 | T-014 | Points on a course, start/finish, laps (items 3-4) | Place Agua at km 2 on a course; set 2 laps and out-and-back; check km in the list, total distance, start/finish markers | 0.1.0-dev.9 | READY FOR TEST |
 | T-015 | Course sheet (item 5) | Open Hoja del recorrido, check map, distances, elevation, stations; print or save as PDF | 0.1.0-dev.9 | READY FOR TEST |
 | T-010 | Running courses add-on (DEC-023) | Import a GPX from Strava/Garmin/plotaroute: check distance, km markers, elevation profile; export it again as GPX | 0.1.0-dev.9 | READY FOR TEST |
@@ -178,7 +179,8 @@ Walter tests the build running on his PC (see docs/USER_GUIDE.md; sign in with h
 
 | ID | Question | Options or constraint | Needed by | Owner |
 | --- | --- | --- | --- | --- |
-| P-017 | Google Maps Platform key (DEC-026) | Walter creates it (Places API (New), Map Tiles API, Routes API, Elevation API; restrict the key to these) and puts GOOGLE_MAPS_KEY=... in .env; then restart Docker. Until then OpenStreetMap is used and T-011..T-013 wait | Now | Walter |
+| P-018 | Google Cloud account follow-ups | (1) Free trial ends 2026-12-31 (or when the $300 credit is used): Walter upgrades to a paid account before then, or the maps fall back to OpenStreetMap. (2) Before upgrading, set daily quotas per API inside the free monthly amounts (Places autocomplete 300, Place details 300, Map Tiles 3,000, Routes 300, Elevation 300). (3) Budget alert $20/month. (4) When the hosted server exists, restrict the key to the server's IP address | Before 2026-12-31 | Walter |
+| P-017 | CLOSED 2026-10-01. Google Maps Platform key (DEC-026) | Walter creates it (Places API (New), Map Tiles API, Routes API, Elevation API; restrict the key to these) and puts GOOGLE_MAPS_KEY=... in .env; then restart Docker. Until then OpenStreetMap is used and T-011..T-013 wait | Now | Walter |
 | P-011 | Cloud hosting provider and onsite mini-PC model | Not blocking 0.1.0. DEC-014 adds a need: the machine running the local AI model needs roughly 8 GB of memory or more | Phase 4 / first cloud deployment | Walter |
 | P-005 | Licensing policy values (gap G-07) | Pricing, plans, capacity limits, offline grace period. The spec says: configuration only, never invented | Phase 4 | Walter |
 | P-006 | Tax, rounding, currency and retention settings (gap G-10) | Must be explicit configurable policies | Phase 2 | Walter |
