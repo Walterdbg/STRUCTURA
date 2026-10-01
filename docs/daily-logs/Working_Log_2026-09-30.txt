@@ -132,6 +132,7 @@ Open from yesterday: DEFECT-002 (for dev.7).
 [DEFECT-004] General error message stays after the field is fixed. Low. OPEN.
 [DEFECT-005] Past dates accepted with no warning. Medium. OPEN, rule pending P-015.
 [DEFECT-006] Date boxes show mm/dd/yyyy (browser English) on a Spanish screen. Low. OPEN.
+[DEFECT-007] Confirmar (reservar) is disabled with no products and gives no reason; Walter pressed it, nothing happened, also after signing out and in. Medium. OPEN. Fix: keep it pressable and say what is missing.
 
 
 DECISIONS MADE TODAY

@@ -5,7 +5,7 @@
 | Field | Value |
 | --- | --- |
 | Project | STRUCTURA (ChatGPT project name: "Inventario") |
-| Roadmap version | `1.14.0` |
+| Roadmap version | `1.14.1` |
 | Current application version/build | `0.1.0-dev.6`: 0.1.0 feature-complete, READY FOR TEST by Walter |
 | Last updated | 2026-09-30 |
 | Document owner | Walter |
@@ -32,6 +32,7 @@
 | 1.12.0 | 2026-09-30 | Claude (for Walter) | Walter placed the search + assistant at the end of Phase 1 as version 0.2.0, after 0.1.0 is approved (DEC-017, was P-012). B-004 moved into the Phase 1 plan | DEC-017 |
 | 1.13.0 | 2026-09-30 | Claude (for Walter) | Walter approved the encryption design with a scope: layer 1 (encrypted storage area) for everything; layer 2 (per-file app encryption) only for core data; product photos layer 1 only; users' own source folders out of scope (DEC-018, was P-014) | DEC-018 |
 | 1.14.0 | 2026-09-30 | Claude (for Walter) | Walter's T-002 testing found D-003..D-006 (date rules and form messages); P-015 opened (past dates) | D-003..D-006 |
+| 1.14.1 | 2026-09-30 | Claude (for Walter) | D-007: disabled Confirm button gives no reason | D-007 |
 
 ## Project Objective
 
@@ -107,6 +108,7 @@ Walter tests the build running on his PC (see docs/USER_GUIDE.md; sign in with h
 | D-004 | After fixing a refused date, the general message "Revise los campos marcados" stays on screen with no field marked, until the next save | Low | Walter's T-002 screenshots | OPEN | 0.1.0-dev.7 |
 | D-005 | Past dates are accepted with no warning (whole rental period 6 Aug–22 Sep already over on 30 Sep) | Medium | Walter's T-002 screenshots | OPEN, rule pending P-015 | 0.1.0-dev.7 |
 | D-006 | Date boxes show mm/dd/yyyy (browser's English) while the screen is in Spanish | Low | Walter's T-002 screenshots; same family as D-002 | OPEN | 0.1.0-dev.7 |
+| D-007 | **Confirmar (reservar)** is disabled when the Event has no products (or no dates) but says nothing: pressing it does nothing, with no explanation, also after signing out and in | Medium | Walter, 2026-09-30, on the Event from his T-002 test | OPEN | 0.1.0-dev.7: the button stays pressable and says what is missing ("Agregue al menos un producto" / "Indique salida y retorno"), plus a hint next to it |
 | D-001 | Saved Event stayed in edit mode | Low | Working_Log_2026-09-29 DEFECT-001 | CLOSED (fixed in dev.3) | — |
 
 ### Known limitations (by design in 0.1.0, not defects)
