@@ -128,7 +128,7 @@ Decision: DEC-030 - routes drawn piece by piece (on foot / by bike / by car / dr
 Approved by: Walter (described the functionality and asked to focus on it)
 Roadmap update required: YES (done)
 
-Proposed, waiting for Walter: P-019 (proposed DEC-028) warehouse departure at most 15 days before the event date, configurable per organization; same limit for the return?
+Proposed, waiting for Walter: P-020 (DEC-031 event types: Race vs Rental / delivery), P-021 (DEC-032 race tools like RunningAhead, items 1-9); P-019 (proposed DEC-028) warehouse departure at most 15 days before the event date, configurable per organization; same limit for the return?
 
 
 DOCUMENT REGISTER
