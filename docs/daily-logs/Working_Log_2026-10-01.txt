@@ -139,6 +139,23 @@ Roadmap section: Known Defects (D-014), Approved Decisions (DEC-030 note), Build
 
 ---
 
+[008]
+Time: 2026-10-01, night
+Area / feature: 0.1.0-dev.14 - motorcycle, home button, left menu (DEC-034), Maps repository (DEC-033)
+Request or objective: Walter: "Google paths are for cars / delivery, and delivery must add motorcycle"; "put the home button in the STRUCTURA text"; "move the current tabs to the left: inventory, events..."; "we can have pre-created routes or race courses, so that map isn't part of the event section, it's a full separate build"; "we can keep tabs if they serve a common purpose"; "or event subsections or the section"; he dismissed my two-option question, then: "I answer both for different reasons: we will have in maps a repository of routes; the routes will be saved as GPX maps always".
+Action taken: Motorcycle (Routes TWO_WHEELER, car fallback flagged) for delivery/pickup; courses drawn by hand only; stray check only for foot/bike. STRUCTURA name links home. Left menu with sections and tabs. Maps repository: migration 009 (route_repository + append-only route_repository_versions with GPX text, GeoJSON, props, length, source); shared GPX writer moved to domain; API list/detail/GPX download/create/new version/remove (map.edit; courses add-on; locked shape); screens: repository list and route editor (draw / GPX import, units, markers, course tools, elevation hover, versions with GPX downloads, duplicate, lock, remove); Event map: From repository (copy with source) and Save to repository. Interpretation recorded: own section; Events take copies (GPX snapshots).
+Files created: server/migrations/009_route_repository.sql, domain/src/gpx.ts, server/src/repository/routes.ts, server/test/repository.test.ts, web/src/pages/RepositoryPage.tsx
+Files modified: domain index/maps, server geo.ts + app.ts + tests (geo, foundation), web App.tsx, router.ts, i18n.ts, styles.css, api.ts, components/gpx.ts, components/routeEditor.ts, pages/EventMap.tsx, package files (0.1.0-dev.14), CHANGELOG.md, ROADMAP.md (v1.26.0), docs/USER_GUIDE.md
+Decision made: DEC-033, DEC-034 (Walter); DEC-030 refined (courses by hand; Google paths for deliveries, car / motorcycle)
+Verification performed: 134/134 server tests. Browser (dev run): menu and tabs; repository list with 2 routes; course opened, saved as v2 (heights added, versions v2/v1 listed), duplicated; rental Event picker offers only the delivery route, race Event offers all; copy added with source "Del repositorio: 10K Cinta Costera v2" and heights; Event course saved back to the repository; delivery tools 🚗 🏍 ✏️, course ✏️ only. Docker dev.14: migration 009 applied.
+Result: PASS for Claude's checks; NOT TESTED by Walter
+Observed issue: A stale test copy kept the test port, so the first repository check hit an old server (404); fixed by restarting it. Dates in the repository showed mm/dd in Spanish; fixed to dd/mm before the build.
+Follow-up required: Walter tests T-020, T-021 (and earlier); confirm the interpretation of "both" (own section + Event copies)
+Roadmap update required: YES (done: v1.26.0)
+Roadmap section: Approved Decisions (DEC-033, DEC-034, DEC-030 note), Ready for test (T-020, T-021), Backlog (B-006), Build status
+
+---
+
 
 DEFECTS DISCOVERED TODAY
 ========================
@@ -179,7 +196,7 @@ DEPLOYMENT / BUILD RECORD
 =========================
 
 Deployment performed: YES (local development only)
-Build/version: 0.1.0-dev.10, 0.1.0-dev.11, 0.1.0-dev.12, then 0.1.0-dev.13 (current)
+Build/version: 0.1.0-dev.10, 0.1.0-dev.11, 0.1.0-dev.12, 0.1.0-dev.13, then 0.1.0-dev.14 (current)
 Environment: Development - Docker on Walter's PC, http://127.0.0.1:8095
 Deployment result: PASS (Claude's checks); NOT TESTED by Walter
 Verification performed: health 0.1.0-dev.10, dev.11 and dev.12 (migration 008), Google status/search live

@@ -30,6 +30,7 @@ function fakeGoogle() {
     if (url.includes("createSession")) return json({ session: "sess-1", expiry: String(Math.floor(Date.now() / 1000) + 14 * 86400) });
     if (url.includes("/2dtiles/")) return new Response(new Uint8Array([0x89, 0x50, 0x4e, 0x47]), { status: 200, headers: { "content-type": "image/png" } });
     if (url.includes("/tile/v1/viewport")) return json({ copyright: "Map data ©2026 Google" });
+    if (url.includes("computeRoutes") && String(init?.body).includes("TWO_WHEELER") && String(init?.body).includes("-79.9")) return json({});
     if (url.includes("computeRoutes")) return json({ routes: [{ distanceMeters: 1234, polyline: { encodedPolyline: encodePolyline([[-79.5, 9.0], [-79.505, 9.002], [-79.51, 9.004]]) } }] });
     if (url.includes("elevation/json")) {
       const enc = decodeURIComponent(url.split("locations=enc:")[1]!.split("&")[0]!);
@@ -95,6 +96,20 @@ describe("map services through our server, with Google (DEC-026)", () => {
     expect(res.statusCode).toBe(200);
     expect(res.json().coordinates).toHaveLength(3);
     expect(calls.find((c) => c.url.includes("computeRoutes"))!.body).toMatchObject({ travelMode: "DRIVE" });
+  });
+
+  it("routes by motorcycle for deliveries; where Google has no motorcycle path, the car path is used and said", async () => {
+    const { fake, calls } = fakeGoogle();
+    vi.stubGlobal("fetch", fake);
+    const { app, cookie } = await setup("test-key", []);
+    const moto = await app.inject({ method: "POST", url: "/api/geo/route", headers: { cookie }, payload: { mode: "motorcycle", waypoints: [[-79.5, 9.0], [-79.51, 9.004]] } });
+    expect(moto.statusCode).toBe(200);
+    expect(moto.json().fallback).toBeUndefined();
+    expect(calls.filter((c) => c.url.includes("computeRoutes")).pop()!.body).toMatchObject({ travelMode: "TWO_WHEELER" });
+    const none = await app.inject({ method: "POST", url: "/api/geo/route", headers: { cookie }, payload: { mode: "motorcycle", waypoints: [[-79.9, 9.0], [-79.91, 9.004]] } });
+    expect(none.statusCode).toBe(200);
+    expect(none.json().fallback).toBe("drive");
+    expect(calls.filter((c) => c.url.includes("computeRoutes")).pop()!.body).toMatchObject({ travelMode: "DRIVE" });
   });
 
   it("routes on foot and by bike too (DEC-030 tools)", async () => {

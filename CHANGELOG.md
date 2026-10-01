@@ -3,6 +3,34 @@
 Every entry gets an **Intent** and a **Result**. A Result is only marked
 confirmed once actually verified, and can honestly say FAILED.
 
+## 0.1.0-dev.14 — 2026-10-01 (Maps repository, left menu, motorcycle) — NOT YET TESTED BY WALTER
+
+**Intent:** Walter: routes and race courses made ahead of time in their own
+Maps section, "saved as GPX maps always" (DEC-033); navigation moved to
+the left with tabs where pages belong together (DEC-034); STRUCTURA as the
+home button; "Google paths are for cars / delivery, and delivery must add
+motorcycle".
+
+**Result:**
+- **🗺 Mapas**: a repository of race courses and delivery / pickup routes.
+  Draw a route or import a GPX; every save is a new **GPX version** (v1,
+  v2, ...), each downloadable; Duplicate; lock courses; remove (versions
+  kept). Migration 009 (versions can never be changed).
+- **Events**: 📚 *From repository* adds a route as the Event's own copy
+  (noting route and version; rental Events aren't offered courses);
+  📚 *Save to repository* keeps an Event route for other Events.
+- **Left menu**: Inventario (tabs Productos / Movimientos / Ubicaciones),
+  Eventos, Mapas, Organización (tabs Usuarios / Reglas de fechas); account,
+  sign out and language at the bottom; STRUCTURA goes home.
+- **Route tools**: courses are drawn by hand (✏️ only); delivery and pickup
+  routes offer 🚗 By car, 🏍 By motorcycle and ✏️. Where Google has no
+  motorcycle paths, the car path is used and the screen says so.
+- Checked by Claude: 134/134 server tests (repository versions, GPX
+  content, append-only, add-on, lock, permissions; motorcycle with car
+  fallback); browser: menu and tabs, repository list / open / save v2 with
+  heights / duplicate, rental vs race picker, copy into a race Event with
+  source and heights, save an Event route to the repository; delivery
+  tools 🚗 🏍 ✏️ and course ✏️ only; Docker dev.14 with migration 009.
 ## 0.1.0-dev.13 — 2026-10-01 (you draw the route) — NOT YET TESTED BY WALTER
 
 **Intent:** Walter: street tools "even on foot take a wild route around

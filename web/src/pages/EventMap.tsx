@@ -74,18 +74,21 @@ const toDraft = (f: MapFeature): Draft => ({
   props: f.props ?? {},
 });
 
-const TOOL_ICON: Record<SegMode, string> = { w: "👣", b: "🚲", d: "🚗", l: "✏️" };
-const TOOL_LABEL: Record<SegMode, TextKey> = { w: "map.toolFoot", b: "map.toolBike", d: "map.toolCar", l: "map.toolDraw" };
-const TOOL_HINT: Record<SegMode, TextKey> = { w: "map.toolFootHint", b: "map.toolBikeHint", d: "map.toolCarHint", l: "map.toolDrawHint" };
+const TOOL_ICON: Record<SegMode, string> = { w: "👣", b: "🚲", d: "🚗", m: "🏍", l: "✏️" };
+const TOOL_LABEL: Record<SegMode, TextKey> = { w: "map.toolFoot", b: "map.toolBike", d: "map.toolCar", m: "map.toolMoto", l: "map.toolDraw" };
+const TOOL_HINT: Record<SegMode, TextKey> = { w: "map.toolFootHint", b: "map.toolBikeHint", d: "map.toolCarHint", m: "map.toolMotoHint", l: "map.toolDrawHint" };
 
 // Walter draws the route himself ("you don't need to find the route, I'm
 // creating it"): every route starts with Draw; the street tools are a help
 // he switches on to bend a piece onto the street between two of his clicks.
 const byCar = (category: string) => category === "delivery" || category === "pickup";
-const defaultTool = (_category: string, _routing: boolean): SegMode => "l";
+// Google paths are for cars and deliveries (Walter, 2026-10-01): delivery and
+// pickup routes offer car and motorcycle and start by car; courses are drawn.
+const streetTools = (category: string, routing: boolean): SegMode[] => (routing && byCar(category) ? ["d", "m"] : []);
+const defaultTool = (category: string, routing: boolean): SegMode => (routing && byCar(category) ? "d" : "l");
 
 // One street piece from Google, through our server.
-async function routeBetween(from: number[], to: number[], mode: "walk" | "bike" | "drive"): Promise<number[][]> {
+async function routeBetween(from: number[], to: number[], mode: "walk" | "bike" | "drive" | "motorcycle"): Promise<{ coordinates: number[][]; fallback?: string }> {
   const res = await fetch("/api/geo/route", {
     method: "POST",
     credentials: "same-origin",
@@ -94,7 +97,31 @@ async function routeBetween(from: number[], to: number[], mode: "walk" | "bike" 
   });
   const body = await res.json();
   if (!res.ok) throw new ApiError(res.status, body?.error ?? "internal", body?.message ?? "", body?.details);
-  return body.coordinates as number[][];
+  return body as { coordinates: number[][]; fallback?: string };
+}
+
+interface RepoItem {
+  id: string;
+  name: string;
+  category: string;
+  notes: string | null;
+  currentVersion: number;
+  lengthMeters: number;
+  props: FeatureProps;
+  geometry?: { type: "LineString"; coordinates: number[][] };
+}
+
+// Laps, out-and-back and the lock belong to courses only.
+function routeProps(category: string, props: FeatureProps): FeatureProps {
+  const out: FeatureProps = { ...props };
+  delete out.courseId;
+  delete out.distanceM;
+  if (category !== "course") {
+    delete out.laps;
+    delete out.outAndBack;
+    delete out.locked;
+  }
+  return out;
 }
 
 // The pieces of a route kept with it (DEC-030), so it can be edited later.
@@ -137,6 +164,9 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
   const [routeBusy, setRouteBusy] = useState(false);
   // A piece drawn straight because the street route went the long way round.
   const [notice, setNotice] = useState<string | null>(null);
+  // Maps repository (DEC-033): routes made ahead of time, taken as copies.
+  const [repoList, setRepoList] = useState<RepoItem[] | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const statusRef = useRef<GeoStatus | null>(null);
   statusRef.current = status;
   // DEC-031: running courses only on races (and with the courses add-on).
@@ -253,6 +283,13 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
     if (active) m.scrollWheelZoom.enable();
     else if (!document.fullscreenElement) m.scrollWheelZoom.disable();
   }, [drawing, editingShape]);
+
+  // A route whose type changes keeps only the tools that type offers.
+  useEffect(() => {
+    if (drawing !== "route" || !draft) return;
+    if (tool !== "l" && !streetTools(draft.category, Boolean(status?.routing)).includes(tool)) setTool(defaultTool(draft.category, Boolean(status?.routing)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft?.category, drawing]);
 
   // Ctrl+Z (Cmd+Z) undoes the last step while a route is being drawn.
   useEffect(() => {
@@ -385,7 +422,13 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
     editor.current?.stop();
     const ed = new RouteEditor(m, {
       color: ROUTE_COLOR[category] ?? "#1971c2",
-      route: statusRef.current?.routing ? routeBetween : null,
+      route: statusRef.current?.routing
+        ? async (from, to, mode) => {
+            const r = await routeBetween(from, to, mode);
+            if (r.fallback === "drive") setNotice(t("map.motoFallback"));
+            return r.coordinates;
+          }
+        : null,
       mode: () => toolRef.current,
       onBusy: (b) => setRouteBusy(b),
       onRouteFailed: () => setNotice(t("map.noRoute")),
@@ -493,7 +536,7 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
     if (!draft || draft.geometry.type !== "LineString") return;
     setError(null);
     if (!editor.current) editShape();
-    const streets: SegMode = byCar(draft.category) ? "d" : "w";
+    const streets: SegMode = "d";
     setTool(streets);
     toolRef.current = streets;
     editor.current?.remakeAll();
@@ -554,6 +597,62 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
       setError(kind === "license_restricted" ? "map.coursesLocked" : tooFar ? "map.beyondEnd" : kind === "validation" ? "map.badShape" : describeFailure(err).message);
     } finally {
       setBusy(null);
+    }
+  }
+
+  // DEC-033: the repository's routes this Event can use (courses only on races).
+  async function openRepository() {
+    setInfo(null);
+    try {
+      const r = await get<{ items: RepoItem[] }>("/api/repository/routes");
+      setRepoList(r.items.filter((x) => x.category !== "course" || hasCourses));
+    } catch (err) {
+      setError(describeFailure(err).message);
+    }
+  }
+
+  // Take a repository route into this Event as its own copy.
+  async function useFromRepository(item: RepoItem) {
+    try {
+      const full = await get<RepoItem>(`/api/repository/routes/${item.id}`);
+      const payload = {
+        kind: "route",
+        category: full.category,
+        label: full.name,
+        notes: full.notes,
+        preferred: false,
+        geometry: full.geometry,
+        source: `${t("repo.fromRepo")}: ${full.name} v${full.currentVersion}`.slice(0, 300),
+        props: routeProps(full.category, full.props ?? {}),
+      };
+      await send("POST", `/api/events/${event.id}/map`, newCommand(payload));
+      setRepoList(null);
+      setInfo(t("repo.added"));
+      await load();
+      if (full.geometry) centreOn(full.geometry);
+    } catch (err) {
+      setError(err instanceof ApiError && err.kind === "license_restricted" ? "map.coursesLocked" : describeFailure(err).message);
+    }
+  }
+
+  // Keep an Event route in the repository for other Events (a new route there).
+  async function saveToRepository() {
+    if (!draft || draft.kind !== "route") return;
+    const geometry = currentGeometry() ?? draft.geometry;
+    if (geometry.type !== "LineString" || geometry.coordinates.length < 2) return setError("map.needTwoPoints");
+    const payload = {
+      name: draft.label.trim() || t(`map.cat.${draft.category}` as TextKey),
+      category: draft.category,
+      notes: draft.notes.trim() || null,
+      geometry,
+      props: routeProps(draft.category, draft.props),
+      source: `${t("nav.events")}: ${event.designation}`.slice(0, 300),
+    };
+    try {
+      await send("POST", "/api/repository/routes", newCommand(payload));
+      setInfo(t("repo.savedToRepo"));
+    } catch (err) {
+      setError(err instanceof ApiError && err.kind === "license_restricted" ? "map.coursesLocked" : describeFailure(err).message);
     }
   }
 
@@ -666,6 +765,9 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
             <button type="button" onClick={() => startDraw("route", "pickup")}>
               ↩ {t("map.addPickup")}
             </button>
+            <button type="button" title={t("repo.pick")} onClick={() => void openRepository()}>
+              📚 {t("repo.fromRepo")}
+            </button>
             {/* DEC-031: no course tools on a rental Event. */}
             {!isRace ? null : hasCourses ? (
               <>
@@ -685,6 +787,44 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
           </div>
         )}
       </div>
+      {info && (
+        <p className="good small" role="status">
+          {info}
+        </p>
+      )}
+      {repoList && (
+        <div className="map-panel">
+          <div className="row between">
+            <strong>{t("repo.pick")}</strong>
+            <button type="button" onClick={() => setRepoList(null)}>
+              {t("common.cancel")}
+            </button>
+          </div>
+          {repoList.length === 0 ? (
+            <p className="muted small">{t("repo.noneFit")}</p>
+          ) : (
+            <table>
+              <tbody>
+                {repoList.map((r) => (
+                  <tr key={r.id}>
+                    <td>
+                      {r.category === "course" ? "🏃" : r.category === "pickup" ? "↩" : "🚚"} {r.name}
+                    </td>
+                    <td className="small">{t(`map.cat.${r.category}` as TextKey)}</td>
+                    <td className="num small">{dist(r.lengthMeters)}</td>
+                    <td className="small">v{r.currentVersion}</td>
+                    <td>
+                      <button type="button" className="primary" onClick={() => void useFromRepository(r)}>
+                        ➕ {t("common.add")}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
       <div className="row between map-tools">
         <p className="muted small flush">{canEdit ? t(isRace ? "map.hint" : "map.hintRental") : t("map.viewOnly")}</p>
         <div className="row">
@@ -718,8 +858,7 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
             <>
               {/* The tool for the next piece (DEC-030), like RunningAhead. */}
               <span className="seg-tools" role="group" aria-label={t("map.tool")}>
-                {status?.routing &&
-                  (["w", "b", "d"] as SegMode[]).map((m) => (
+                {streetTools(draft?.category ?? "", Boolean(status?.routing)).map((m) => (
                     <button key={m} type="button" className={tool === m ? "primary" : ""} aria-pressed={tool === m} title={t(TOOL_HINT[m])} onClick={() => setTool(m)}>
                       {TOOL_ICON[m]} {t(TOOL_LABEL[m])}
                     </button>
@@ -902,7 +1041,7 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
                   ⊙ {t("map.centre")}
                 </button>
               )}
-              {draft.kind === "route" && status?.routing && !draft.props.locked && (
+              {draft.kind === "route" && byCar(draft.category) && status?.routing && !draft.props.locked && (
                 <button type="button" disabled={busy !== null} onClick={() => void refit()}>
                   🛣 {t("map.snapAgain")}
                 </button>
@@ -915,6 +1054,11 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
               {(draft.id || draft.kind === "route") && !editingShape && !drawing && !draft.props.courseId && !draft.props.locked && (
                 <button type="button" onClick={editShape}>
                   ✎ {t("map.editShape")}
+                </button>
+              )}
+              {draft.id && draft.kind === "route" && !drawing && (
+                <button type="button" title={t("repo.toRepo")} onClick={() => void saveToRepository()}>
+                  📚 {t("repo.toRepo")}
                 </button>
               )}
               {draft.id && (

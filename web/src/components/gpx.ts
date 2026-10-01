@@ -22,21 +22,7 @@ export function parseGpx(text: string): { name: string | null; coordinates: numb
   return { name, coordinates: allEle ? coordinates : coordinates.map((c) => [c[0]!, c[1]!]) };
 }
 
-export function toGpx(name: string, coordinates: number[][]): string {
-  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const pts = coordinates
-    .map((c) => `      <trkpt lat="${c[1]}" lon="${c[0]}">${c.length > 2 ? `<ele>${c[2]}</ele>` : ""}</trkpt>`)
-    .join("\n");
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="STRUCTURA" xmlns="http://www.topografix.com/GPX/1/1">
-  <trk>
-    <name>${esc(name)}</name>
-    <trkseg>
-${pts}
-    </trkseg>
-  </trk>
-</gpx>
-`;
-}
+// The GPX writer is shared with the server (Maps repository, DEC-033).
+export { toGpx } from "@structura/domain";
 
 const round = (v: number) => Math.round(v * 1e6) / 1e6;

@@ -54,9 +54,9 @@ export const featurePropsSchema = z
     distanceM: z.number().min(0).max(1_000_000).optional(),
     // Routes drawn piece by piece (Walter, 2026-10-01): where each clicked
     // point sits in the line, and the tool used for each piece
-    // (w = on foot, b = by bike, d = by car, l = straight), so the pieces can be edited.
+    // (d = by car, m = by motorcycle, l = drawn straight; w / b on foot and by\n    // bike from earlier routes), so the pieces can be edited.
     anchorIdx: z.array(z.number().int().min(0)).min(2).max(2000).optional(),
-    segModes: z.array(z.enum(["w", "b", "d", "l"])).max(1999).optional(),
+    segModes: z.array(z.enum(["w", "b", "d", "m", "l"])).max(1999).optional(),
     // DEC-032 item 6: a locked course can't change shape until unlocked.
     locked: z.boolean().optional(),
   })

@@ -11,6 +11,7 @@ import type { Db } from "./db.js";
 import { mapRoutes } from "./events/maps.js";
 import { eventRoutes } from "./events/routes.js";
 import { geoRoutes } from "./geo.js";
+import { repositoryRoutes } from "./repository/routes.js";
 import { identityRoutes } from "./identity/routes.js";
 import { inventoryRoutes } from "./inventory/routes.js";
 import { filesystemStore, type FileStore } from "./storage.js";
@@ -70,6 +71,7 @@ export async function buildApp({ db, config, logger = true, store }: AppOptions)
   inventoryRoutes(app, db, config, files);
   auditRoutes(app, db);
   geoRoutes(app, db, config);
+  repositoryRoutes(app, db, config);
 
   app.get("/api/health", async (_req, reply) => {
     let database: "ok" | "unavailable" = "ok";

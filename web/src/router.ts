@@ -13,7 +13,11 @@ export type Route =
   | { name: "locations" }
   | { name: "movements" }
   | { name: "movementNew"; itemId?: string }
+  | { name: "maps" }
+  | { name: "mapNew"; category?: string }
+  | { name: "map"; id: string }
   | { name: "members" }
+  | { name: "dateRules" }
   | { name: "account" };
 
 export function parseRoute(hash: string): Route {
@@ -35,8 +39,14 @@ export function parseRoute(hash: string): Route {
     case "movements":
       if (parts[1] === "new") return { name: "movementNew", itemId: params.get("item") ?? undefined };
       return { name: "movements" };
+    case "maps":
+      if (parts[1] === "new") return { name: "mapNew", category: params.get("cat") ?? undefined };
+      if (parts[1]) return { name: "map", id: parts[1] };
+      return { name: "maps" };
     case "members":
       return { name: "members" };
+    case "settings":
+      return parts[1] === "date-rules" ? { name: "dateRules" } : { name: "members" };
     case "account":
       return { name: "account" };
     default:

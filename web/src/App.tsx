@@ -14,6 +14,7 @@ import { MovementsList } from "./pages/MovementsList.js";
 import { Login } from "./pages/Login.js";
 import { Members } from "./pages/Members.js";
 import { DateRulesCard } from "./pages/DateRulesCard.js";
+import { RepositoryList, RepositoryRouteEditor } from "./pages/RepositoryPage.js";
 import { MyAccount } from "./pages/MyAccount.js";
 import { SystemStatus } from "./pages/SystemStatus.js";
 
@@ -86,68 +87,110 @@ export function App() {
     else if (route.name === "locations") body = <Locations canManage={can("inventory.manage")} />;
     else if (route.name === "movements") body = <MovementsList canMove={can("movement.post")} canCorrect={can("movement.correct")} />;
     else if (route.name === "movementNew") body = <MovementForm key={route.itemId ?? "any"} presetItemId={route.itemId} />;
-    else if (route.name === "members" && can("tenant.admin"))
-    body = (
-      <>
-        <Members />
-        <DateRulesCard />
-      </>
-    );
+    else if (route.name === "maps") body = <RepositoryList canEdit={can("map.edit")} features={me.tenant.features ?? []} />;
+    else if (route.name === "mapNew") body = <RepositoryRouteEditor key={`new-${route.category ?? ""}`} newCategory={route.category} canEdit={can("map.edit")} features={me.tenant.features ?? []} />;
+    else if (route.name === "map") body = <RepositoryRouteEditor key={route.id} routeId={route.id} canEdit={can("map.edit")} features={me.tenant.features ?? []} />;
+    else if (route.name === "members" && can("tenant.admin")) body = <Members />;
+    else if (route.name === "dateRules" && can("tenant.admin")) body = <DateRulesCard />;
     else if (route.name === "account") body = <MyAccount me={me} onSaved={refresh} onLocale={setLocale} />;
     else body = <EventsList canCreate={can("event.manage")} />;
   }
 
+  // Left menu (Walter, 2026-10-01): the main sections, Inventory first;
+  // tabs inside a section when its pages serve a common purpose.
+  const section =
+    route.name === "inventory" || route.name.startsWith("item") || route.name.startsWith("movement") || route.name === "locations"
+      ? "inventory"
+      : route.name === "maps" || route.name === "mapNew" || route.name === "map"
+        ? "maps"
+        : route.name === "members" || route.name === "dateRules"
+        ? "organization"
+        : route.name === "account"
+          ? "account"
+          : "events";
+  const tabs: { href: string; label: string; active: boolean }[] =
+    section === "inventory"
+      ? [
+          { href: "#/inventory", label: t("nav.products"), active: route.name === "inventory" || route.name.startsWith("item") },
+          { href: "#/movements", label: t("nav.movements"), active: route.name.startsWith("movement") },
+          { href: "#/locations", label: t("nav.locations"), active: route.name === "locations" },
+        ]
+      : section === "organization"
+        ? [
+            { href: "#/members", label: t("nav.members"), active: route.name === "members" },
+            { href: "#/settings/date-rules", label: t("rules.title"), active: route.name === "dateRules" },
+          ]
+        : [];
+
   return (
     <LocaleContext.Provider value={locale}>
-      <div className="page">
-        <header className="top">
-          <div>
-            <h1>STRUCTURA</h1>
-            <p className="tagline">
-              {session.kind === "signedIn" ? session.me.tenant.name : t("app.tagline")}
-            </p>
-          </div>
-          {languagePicker}
-        </header>
-
-        {session.kind === "signedIn" && (
-          <nav className="nav">
-            <a href="#/events" className={route.name.startsWith("event") ? "active" : ""}>
-              {t("nav.events")}
+      {session.kind !== "signedIn" ? (
+        <div className="page">
+          <header className="top">
+            <div>
+              <h1>STRUCTURA</h1>
+              <p className="tagline">{t("app.tagline")}</p>
+            </div>
+            {languagePicker}
+          </header>
+          <main>{body}</main>
+          <SystemStatus />
+        </div>
+      ) : (
+        <div className="shell">
+          <aside className="side">
+            {/* The name is the home button (Walter, 2026-10-01). */}
+            <a href="#/events" className="home-link brand" title={t("nav.home")}>
+              STRUCTURA
             </a>
-            <a href="#/inventory" className={route.name === "inventory" || route.name.startsWith("item") ? "active" : ""}>
-              {t("nav.inventory")}
-            </a>
-            <a href="#/movements" className={route.name.startsWith("movement") ? "active" : ""}>
-              {t("nav.movements")}
-            </a>
-            <a href="#/locations" className={route.name === "locations" ? "active" : ""}>
-              {t("nav.locations")}
-            </a>
-            {session.me.capabilities.includes("tenant.admin") && (
-              <a href="#/members" className={route.name === "members" ? "active" : ""}>
-                {t("nav.members")}
+            <p className="tagline">{session.me.tenant.name}</p>
+            <nav className="side-nav">
+              <a href="#/inventory" className={section === "inventory" ? "active" : ""}>
+                📦 {t("nav.inventory")}
               </a>
+              <a href="#/events" className={section === "events" ? "active" : ""}>
+                📅 {t("nav.events")}
+              </a>
+              <a href="#/maps" className={section === "maps" ? "active" : ""}>
+                🗺 {t("nav.maps")}
+              </a>
+              {session.me.capabilities.includes("tenant.admin") && (
+                <a href="#/members" className={section === "organization" ? "active" : ""}>
+                  ⚙️ {t("nav.organization")}
+                </a>
+              )}
+            </nav>
+            <div className="side-foot">
+              <a href="#/account" className={section === "account" ? "active" : ""} title={t("account.title")}>
+                👤 {session.me.user.displayName}
+              </a>
+              <button
+                type="button"
+                onClick={async () => {
+                  await api.logout().catch(() => {});
+                  setSession({ kind: "signedOut" });
+                }}
+              >
+                {t("nav.signOut")}
+              </button>
+              {languagePicker}
+            </div>
+          </aside>
+          <div className="content">
+            {tabs.length > 0 && (
+              <nav className="tabs">
+                {tabs.map((tb) => (
+                  <a key={tb.href} href={tb.href} className={tb.active ? "active" : ""}>
+                    {tb.label}
+                  </a>
+                ))}
+              </nav>
             )}
-            <span className="spacer" />
-            <a href="#/account" className={`who ${route.name === "account" ? "active" : ""}`} title={t("account.title")}>
-              👤 {session.me.user.displayName}
-            </a>
-            <button
-              type="button"
-              onClick={async () => {
-                await api.logout().catch(() => {});
-                setSession({ kind: "signedOut" });
-              }}
-            >
-              {t("nav.signOut")}
-            </button>
-          </nav>
-        )}
-
-        <main>{body}</main>
-        <SystemStatus />
-      </div>
+            <main>{body}</main>
+            <SystemStatus />
+          </div>
+        </div>
+      )}
     </LocaleContext.Provider>
   );
 }

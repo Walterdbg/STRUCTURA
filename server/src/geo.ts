@@ -104,7 +104,7 @@ async function tileSession(key: string, type: "roadmap" | "satellite", locale: s
 // ---------------------------------------------------------------- input rules
 const position = z.tuple([z.number().min(-180).max(180), z.number().min(-90).max(90)]).rest(z.number());
 const routeBody = z.object({
-  mode: z.enum(["drive", "walk", "bike"]),
+  mode: z.enum(["drive", "motorcycle", "walk", "bike"]),
   waypoints: z.array(position).min(2).max(25),
 });
 const elevationBody = z.object({ coordinates: z.array(position).min(2).max(5000) });
@@ -229,7 +229,8 @@ export function geoRoutes(app: FastifyInstance, db: Db, config: Config): void {
     if (!body.success) throw new DomainError("validation", "Between 2 and 25 points are needed");
     const pts = body.data.waypoints;
     const ll = (p: number[]) => ({ location: { latLng: { latitude: p[1], longitude: p[0] } } });
-    try {
+    const TRAVEL = { drive: "DRIVE", motorcycle: "TWO_WHEELER", walk: "WALK", bike: "BICYCLE" } as const;
+    const ask = async (travelMode: string) => {
       const r = await google<{ routes?: { distanceMeters?: number; polyline?: { encodedPolyline?: string } }[] }>(
         "https://routes.googleapis.com/directions/v2:computeRoutes",
         key,
@@ -239,14 +240,25 @@ export function geoRoutes(app: FastifyInstance, db: Db, config: Config): void {
             origin: ll(pts[0]!),
             destination: ll(pts[pts.length - 1]!),
             intermediates: pts.slice(1, -1).map(ll),
-            travelMode: ({ drive: "DRIVE", walk: "WALK", bike: "BICYCLE" } as const)[body.data.mode],
+            travelMode,
             polylineQuality: "HIGH_QUALITY",
           },
         }
       );
       const enc = r.routes?.[0]?.polyline?.encodedPolyline;
-      if (!enc) throw new DomainError("validation", "No route was found between those points", { reason: "no_route" });
-      return { coordinates: decodePolyline(enc).map(([lng, lat]) => [round6(lng), round6(lat)]), distanceMeters: r.routes?.[0]?.distanceMeters ?? null };
+      return enc ? { coordinates: decodePolyline(enc).map(([lng, lat]) => [round6(lng), round6(lat)]), distanceMeters: r.routes?.[0]?.distanceMeters ?? null } : null;
+    };
+    try {
+      let found = await ask(TRAVEL[body.data.mode]).catch(() => null);
+      // Motorcycle paths exist only in some countries: there the car path is
+      // used, and the screen says so (Walter, 2026-10-01).
+      let fallback: "drive" | undefined;
+      if (!found && body.data.mode === "motorcycle") {
+        found = await ask("DRIVE");
+        if (found) fallback = "drive";
+      }
+      if (!found) throw new DomainError("validation", "No route was found between those points", { reason: "no_route" });
+      return { ...found, ...(fallback ? { fallback } : {}) };
     } catch (err) {
       if (err instanceof DomainError) throw err;
       throw unavailable("Street routing");

@@ -17,7 +17,10 @@ const DETOUR_EXTRA_M = 60;
 // touching a changed point are remade with the tool chosen at that moment.
 // Undo goes back one step at a time.
 
-export type SegMode = "w" | "b" | "d" | "l";
+// Courses are drawn by hand ("l"); Google paths are for deliveries and
+// pickups: "d" by car, "m" by motorcycle (Walter, 2026-10-01). "w" / "b"
+// (on foot, by bike) remain only in routes drawn before.
+export type SegMode = "w" | "b" | "d" | "m" | "l";
 export interface Segment {
   mode: SegMode;
   coords: number[][]; // from one point to the next, both included
@@ -27,8 +30,8 @@ export interface RouteShape {
   segments: Segment[];
 }
 
-type Router = (from: number[], to: number[], mode: "walk" | "bike" | "drive") => Promise<number[][]>;
-const TRAVEL = { w: "walk", b: "bike", d: "drive" } as const;
+type Router = (from: number[], to: number[], mode: "walk" | "bike" | "drive" | "motorcycle") => Promise<number[][]>;
+const TRAVEL = { w: "walk", b: "bike", d: "drive", m: "motorcycle" } as const;
 
 export interface EditorOptions {
   color: string;
@@ -87,7 +90,7 @@ export function shapeFromLine(coords: number[][], anchorIdx?: number[], modes?: 
   const segments: Segment[] = [];
   for (let i = 1; i < idx!.length; i++) {
     const m = valid ? modes?.[i - 1] : undefined;
-    segments.push({ mode: m === "w" || m === "b" || m === "d" ? m : "l", coords: coords.slice(idx![i - 1]!, idx![i]! + 1) });
+    segments.push({ mode: m === "w" || m === "b" || m === "d" || m === "m" ? m : "l", coords: coords.slice(idx![i - 1]!, idx![i]! + 1) });
   }
   return { anchors: idx!.map((i) => coords[i]!), segments };
 }
@@ -264,7 +267,9 @@ export class RouteEditor {
           const piece = [f, ...coords.slice(1, -1), t];
           const routed = lineLength(piece);
           const direct = Math.max(haversine(f, t), reference);
-          if (routed > direct * DETOUR_RATIO && routed - direct > DETOUR_EXTRA_M) {
+          // Car and motorcycle paths are trusted as Google gives them (one-way
+          // streets make real detours); the stray check is for foot and bike.
+          if ((mode === "w" || mode === "b") && routed > direct * DETOUR_RATIO && routed - direct > DETOUR_EXTRA_M) {
             this.opts.onDetour(routed, haversine(f, t));
             return { mode: "l", coords: [f, t] };
           }

@@ -8,6 +8,13 @@ What 0.1.0 covers: users, Events, inventory, locations, movements and
 reservations. Quotes, invoices, deliveries, maps, the customer portal and
 the onsite engine come in later phases (ROADMAP).
 
+## Moving around
+
+The menu on the left has the main sections: **Inventario** (tabs *Productos*, *Movimientos*,
+*Ubicaciones*), **Eventos**, **Mapas** and, for administrators, **Organización** (tabs *Usuarios*,
+*Reglas de fechas*). Your name (My account), *Cerrar sesión* and the language are at the bottom.
+Click **STRUCTURA** at the top to go home.
+
 ## Signing in
 
 Use the email and password your administrator gave you. After 5 wrong
@@ -256,6 +263,20 @@ Without the add-on these buttons show 🔒 *Recorridos (complemento)*.
 
 **Map / Satellite:** with the Google key, every map has a **🗺 Mapa / 🛰 Satélite** switch at
 the top right, and place search finds buildings (e.g. "PH Palmas Bellas").
+
+## Maps: the route repository
+
+**Mapas** keeps race courses and delivery / pickup routes made ahead of time, for any Event.
+
+- **+ Nuevo recorrido / Nueva ruta de entrega / Nueva ruta de recogida**: draw it (courses by hand
+  with ✏️; deliveries and pickups with 🚗 car, 🏍 motorcycle or ✏️), or **⤒ GPX** to import a file.
+- Every **Guardar** keeps a **new version as a GPX file** (v1, v2, ...). The *Versiones* list
+  downloads any of them. Earlier versions are never lost.
+- **⧉ Duplicar** starts a new route from this one (e.g. next year's course). **🔒** locks a final
+  course.
+- In an Event's map, **📚 Del repositorio** adds a route **as the Event's own copy**: later changes
+  in the repository don't change that Event. A rental Event isn't offered race courses.
+- On an Event route, **📚 Guardar en el repositorio** keeps it for other Events.
 
 ## Change history
 
