@@ -5,8 +5,8 @@
 | Field | Value |
 | --- | --- |
 | Project | STRUCTURA (ChatGPT project name: "Inventario") |
-| Roadmap version | `1.16.0` |
-| Current application version/build | `0.1.0-dev.7`: fixes from Walter's testing + My account + map location, READY FOR TEST |
+| Roadmap version | `1.18.0` |
+| Current application version/build | `0.1.0-dev.8`: + event maps, running courses add-on, plans, place search, timezones with time; READY FOR TEST |
 | Last updated | 2026-09-30 |
 | Document owner | Walter |
 | Current environment | Development (Docker on Walter's PC, port 8095) |
@@ -36,6 +36,8 @@
 | 1.15.0 | 2026-09-30 | Claude (for Walter) | Walter: an Event cannot be in the past (DEC-019, was P-015); D-005 fix defined | DEC-019 |
 | 1.15.1 | 2026-09-30 | Claude (for Walter) | Walter refined DEC-019: the rental may already have started; event date and expected return must be today or later (DEC-020) | DEC-020 |
 | 1.16.0 | 2026-09-30 | Claude (for Walter) | Build 0.1.0-dev.7: D-002..D-009 fixed; My account (D-009); Event location as a map point (DEC-021); place-search provider pending (P-016); tests T-007, T-008 added | D-002..D-009, DEC-021 |
+| 1.17.0 | 2026-09-30 | Claude (for Walter) | Walter added event maps (points, small areas, routes; UC-05 brought forward) and running courses like Strava as a paid add-on (DEC-022, DEC-023); building in 0.1.0-dev.8 | DEC-022, DEC-023 |
+| 1.18.0 | 2026-09-30 | Claude (for Walter) | Build 0.1.0-dev.8: event maps, courses add-on, plans/tiers (DEC-024), place search on for testing (DEC-025, was P-016), timezones with offset and time; tests T-009, T-010 | DEC-024, DEC-025 |
 
 ## Project Objective
 
@@ -95,14 +97,16 @@ Walter tests the build running on his PC (see docs/USER_GUIDE.md; sign in with h
 
 | ID | Work item | Test required | Build | Status |
 | --- | --- | --- | --- | --- |
-| T-001 | Accounts (DEC-013) | Sign in; add a user with the *Operador de inventario* profile; sign in as that user and confirm they can record a movement but not create a product | 0.1.0-dev.7 | READY FOR TEST |
-| T-002 | Events (UC-13, AT-01) | Create an Event with only a provisional name, no customer; set event date, departure and expected return; reopen it and check the three dates stayed separate | 0.1.0-dev.7 | RETEST: FAILED on dev.6 (D-003..D-006); fixed in dev.7 |
-| T-003 | Catalog and photos (UC-12, AT-05, AT-36) | Create two products, one with a barcode starting with 0; give each a photo; switch between them and check each keeps its own photo and the barcode keeps its 0 | 0.1.0-dev.7 | READY FOR TEST |
-| T-004 | Movements (UC-03, AT-02, AT-03) | Create a warehouse and an event location; move part of a product's stock with no trip; try to move more than is there (must be refused); correct a movement and check the original stays, marked *Corregido* | 0.1.0-dev.7 | READY FOR TEST |
-| T-005 | Reservations (UC-21, AT-04, AT-31) | Confirm Event A holding all of a product until day 14; an Event B starting day 14 must be refused; starting day 15 must confirm | 0.1.0-dev.7 | READY FOR TEST |
-| T-006 | Change history (AT-18) | Open *Historial de cambios* on an Event and a product; check who/what/when is shown | 0.1.0-dev.7 | READY FOR TEST |
-| T-007 | My account (D-009) | Click your name (👤) at the top: change the language and save (the whole screen changes, also after signing in again); change your password. Under Usuarios, switch a user off and give a user a new password | 0.1.0-dev.7 | READY FOR TEST |
-| T-008 | Map location (DEC-021) | On an Event, click the map to mark the place, drag the pin, save; reopen and check the point and name stayed | 0.1.0-dev.7 | READY FOR TEST |
+| T-001 | Accounts (DEC-013) | Sign in; add a user with the *Operador de inventario* profile; sign in as that user and confirm they can record a movement but not create a product | 0.1.0-dev.8 | READY FOR TEST |
+| T-002 | Events (UC-13, AT-01) | Create an Event with only a provisional name, no customer; set event date, departure and expected return; reopen it and check the three dates stayed separate | 0.1.0-dev.8 | RETEST: FAILED on dev.6 (D-003..D-006); fixed in dev.7 |
+| T-003 | Catalog and photos (UC-12, AT-05, AT-36) | Create two products, one with a barcode starting with 0; give each a photo; switch between them and check each keeps its own photo and the barcode keeps its 0 | 0.1.0-dev.8 | READY FOR TEST |
+| T-004 | Movements (UC-03, AT-02, AT-03) | Create a warehouse and an event location; move part of a product's stock with no trip; try to move more than is there (must be refused); correct a movement and check the original stays, marked *Corregido* | 0.1.0-dev.8 | READY FOR TEST |
+| T-005 | Reservations (UC-21, AT-04, AT-31) | Confirm Event A holding all of a product until day 14; an Event B starting day 14 must be refused; starting day 15 must confirm | 0.1.0-dev.8 | READY FOR TEST |
+| T-006 | Change history (AT-18) | Open *Historial de cambios* on an Event and a product; check who/what/when is shown | 0.1.0-dev.8 | READY FOR TEST |
+| T-007 | My account (D-009) | Click your name (👤) at the top: change the language and save (the whole screen changes, also after signing in again); change your password. Under Usuarios, switch a user off and give a user a new password | 0.1.0-dev.8 | READY FOR TEST |
+| T-008 | Map location (DEC-021, DEC-025) | On an Event, type a place in Lugar del evento and choose a suggestion (or click the map), drag the pin, save; reopen and check the point and name stayed | 0.1.0-dev.8 | READY FOR TEST |
+| T-009 | Event map (DEC-022, AT-07) | On an Event's Mapa del evento: add a stage point and a water station, draw a small area (bar storage), draw a delivery route with Terminar and mark it preferred; reopen and check everything stayed | 0.1.0-dev.8 | READY FOR TEST |
+| T-010 | Running courses add-on (DEC-023) | Import a GPX from Strava/Garmin/plotaroute: check distance, km markers, elevation profile; export it again as GPX | 0.1.0-dev.8 | READY FOR TEST |
 
 ## Known Defects
 
@@ -154,13 +158,16 @@ Walter tests the build running on his PC (see docs/USER_GUIDE.md; sign in with h
 | DEC-018 | 2026-09-30 | Encryption design (implements DEC-016). **Layer 1**, an encrypted storage area on every STRUCTURA machine (LUKS2 on the box, key sealed in its TPM chip; equivalent disk encryption in the cloud), holds the database, all managed files, backups and the AI index. **Layer 2**, per-tenant file encryption by the app (AES-256-GCM), applies only to core data: signatures, delivery photos and evidence, files attached to records, records and files captured offline and waiting to sync, backups and exports. **Product catalog photos get layer 1 only.** Users' own folders where they keep files before uploading (e.g. the 27TS `Imagenes` folder) are outside STRUCTURA and not encrypted by it. Exports only through STRUCTURA's tool; the box is locked down as an appliance | Walter approved the design (was P-014) and asked to limit per-file encryption to core data, photos only where simple. Layer 1 already encrypts photos at no extra effort | Storage, backups, exports, local engine |
 | DEC-019 | 2026-09-30 | **An Event cannot be in the past.** When dates are entered or changed (new Event, or editing its dates), the event date, warehouse departure and expected return can't be before today in the Event's timezone, and the event date must lie between departure and expected return (D-003). An Event created correctly stays usable after its dates pass (edit other fields, returns, closing). Past Events enter only as history through the future 27TS import tool (Phase 5, B-003), not through the screen | Walter's decision (was P-015) | Events, reservations |
 | DEC-021 | 2026-09-30 | The Event location is a **searchable map point**, not only text: search a place or click the map, drag the pin; the place name plus WGS84 coordinates are saved (migration 005). Map pictures from OpenStreetMap (normal viewing). Place search goes only through our server | Walter: "the location must be a searchable map button, not only text". First step towards the Phase 3 event maps (spec 12) | Events, maps |
+| DEC-022 | 2026-09-30 | **Event map** for every Event (UC-05, AT-07, brought forward from Phase 3): labeled **points** (stage, water station, portable toilets, bar or drinks storage, first aid, entrance, parking, other), small **areas** (same types) and **routes** (delivery, other; one can be marked preferred; length shown). WGS84 / GeoJSON geometry, versioned and audited, never a location hierarchy, never moves stock | Walter: "add the capacity to create routes ... delivery or small areas POI such as water stations, stage platforms, portapotties or bar drinks storage" | Maps |
+| DEC-023 | 2026-09-30 | **Running courses like Strava are a paid add-on** ("Running courses"): course routes with total distance, km markers, elevation profile and climb (from the GPX file's own heights), GPX import/export (Strava, Garmin, plotaroute). Enabled per organization; enforced by the server (a tenant without it can't save a course). An operator switches it on until the Phase 4 license system; prices remain undefined (gap G-07) | Walter: "running routes also, like Strava ... could be an additional paid feature" | Maps, licensing |
+| DEC-024 | 2026-09-30 | **Plans (tiers) are configurable**: a plan lists the features it includes; each organization has one plan plus individual add-ons; what it can use = plan + add-ons, enforced by the server. Managed with the operator tool `features.js` until the Phase 4 license system. No plan contents hard-coded; plan names and prices stay Walter's (G-07). **Walter's test organizations always get full access** | Walter: "be sure that we can control what is part of what tier ... always give me a user with full access" | Licensing |
+| DEC-025 | 2026-09-30 | Place search for the Event map is **on**, using OpenStreetMap's public search through our server (option A), while testing; our own copy inside our environment (option B) before real customers. One box: typing shows suggestions; nearest to the map view first | Walter: "the search isn't activated, that isn't the way" (was P-016). Limit: the free search knows streets, areas, landmarks, not every building | Maps |
 | DEC-020 | 2026-09-30 | Refines DEC-019: an Event can be created **after its rental period has started** (warehouse departure in the past is allowed, e.g. a week into the rental), but **the event date and the expected return must be today or later**. Confirming (reserving) is refused only when the expected return is already past. Event date must still lie between departure and expected return | Walter: "I can create the event a week into the rental period, but the rental period and the event must end after today". Read as today-or-later: a rental ending today is still current | Events, reservations |
 
 ## Pending Decisions
 
 | ID | Question | Options or constraint | Needed by | Owner |
 | --- | --- | --- | --- | --- |
-| P-016 | Place-search provider for the Event map (DEC-021) | A: OpenStreetMap public search (free, light use, only the typed words leave, via our server). B: our own copy inside our environment (e.g. Panama data; nothing leaves; more setup). C: Google/Mapbox (best, paid, words leave). Proposed: A while testing, B before real customers. Search is OFF until decided; the map works by clicking | Before relying on search | Walter |
 | P-011 | Cloud hosting provider and onsite mini-PC model | Not blocking 0.1.0. DEC-014 adds a need: the machine running the local AI model needs roughly 8 GB of memory or more | Phase 4 / first cloud deployment | Walter |
 | P-005 | Licensing policy values (gap G-07) | Pricing, plans, capacity limits, offline grace period. The spec says: configuration only, never invented | Phase 4 | Walter |
 | P-006 | Tax, rounding, currency and retention settings (gap G-10) | Must be explicit configurable policies | Phase 2 | Walter |
@@ -201,7 +208,7 @@ not an approved schedule.
 
 | Environment | Current build | Deployment date | Verification | Status |
 | --- | --- | --- | --- | --- |
-| Development | `0.1.0-dev.7` | 2026-09-30 | 108/108 tests; browser check of every fix; Docker check | Running on Walter's PC (http://127.0.0.1:8095), waiting for Walter's tests |
+| Development | `0.1.0-dev.8` | 2026-09-30 | 117/117 tests; browser check; Docker check | Running on Walter's PC (http://127.0.0.1:8095), waiting for Walter's tests |
 | Test | None | — | — | Not started |
 | Production | None | — | — | Not started |
 

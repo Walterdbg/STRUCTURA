@@ -36,6 +36,7 @@ export function LocationPicker({ value, onChange, disabled }: { value: MapPoint;
   const [results, setResults] = useState<Place[] | null>(null);
   const [searchOn, setSearchOn] = useState<boolean | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [searching, setSearching] = useState(false);
 
   useEffect(() => {
     get<{ search: boolean }>("/api/geo/status").then((s) => setSearchOn(s.search), () => setSearchOn(false));
@@ -101,74 +102,80 @@ export function LocationPicker({ value, onChange, disabled }: { value: MapPoint;
     if (!m.getBounds().contains(pos)) m.setView(pos, Math.max(m.getZoom(), 15));
   }, [value.lat, value.lng, disabled, onChange]);
 
-  async function search() {
-    setMessage(null);
-    if (query.trim().length < 3) {
-      setMessage(t("map.typeMore"));
+  // One box: typing the place searches it (after a short pause), and the
+  // suggestions appear right under it. Places near the map's current
+  // view come first.
+  useEffect(() => {
+    if (disabled || !searchOn || !query || query.trim().length < 3) {
+      setResults(null);
       return;
     }
-    try {
-      const r = await get<{ items: Place[] }>(`/api/geo/search?q=${encodeURIComponent(query.trim())}&lang=${locale}`);
-      setResults(r.items);
-      if (r.items.length === 0) setMessage(t("map.noResults"));
-    } catch (err) {
-      const reason = err instanceof ApiError ? err.details?.reason : undefined;
-      setMessage(t(reason === "not_configured" ? "map.searchOff" : "map.searchFailed"));
-    }
-  }
+    const timer = setTimeout(async () => {
+      setSearching(true);
+      setMessage(null);
+      try {
+        const b = map.current?.getBounds();
+        const near = b ? `&near=${[b.getWest(), b.getNorth(), b.getEast(), b.getSouth()].map((v) => v.toFixed(4)).join(",")}` : "";
+        const r = await get<{ items: Place[] }>(`/api/geo/search?q=${encodeURIComponent(query.trim())}&lang=${locale}${near}`);
+        setResults(r.items);
+        if (r.items.length === 0) setMessage(t("map.noResults"));
+      } catch (err) {
+        const reason = err instanceof ApiError ? err.details?.reason : undefined;
+        setMessage(t(reason === "not_configured" ? "map.searchOff" : "map.searchFailed"));
+      } finally {
+        setSearching(false);
+      }
+    }, 700);
+    return () => clearTimeout(timer);
+    // Only a new query starts a search (t changes every render).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, disabled, searchOn, locale]);
 
   function choose(p: Place) {
     setResults(null);
     setQuery("");
+    setMessage(null);
     onChange({ name: p.name, lat: round(p.lat), lng: round(p.lng) });
-    map.current?.setView([p.lat, p.lng], 16);
+    map.current?.setView([p.lat, p.lng], 17);
   }
 
   return (
     <div className="location-picker">
-      <input
-        aria-label={t("event.location")}
-        placeholder={t("map.namePlaceholder")}
-        value={value.name}
-        disabled={disabled}
-        onChange={(e) => onChange({ ...value, name: e.target.value })}
-      />
-      {!disabled && (
-        <div className="row search-row">
-          <input
-            type="search"
-            aria-label={t("map.search")}
-            placeholder={searchOn === false ? t("map.searchOff") : t("map.searchPlaceholder")}
-            value={query}
-            disabled={searchOn === false}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                void search();
-              }
-            }}
-          />
-          <button type="button" onClick={() => void search()} disabled={searchOn === false}>
-            🔍 {t("map.search")}
+      <div className="search-box">
+        <input
+          aria-label={t("event.location")}
+          placeholder={searchOn ? t("map.searchPlaceholder") : t("map.namePlaceholder")}
+          value={value.name}
+          disabled={disabled}
+          autoComplete="off"
+          onChange={(e) => {
+            onChange({ ...value, name: e.target.value });
+            setQuery(e.target.value);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setResults(null);
+            if (e.key === "Enter") e.preventDefault();
+          }}
+        />
+        {searching && <span className="small muted searching">🔍…</span>}
+        {results && results.length > 0 && (
+          <ul className="results" role="listbox">
+            {results.map((p) => (
+              <li key={`${p.lat},${p.lng}`}>
+                <button type="button" onClick={() => choose(p)}>
+                  📍 {p.name}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      {!disabled && value.lat !== null && (
+        <div className="row">
+          <button type="button" onClick={() => onChange({ ...value, lat: null, lng: null })}>
+            {t("map.clear")}
           </button>
-          {value.lat !== null && (
-            <button type="button" onClick={() => onChange({ ...value, lat: null, lng: null })}>
-              {t("map.clear")}
-            </button>
-          )}
         </div>
-      )}
-      {results && results.length > 0 && (
-        <ul className="results">
-          {results.map((p) => (
-            <li key={`${p.lat},${p.lng}`}>
-              <button type="button" className="link" onClick={() => choose(p)}>
-                {p.name}
-              </button>
-            </li>
-          ))}
-        </ul>
       )}
       {message && <p className="small bad">{message}</p>}
       <div ref={box} className="map-box" />

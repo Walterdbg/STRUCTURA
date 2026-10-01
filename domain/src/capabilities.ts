@@ -9,6 +9,7 @@ export const CAPABILITIES = [
   "movement.post",
   "movement.correct",
   "attachment.manage",
+  "map.edit",
   "audit.read",
   "report.read",
 ] as const;
@@ -28,6 +29,7 @@ export const PRESETS = {
     "movement.post",
     "movement.correct",
     "attachment.manage",
+    "map.edit",
     "report.read",
   ],
   inventory_operator: ["movement.post", "attachment.manage"],

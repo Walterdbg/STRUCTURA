@@ -47,6 +47,31 @@ arrives in Phase 4 (ROADMAP).
 4. Open `http://127.0.0.1:PORT/` and sign in with that email and
    password.
 
+## Plans and add-ons (operator)
+
+What an organization can use = its plan's features + its own add-ons
+(DEC-024). Nothing is hard-coded; you define the plans. Run inside the app
+container (`docker compose exec structura-app node server/dist/cli/features.js …`):
+
+| Command | What it does |
+| --- | --- |
+| `--list` | Every organization: plan, add-ons, what it can use |
+| `--plans` | The plans you have defined |
+| `--plan-save CODE --name "NAME" --features courses` | Create or change a plan |
+| `--tenant "ORGANIZATION" --plan CODE` | Give an organization a plan (`none` to remove it) |
+| `--tenant "ORGANIZATION" --enable courses` / `--disable courses` | Add-on on or off |
+| `--tenant "ORGANIZATION" --full` | Every add-on (for test organizations) |
+
+Each change is recorded in that organization's history.
+
+## Place search (map)
+
+`GEOCODER=nominatim` in `.env` switches on place search for the Event map,
+using OpenStreetMap's public search through STRUCTURA's own server (only
+the typed words leave). `GEOCODER=none` switches it off; the map still
+works by clicking. Before real customers this will move to our own copy of
+the search (DEC-025).
+
 ## Where things are kept
 
 | What | Where |

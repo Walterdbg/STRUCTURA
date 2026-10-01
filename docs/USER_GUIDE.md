@@ -110,9 +110,13 @@ written dd/mm/aaaa in Spanish (mm/dd/yyyy in English).
   you can record an Event a week into its rental.
 - Once an Event is created, it stays editable after its dates pass (notes, responsible…).
 
-**Location:** type the place name, then mark it on the map: click the map, or search a
-place (when place search is switched on), and drag the pin to adjust it. The name and the
-exact point are saved.
+**Location:** type the place or address in *Lugar del evento*. Suggestions appear
+underneath; choose one and the pin drops on the map. You can also just click the map,
+and drag the pin to adjust it. The name and the exact point are saved. (The free place
+search knows streets, areas and well-known places, not every building; if a building
+isn't found, search its street or area and drag the pin.)
+
+**Timezone:** each option shows its UTC offset and the time it is there now.
 
 ### Products and reservations
 
@@ -147,6 +151,33 @@ Everything owned, except:
 - stock sitting at an event location that no reservation explains
 - stock still out after its Event's expected return date, which keeps
   blocking until it is actually brought back
+
+## Event map
+
+At the bottom of each Event, **Mapa del evento** holds what the team needs on site:
+
+- **📍 Punto**: click where it goes, then choose its type and name it, e.g.
+  🎤 "Tarima uno", 💧 "Agua km 5", 🚻 "Baños norte", 🍹 "Bodega de bebidas", ⛑️ first aid,
+  🚪 entrance, 🅿️ parking.
+- **⬠ Área**: click each corner of a small zone (bar storage, stage platform) and press
+  **Terminar**.
+- **〰 Ruta**: click each point of the route in order and press **Terminar**. Mark
+  *Ruta preferida* for the delivery path to use. Its length is shown.
+
+Click any item on the map or in the list to rename it, change its shape or remove it.
+Removed items stay in the history. The map never moves stock and never creates
+inventory locations.
+
+### Running courses (paid add-on)
+
+Organizations with the *Recorridos* add-on also get:
+
+- **🏃 Recorrido**: draw a race course, with km markers on the map and the total distance.
+- **⤒ GPX**: import a course from Strava, Garmin or plotaroute. If the file has heights,
+  the elevation profile and total climb are shown.
+- **⤓ GPX** in the list: export a course for runners or timing companies.
+
+Without the add-on these buttons show 🔒 *Recorridos (complemento)*.
 
 ## Change history
 

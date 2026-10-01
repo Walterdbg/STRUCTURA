@@ -7,6 +7,7 @@
 //
 import os from "node:os";
 import path from "node:path";
+import { FEATURES } from "@structura/domain";
 import { buildApp } from "../app.js";
 import { loadConfig } from "../config.js";
 import { openDb } from "../db.js";
@@ -36,6 +37,10 @@ await bootstrapTenant(db, {
   adminName: "Admin de prueba",
   adminPassword: password,
 });
+// The test organization has full access: every add-on (Walter's rule).
+// DEV_FEATURES=none (or a list) narrows it for testing a restriction.
+const devFeatures = process.env.DEV_FEATURES === undefined ? [...FEATURES] : process.env.DEV_FEATURES.split(",").map((s) => s.trim()).filter((s) => s && s !== "none");
+await db.query("UPDATE tenants SET features = $1", [devFeatures]);
 const app = await buildApp({ db, config, logger: false });
 await app.listen({ host: "127.0.0.1", port: config.port });
 console.log(`STRUCTURA dev (in-memory) on http://127.0.0.1:${config.port} - version ${config.appVersion}`);

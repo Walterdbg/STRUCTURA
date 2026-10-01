@@ -63,7 +63,7 @@ export const send = <R>(method: "POST" | "PUT", url: string, cmd: Command<unknow
 // ---------------------------------------------------------------- shapes
 export interface Me {
   user: { id: string; email: string; displayName: string; locale: string };
-  tenant: { id: string; name: string; defaultTimezone: string; defaultLocale: string };
+  tenant: { id: string; name: string; defaultTimezone: string; defaultLocale: string; features: string[] };
   capabilities: Capability[];
 }
 
@@ -91,6 +91,19 @@ export interface EventRecord {
   closureDate: string | null;
   notes: string | null;
   fulfillmentState: "draft" | "confirmed" | "delivered" | "partial_return" | "closed" | "cancelled";
+  version: number;
+}
+
+export interface MapFeature {
+  id: string;
+  kind: "point" | "area" | "route";
+  category: string;
+  label: string;
+  notes: string | null;
+  geometry: { type: "Point" | "Polygon" | "LineString"; coordinates: any };
+  preferred: boolean;
+  source: string | null;
+  lengthMeters: number | null;
   version: number;
 }
 

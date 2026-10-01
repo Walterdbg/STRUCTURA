@@ -156,6 +156,23 @@ Roadmap section: Known Defects (D-002..D-009 fixed), Approved Decisions (DEC-020
 
 ---
 
+[009]
+Time: 2026-09-30
+Area / feature: 0.1.0-dev.8 - event maps, running courses add-on, plans, place search, timezones
+Request or objective: Walter: add routes (delivery) and small-area POIs (water stations, stage platforms, portable toilets, bar drinks storage); running routes like Strava as an additional paid feature; be sure we control what is part of what tier; always give him a user with full access; timezones without times aren't useful; "the search isn't activated, that isn't the way".
+Action taken: Migration 006 (plans, tenants.plan_id + features, map_features; map.edit granted to admins/operations managers). Domain maps.ts (geometry validation, distance, km markers, elevation profile). Server: map commands (create/update/remove, versioned, audited), course add-on enforced by the server, effective features = plan + add-ons, operator tool features.js, geo search sorted by distance to the map view. Web: EventMap (Leaflet-Geoman drawing; points, areas, routes, preferred; Terminar button; course km markers, elevation chart, GPX import/export), single-box place search with suggestions, timezone options with offset and local time. GEOCODER=nominatim in .env (testing). Saved memories: full access for Walter's test accounts.
+Files created: server/migrations/006_event_maps.sql, domain/src/maps.ts, server/src/events/maps.ts, server/src/cli/features.ts, server/test/maps.test.ts, web/src/pages/EventMap.tsx, web/src/components/gpx.ts
+Files modified: domain capabilities/index, server app/geo/identity routes/dev cli, web EventForm/LocationPicker/TimezoneSelect/api/i18n/styles, .env.example, .env (local), all package.json (0.1.0-dev.8), CHANGELOG, ROADMAP (v1.17.0, v1.18.0), USER_GUIDE, INSTALL
+Decision made: DEC-022, DEC-023, DEC-024, DEC-025 (all Walter). P-016 resolved by DEC-025.
+Verification performed: 117/117 tests. Dev run in the browser: Playa Coronado search (Panama first) drops the pin; Tarima uno point; 457 m preferred delivery route via Terminar; GPX course 5.02 km, elevation 2-15 m, +13/-12 m, km markers 1-5, GPX export shown. Docker dev.8: migration 006 applied; test admin has all 10 permissions; test organization can use courses (features.js --full); search answers from Docker.
+Result: PASS (Claude); Walter to test T-008..T-010 (and the earlier list)
+Observed issue: Two drawing problems found during the check and fixed before the build (clicking an item while drawing opened it; finishing a route by re-clicking its last point failed under another icon, hence the Terminar button). The drawing tool's own hints were in English; now follow the screen's language. Free place search doesn't know every building (e.g. "edificio palmas bellas"); documented.
+Follow-up required: Walter tests; option B (own search copy) before real customers; plan names/prices are Walter's
+Roadmap update required: YES (done: v1.18.0)
+Roadmap section: Approved Decisions (DEC-022..025), Pending (P-016 removed), Ready for test (T-008..T-010), Build status
+
+---
+
 
 DEFECTS DISCOVERED TODAY
 ========================
@@ -226,6 +243,11 @@ Decision: DEC-021 - Event location is a searchable map point, not only text
 Approved by: Walter
 Roadmap update required: YES (done)
 
+[DECISION-009]
+Decision: DEC-022 event maps (points, areas, routes); DEC-023 running courses as a paid add-on; DEC-024 configurable plans + full access for Walter's test orgs; DEC-025 place search on (OpenStreetMap, testing)
+Approved by: Walter
+Roadmap update required: YES (done)
+
 
 DOCUMENT REGISTER
 =================
@@ -237,7 +259,7 @@ DEPLOYMENT / BUILD RECORD
 =========================
 
 Deployment performed: YES (local development only)
-Build/version: 0.1.0-dev.7
+Build/version: 0.1.0-dev.7, then 0.1.0-dev.8 (current)
 Environment: Development - Docker on Walter's PC, http://127.0.0.1:8095
 Deployment result: PASS (Claude's checks); NOT TESTED by Walter
 Verification performed: health 0.1.0-dev.7, migration 005 applied, past rental refused, place search off

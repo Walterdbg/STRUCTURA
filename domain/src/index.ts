@@ -9,3 +9,4 @@ export * from "./locale.js";
 export * from "./capabilities.js";
 export * from "./events.js";
 export * from "./inventory.js";
+export * from "./maps.js";

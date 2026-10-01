@@ -3,6 +3,73 @@
 Every entry gets an **Intent** and a **Result**. A Result is only marked
 confirmed once actually verified, and can honestly say FAILED.
 
+## 0.1.0-dev.8 — 2026-09-30 (event maps, running courses add-on, plans, place search, timezones) — NOT YET TESTED BY WALTER
+
+**Intent:** Walter asked for event maps with routes and small points of
+interest, running courses like Strava as a paid feature, control over
+which features belong to which tier, working place search, and timezones
+that show their time.
+
+**Result:**
+- **Event map** on every Event (migration `006_event_maps.sql`; UC-05,
+  AT-07; DEC-022):
+  - points with a type and a name: stage, water station, portable
+    toilets, bar or drinks storage, first aid, entrance, parking, other
+  - small areas with the same types
+  - routes, either delivery or other; one per type can be marked
+    preferred, and each shows its length
+  - drawing: choose the tool, click on the map, press **Terminar** for
+    routes and areas; click an item to rename it, change its shape or
+    remove it (removal stays in the history)
+  - the drawing tool's own hints follow the screen's language
+  - never creates locations, never moves stock (checked by test)
+- **Running courses, paid add-on "courses"** (DEC-023):
+  - course routes with km markers, total distance, an elevation profile
+    and the climb, taken from the GPX file's own heights
+  - **GPX import and export** (Strava, Garmin, plotaroute)
+  - enforced by the server: an organization without it gets "add-on not
+    active" and the screen shows 🔒
+- **Plans (tiers) and add-ons** (DEC-024):
+  - a `plans` table: code, name, which features each plan includes
+  - each organization has one plan, plus add-ons on top
+  - what it can use = plan + add-ons, controlled with the operator tool
+    `server/dist/cli/features.js` (list, define a plan, assign it, add or
+    remove an add-on, `--full`)
+  - nothing about plan contents is hard-coded, and no plans or prices
+    were invented (gap G-07)
+- **Full access for Walter's test organization:** every add-on is on, and
+  the dev starter turns everything on by default. The new `map.edit`
+  permission was granted to existing administrators and operations
+  managers.
+- **Place search switched on** with OpenStreetMap's search through our
+  server (DEC-025):
+  - one box: typing the place shows suggestions underneath, choosing one
+    drops the pin
+  - places nearest the map's current view come first
+  - limit: the free search knows streets, areas and well-known places,
+    not every building (e.g. "edificio palmas bellas" isn't found; "palmas
+    bellas" is)
+- **Timezones** show their UTC offset and the current local time, sorted
+  by offset, e.g. "(UTC−05:00) America/Panama · 10:06 p. m.".
+- Tests: 117/117 (domain 10, server 107).
+- Checked in the browser (dev run):
+  - typed "Playa Coronado" and Panama came first; choosing it dropped the
+    pin
+  - placed "Tarima uno"; drew a 457 m preferred delivery route ending at
+    it with **Terminar**
+  - imported a GPX: course of 5.02 km, elevation 2–15 m, ↑13 m, km
+    markers 1–5, GPX export button shown
+- Found and fixed during that check, before the build:
+  - clicking an existing item while drawing opened it instead of
+    continuing the drawing
+  - finishing a route by clicking its last point failed when that point
+    sat under another icon, hence the **Terminar** button
+- Checked in Docker dev.8:
+  - migration 006 applied
+  - the test admin has all 10 permissions, and the organization can use
+    "courses"
+  - place search answers
+
 ## 0.1.0-dev.7 — 2026-09-30 (fixes from Walter's testing; My account; map location) — NOT YET TESTED BY WALTER
 
 **Intent:** fix everything Walter found while testing dev.6 (D-002 to

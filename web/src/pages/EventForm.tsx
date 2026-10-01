@@ -8,6 +8,7 @@ import { TimezoneSelect } from "../components/TimezoneSelect.js";
 import { go } from "../router.js";
 import { AuditPanel } from "./AuditPanel.js";
 import { EventLines } from "./EventLines.js";
+import { EventMap } from "./EventMap.js";
 
 interface FormState {
   designation: string;
@@ -331,6 +332,14 @@ export function EventForm({ me, eventId }: { me: Me; eventId?: string }) {
         canManage={canEdit}
         canCommit={me.capabilities.includes("reservation.commit")}
         onChanged={() => void load()}
+      />
+    )}
+    {record && !editing && (
+      <EventMap
+        key={record.id}
+        event={record}
+        canEdit={me.capabilities.includes("map.edit")}
+        features={me.tenant.features ?? []}
       />
     )}
     {record && me.capabilities.includes("audit.read") && (

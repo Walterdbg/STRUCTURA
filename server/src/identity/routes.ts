@@ -16,6 +16,7 @@ import {
 } from "../auth.js";
 import type { Config } from "../config.js";
 import type { Db } from "../db.js";
+import { tenantFeatures } from "../events/maps.js";
 import { commandRequest, idParam } from "../http.js";
 import {
   changeMyPassword,
@@ -101,8 +102,8 @@ export function identityRoutes(app: FastifyInstance, db: Db, config: Config): vo
 
   app.get("/api/auth/me", async (req) => {
     const auth = requireAuth(req);
-    const t = await db.query<{ display_name: string; default_timezone: string; default_locale: string }>(
-      "SELECT display_name, default_timezone, default_locale FROM tenants WHERE id = $1",
+    const t = await db.query<{ display_name: string; default_timezone: string; default_locale: string; features: string[] }>(
+      "SELECT display_name, default_timezone, default_locale, features FROM tenants WHERE id = $1",
       [auth.tenantId]
     );
     const tenant = t.rows[0]!;
@@ -113,6 +114,7 @@ export function identityRoutes(app: FastifyInstance, db: Db, config: Config): vo
         name: tenant.display_name,
         defaultTimezone: tenant.default_timezone,
         defaultLocale: tenant.default_locale,
+        features: await tenantFeatures(db, auth.tenantId),
       },
       capabilities: auth.capabilities,
     };
