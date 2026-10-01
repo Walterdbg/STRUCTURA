@@ -5,7 +5,7 @@
 | Field | Value |
 | --- | --- |
 | Project | STRUCTURA (ChatGPT project name: "Inventario") |
-| Roadmap version | `1.14.1` |
+| Roadmap version | `1.15.0` |
 | Current application version/build | `0.1.0-dev.6`: 0.1.0 feature-complete, READY FOR TEST by Walter |
 | Last updated | 2026-09-30 |
 | Document owner | Walter |
@@ -33,6 +33,7 @@
 | 1.13.0 | 2026-09-30 | Claude (for Walter) | Walter approved the encryption design with a scope: layer 1 (encrypted storage area) for everything; layer 2 (per-file app encryption) only for core data; product photos layer 1 only; users' own source folders out of scope (DEC-018, was P-014) | DEC-018 |
 | 1.14.0 | 2026-09-30 | Claude (for Walter) | Walter's T-002 testing found D-003..D-006 (date rules and form messages); P-015 opened (past dates) | D-003..D-006 |
 | 1.14.1 | 2026-09-30 | Claude (for Walter) | D-007: disabled Confirm button gives no reason | D-007 |
+| 1.15.0 | 2026-09-30 | Claude (for Walter) | Walter: an Event cannot be in the past (DEC-019, was P-015); D-005 fix defined | DEC-019 |
 
 ## Project Objective
 
@@ -106,7 +107,7 @@ Walter tests the build running on his PC (see docs/USER_GUIDE.md; sign in with h
 | D-002 | Empty required field shows the browser's own English bubble ("Please fill out this field") even in Spanish | Low | Walter's screenshot; Working_Log_2026-09-29 DEFECT-002 | OPEN | 0.1.0-dev.7 |
 | D-003 | Event date not checked against the rental period: an event on 26 Jul saved with warehouse departure on 6 Aug (event before the stock leaves) | Medium | Walter's T-002 screenshots, 2026-09-30 | OPEN | 0.1.0-dev.7 |
 | D-004 | After fixing a refused date, the general message "Revise los campos marcados" stays on screen with no field marked, until the next save | Low | Walter's T-002 screenshots | OPEN | 0.1.0-dev.7 |
-| D-005 | Past dates are accepted with no warning (whole rental period 6 Aug–22 Sep already over on 30 Sep) | Medium | Walter's T-002 screenshots | OPEN, rule pending P-015 | 0.1.0-dev.7 |
+| D-005 | Past dates are accepted with no warning (whole rental period 6 Aug–22 Sep already over on 30 Sep) | Medium | Walter's T-002 screenshots | OPEN, rule set by DEC-019 (refuse past dates) | 0.1.0-dev.7 |
 | D-006 | Date boxes show mm/dd/yyyy (browser's English) while the screen is in Spanish | Low | Walter's T-002 screenshots; same family as D-002 | OPEN | 0.1.0-dev.7 |
 | D-007 | **Confirmar (reservar)** is disabled when the Event has no products (or no dates) but says nothing: pressing it does nothing, with no explanation, also after signing out and in | Medium | Walter, 2026-09-30, on the Event from his T-002 test | OPEN | 0.1.0-dev.7: the button stays pressable and says what is missing ("Agregue al menos un producto" / "Indique salida y retorno"), plus a hint next to it |
 | D-001 | Saved Event stayed in edit mode | Low | Working_Log_2026-09-29 DEFECT-001 | CLOSED (fixed in dev.3) | — |
@@ -145,12 +146,12 @@ Walter tests the build running on his PC (see docs/USER_GUIDE.md; sign in with h
 | DEC-016 | 2026-09-30 | **Every local store of tenant data is encrypted.** The database, managed files (photos, signatures, delivery evidence, records captured offline), backups and the AI's index live only in an encrypted area that STRUCTURA uses. No direct access to it: data leaves only through STRUCTURA's export tool (with permission and license checks, audited). The AI assistant reads the latest local data inside that same encrypted area. Help content and the tenant's other data can live there too, off the public web | Walter's requirement. Makes spec 11.4 ("encrypt ... managed data where appropriate") mandatory for local stores. Limit, per spec 15.2: protects data at rest, stolen or copied; it can't make extraction impossible for someone with full admin control of a running, unlocked box. That risk is reduced by locking the box down as an appliance | Local engine, storage, backups, exports, AI |
 | DEC-017 | 2026-09-30 | Search box + read-only AI help assistant (DEC-014..DEC-016) is version `0.2.0`, the **last part of Phase 1**, started after 0.1.0 is approved and frozen. Same naming as before: test builds `0.2.0-dev.1`, `0.2.0-dev.2`, … | Walter's decision (was P-012) | Roadmap / versioning |
 | DEC-018 | 2026-09-30 | Encryption design (implements DEC-016). **Layer 1**, an encrypted storage area on every STRUCTURA machine (LUKS2 on the box, key sealed in its TPM chip; equivalent disk encryption in the cloud), holds the database, all managed files, backups and the AI index. **Layer 2**, per-tenant file encryption by the app (AES-256-GCM), applies only to core data: signatures, delivery photos and evidence, files attached to records, records and files captured offline and waiting to sync, backups and exports. **Product catalog photos get layer 1 only.** Users' own folders where they keep files before uploading (e.g. the 27TS `Imagenes` folder) are outside STRUCTURA and not encrypted by it. Exports only through STRUCTURA's tool; the box is locked down as an appliance | Walter approved the design (was P-014) and asked to limit per-file encryption to core data, photos only where simple. Layer 1 already encrypts photos at no extra effort | Storage, backups, exports, local engine |
+| DEC-019 | 2026-09-30 | **An Event cannot be in the past.** When dates are entered or changed (new Event, or editing its dates), the event date, warehouse departure and expected return can't be before today in the Event's timezone, and the event date must lie between departure and expected return (D-003). An Event created correctly stays usable after its dates pass (edit other fields, returns, closing). Past Events enter only as history through the future 27TS import tool (Phase 5, B-003), not through the screen | Walter's decision (was P-015) | Events, reservations |
 
 ## Pending Decisions
 
 | ID | Question | Options or constraint | Needed by | Owner |
 | --- | --- | --- | --- | --- |
-| P-015 | Past dates on Events (D-005) | Proposed: saving with past dates shows a warning but is allowed (records can be entered after the fact); **confirming** (reserving stock) is refused when the expected return is already past, since stock can't be held for days that are over | Before 0.1.0-dev.7 | Walter |
 | P-011 | Cloud hosting provider and onsite mini-PC model | Not blocking 0.1.0. DEC-014 adds a need: the machine running the local AI model needs roughly 8 GB of memory or more | Phase 4 / first cloud deployment | Walter |
 | P-005 | Licensing policy values (gap G-07) | Pricing, plans, capacity limits, offline grace period. The spec says: configuration only, never invented | Phase 4 | Walter |
 | P-006 | Tax, rounding, currency and retention settings (gap G-10) | Must be explicit configurable policies | Phase 2 | Walter |

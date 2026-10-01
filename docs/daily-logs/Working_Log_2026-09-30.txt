@@ -122,6 +122,23 @@ Roadmap section: Known Defects; Pending Decisions; Ready for test
 
 ---
 
+[007]
+Time: 2026-09-30
+Area / feature: Events - date rules
+Request or objective: Walter: "the event cannot be in the past ... if you think otherwise please explain"
+Action taken: Agreed, with two clarifications: past = before today in the Event's timezone; the rule applies when dates are entered or changed, so Events created correctly keep working after their dates pass. Past Events come in only through the future import tool. Recorded DEC-019 (was P-015); D-005 fix defined; D-007 (Confirm disabled without a reason) recorded just before.
+Files created: None
+Files modified: ROADMAP.md (v1.14.1, v1.15.0), this log
+Decision made: DEC-019 (Walter)
+Verification performed: N/A
+Result: PASS
+Observed issue: None
+Follow-up required: Build 0.1.0-dev.7 with D-002..D-007
+Roadmap update required: YES (done: v1.15.0)
+Roadmap section: Approved Decisions; Pending Decisions; Known Defects
+
+---
+
 
 DEFECTS DISCOVERED TODAY
 ========================
@@ -171,6 +188,13 @@ Decision: DEC-018 - encryption design approved: layer 1 for everything; layer 2 
 Reason: Walter's approval with scope; per-file encryption kept to core data
 Approved by: Walter
 Affected area: Storage, backups, exports, local engine
+Roadmap update required: YES (done)
+
+[DECISION-006]
+Decision: DEC-019 - an Event cannot be in the past (dates entered/changed must be today or later in the Event's timezone; event date within departure..return)
+Reason: Walter's decision
+Approved by: Walter
+Affected area: Events, reservations
 Roadmap update required: YES (done)
 
 
