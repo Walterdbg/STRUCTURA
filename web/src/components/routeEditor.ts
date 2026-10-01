@@ -1,5 +1,10 @@
 import L from "leaflet";
-import { lineLength, positionAt } from "@structura/domain";
+import { haversine, lineLength, positionAt } from "@structura/domain";
+
+// A street piece longer than this, compared with the direct way (or with
+// the piece it replaces), is a detour and is drawn straight instead.
+const DETOUR_RATIO = 1.5;
+const DETOUR_EXTRA_M = 60;
 
 // Route drawing segment by segment (Walter, 2026-10-01, like RunningAhead):
 // every click adds one piece, made with the tool chosen at that moment:
@@ -32,6 +37,9 @@ export interface EditorOptions {
   onChange: (shape: RouteShape) => void;
   onBusy: (busy: boolean) => void;
   onRouteFailed: () => void;
+  // A street piece came back far longer than the direct way (Walter,
+  // 2026-10-01: "even on foot take a wild route around the map").
+  onDetour: (routedMeters: number, directMeters: number) => void;
 }
 
 const copy = (s: RouteShape): RouteShape => ({
@@ -176,7 +184,10 @@ export class RouteEditor {
     this.run(async () => {
       const mode = this.opts.mode();
       for (let i = 0; i < this.shape.segments.length; i++) {
-        this.shape.segments[i] = await this.build(this.shape.anchors[i]!, this.shape.anchors[i + 1]!, mode);
+        const old = this.shape.segments[i]!;
+        // Keep an old piece that would turn into a detour as it was.
+        const made = await this.build(this.shape.anchors[i]!, this.shape.anchors[i + 1]!, mode, lineLength(old.coords));
+        this.shape.segments[i] = made.mode === "l" && mode !== "l" && old.coords.length > 2 ? old : made;
       }
     });
   }
@@ -239,8 +250,10 @@ export class RouteEditor {
   }
 
   // One piece between two points with the given tool. If the street route
-  // can't be found, the piece is drawn straight and the person is told.
-  private async build(from: number[], to: number[], mode: SegMode): Promise<Segment> {
+  // can't be found, or it goes the long way around, the piece is drawn
+  // straight and the person is told. `reference` is the length the piece
+  // may reasonably have (the piece it replaces, when remaking a long one).
+  private async build(from: number[], to: number[], mode: SegMode, reference = 0): Promise<Segment> {
     const f = [from[0]!, from[1]!];
     const t = [to[0]!, to[1]!];
     if (mode !== "l" && this.opts.route) {
@@ -248,7 +261,14 @@ export class RouteEditor {
         const coords = await this.opts.route(f, t, TRAVEL[mode]);
         if (coords.length >= 2) {
           // Keep the clicked points as the piece's ends, so pieces stay joined.
-          return { mode, coords: [f, ...coords.slice(1, -1), t] };
+          const piece = [f, ...coords.slice(1, -1), t];
+          const routed = lineLength(piece);
+          const direct = Math.max(haversine(f, t), reference);
+          if (routed > direct * DETOUR_RATIO && routed - direct > DETOUR_EXTRA_M) {
+            this.opts.onDetour(routed, haversine(f, t));
+            return { mode: "l", coords: [f, t] };
+          }
+          return { mode, coords: piece };
         }
       } catch {
         /* fall through */

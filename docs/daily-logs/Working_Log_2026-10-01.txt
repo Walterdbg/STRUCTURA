@@ -122,6 +122,23 @@ Roadmap section: Approved Decisions (DEC-028, DEC-031, DEC-032), Pending (P-019.
 
 ---
 
+[007]
+Time: 2026-10-01, evening
+Area / feature: 0.1.0-dev.13 - you draw the route (D-014)
+Request or objective: Walter: "sometimes the maps, even on foot, take a wild route around the map" (screenshots of a piece going around blocks and a red "No street route was found"); then "the confusion is you don't need to find the route, I'm creating it".
+Action taken: Draw is now the default tool; the street tools only fit a piece between two clicks: a Google path longer than 1.5x the direct distance (and over 60 m extra) is ignored and the piece stays straight with a quiet note; Fit to streets keeps long existing pieces rather than turning them into detours; the red route error became a quiet note. Texts updated.
+Files created: None
+Files modified: web/src/components/routeEditor.ts, web/src/pages/EventMap.tsx, web/src/i18n.ts, package files (0.1.0-dev.13), CHANGELOG.md, ROADMAP.md (v1.25.0), docs/USER_GUIDE.md
+Decision made: DEC-030 refined (Walter's direction): Walter draws; tools help
+Verification performed: 129/129 server tests; browser: Draw selected by default; Docker dev.13 health. Detour check not seen on screen (browser pane hidden).
+Result: PASS for Claude's checks; NOT TESTED by Walter
+Observed issue: None new
+Follow-up required: Walter retests route drawing (T-016, T-019)
+Roadmap update required: YES (done: v1.25.0)
+Roadmap section: Known Defects (D-014), Approved Decisions (DEC-030 note), Build status
+
+---
+
 
 DEFECTS DISCOVERED TODAY
 ========================
@@ -129,6 +146,7 @@ DEFECTS DISCOVERED TODAY
 [DEFECT-010] Map item save refused without a name and the message went unnoticed; pressing another drawing button discarded the drawing; Walter lost a route. High. FIXED-NOT-TESTED (dev.10).
 [DEFECT-011] Map/Satellite switch stayed in Spanish after switching to English; large radio circles on a white box. Low. FIXED-NOT-TESTED (dev.10).
 [DEFECT-012] A line drawn as Route and changed to Course got no elevation until "Fit to streets". Medium. FIXED-NOT-TESTED (dev.10).
+[DEFECT-014] Street tools took wild routes between two clicks; red route error treated Walter's drawing as a failure. Medium. FIXED-NOT-TESTED (dev.13).
 [DEFECT-013] Event map hidden while the Event is in edit mode; no full-screen view; wheel zoom unavailable while drawing. Medium. FIXED-NOT-TESTED (dev.10).
 
 
@@ -161,7 +179,7 @@ DEPLOYMENT / BUILD RECORD
 =========================
 
 Deployment performed: YES (local development only)
-Build/version: 0.1.0-dev.10, 0.1.0-dev.11, then 0.1.0-dev.12 (current)
+Build/version: 0.1.0-dev.10, 0.1.0-dev.11, 0.1.0-dev.12, then 0.1.0-dev.13 (current)
 Environment: Development - Docker on Walter's PC, http://127.0.0.1:8095
 Deployment result: PASS (Claude's checks); NOT TESTED by Walter
 Verification performed: health 0.1.0-dev.10, dev.11 and dev.12 (migration 008), Google status/search live

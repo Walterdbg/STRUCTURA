@@ -5,8 +5,8 @@
 | Field | Value |
 | --- | --- |
 | Project | STRUCTURA (ChatGPT project name: "Inventario") |
-| Roadmap version | `1.24.0` |
-| Current application version/build | `0.1.0-dev.12`: Race vs Rental Events (DEC-031), departure/return limits and equipment-out warnings (DEC-028), race tools like RunningAhead (DEC-032); READY FOR TEST |
+| Roadmap version | `1.25.0` |
+| Current application version/build | `0.1.0-dev.13`: you draw the route (Draw by default; street tools only fit a piece between two clicks, D-014); dev.12: Race vs Rental Events (DEC-031), departure/return limits and equipment-out warnings (DEC-028), race tools like RunningAhead (DEC-032); READY FOR TEST |
 | Last updated | 2026-09-30 |
 | Document owner | Walter |
 | Current environment | Development (Docker on Walter's PC, port 8095) |
@@ -44,6 +44,7 @@
 | 1.22.0 | 2026-10-01 | Claude (for Walter) | Build 0.1.0-dev.10: Walter's map tests T-011 PASS, T-012 PASS with note, T-013 PASS with note; defects D-010..D-013 fixed; DEC-029 (no Area tool); P-019 (departure at most 15 days before the event, proposed DEC-028) | DEC-029 |
 | 1.23.0 | 2026-10-01 | Claude (for Walter) | Build 0.1.0-dev.11: DEC-030 route drawing piece by piece like RunningAhead; test T-016; backlog B-005 (more base maps: ArcGIS Topo / Street / Imagery, imagery dates) | DEC-030 |
 | 1.24.0 | 2026-10-01 | Claude (for Walter) | Walter approved P-019, P-020, P-021: DEC-028 (departure 15 days before, return 7 business days after, equipment-out warning after 3 days, overdue after the expected return), DEC-031 (Race vs Rental, type fixed), DEC-032 (race tools 1-9). Build 0.1.0-dev.12 with migration 008; tests T-017..T-019. P-011: keep testing locally; Hetzner covers everything when we move | DEC-028, DEC-031, DEC-032 |
+| 1.25.0 | 2026-10-01 | Claude (for Walter) | Build 0.1.0-dev.13: D-014 (street tools took wild routes); DEC-030 refined: Draw is the default, street tools never stray (detour check), no red error | DEC-030 |
 
 ## Project Objective
 
@@ -103,30 +104,31 @@ Walter tests the build running on his PC (see docs/USER_GUIDE.md; sign in with h
 
 | ID | Work item | Test required | Build | Status |
 | --- | --- | --- | --- | --- |
-| T-001 | Accounts (DEC-013) | Sign in; add a user with the *Operador de inventario* profile; sign in as that user and confirm they can record a movement but not create a product | 0.1.0-dev.12 | READY FOR TEST |
-| T-002 | Events (UC-13, AT-01) | Create an Event with only a provisional name, no customer; set event date, departure and expected return; reopen it and check the three dates stayed separate | 0.1.0-dev.12 | RETEST: FAILED on dev.6 (D-003..D-006); fixed in dev.7 |
-| T-003 | Catalog and photos (UC-12, AT-05, AT-36) | Create two products, one with a barcode starting with 0; give each a photo; switch between them and check each keeps its own photo and the barcode keeps its 0 | 0.1.0-dev.12 | READY FOR TEST |
-| T-004 | Movements (UC-03, AT-02, AT-03) | Create a warehouse and an event location; move part of a product's stock with no trip; try to move more than is there (must be refused); correct a movement and check the original stays, marked *Corregido* | 0.1.0-dev.12 | READY FOR TEST |
-| T-005 | Reservations (UC-21, AT-04, AT-31) | Confirm Event A holding all of a product until day 14; an Event B starting day 14 must be refused; starting day 15 must confirm | 0.1.0-dev.12 | READY FOR TEST |
-| T-006 | Change history (AT-18) | Open *Historial de cambios* on an Event and a product; check who/what/when is shown | 0.1.0-dev.12 | READY FOR TEST |
-| T-007 | My account (D-009) | Click your name (👤) at the top: change the language and save (the whole screen changes, also after signing in again); change your password. Under Usuarios, switch a user off and give a user a new password | 0.1.0-dev.12 | READY FOR TEST |
-| T-008 | Map location (DEC-021, DEC-025) | On an Event, type a place in Lugar del evento and choose a suggestion (or click the map), drag the pin, save; reopen and check the point and name stayed | 0.1.0-dev.12 | READY FOR TEST |
-| T-009 | Event map (DEC-022, AT-07) | On an Event's Mapa del evento: add a stage point and a water station, draw a small area (bar storage), draw a delivery route with Terminar and mark it preferred; reopen and check everything stayed | 0.1.0-dev.12 | READY FOR TEST |
+| T-001 | Accounts (DEC-013) | Sign in; add a user with the *Operador de inventario* profile; sign in as that user and confirm they can record a movement but not create a product | 0.1.0-dev.13 | READY FOR TEST |
+| T-002 | Events (UC-13, AT-01) | Create an Event with only a provisional name, no customer; set event date, departure and expected return; reopen it and check the three dates stayed separate | 0.1.0-dev.13 | RETEST: FAILED on dev.6 (D-003..D-006); fixed in dev.7 |
+| T-003 | Catalog and photos (UC-12, AT-05, AT-36) | Create two products, one with a barcode starting with 0; give each a photo; switch between them and check each keeps its own photo and the barcode keeps its 0 | 0.1.0-dev.13 | READY FOR TEST |
+| T-004 | Movements (UC-03, AT-02, AT-03) | Create a warehouse and an event location; move part of a product's stock with no trip; try to move more than is there (must be refused); correct a movement and check the original stays, marked *Corregido* | 0.1.0-dev.13 | READY FOR TEST |
+| T-005 | Reservations (UC-21, AT-04, AT-31) | Confirm Event A holding all of a product until day 14; an Event B starting day 14 must be refused; starting day 15 must confirm | 0.1.0-dev.13 | READY FOR TEST |
+| T-006 | Change history (AT-18) | Open *Historial de cambios* on an Event and a product; check who/what/when is shown | 0.1.0-dev.13 | READY FOR TEST |
+| T-007 | My account (D-009) | Click your name (👤) at the top: change the language and save (the whole screen changes, also after signing in again); change your password. Under Usuarios, switch a user off and give a user a new password | 0.1.0-dev.13 | READY FOR TEST |
+| T-008 | Map location (DEC-021, DEC-025) | On an Event, type a place in Lugar del evento and choose a suggestion (or click the map), drag the pin, save; reopen and check the point and name stayed | 0.1.0-dev.13 | READY FOR TEST |
+| T-009 | Event map (DEC-022, AT-07) | On an Event's Mapa del evento: add a stage point and a water station, draw a small area (bar storage), draw a delivery route with Terminar and mark it preferred; reopen and check everything stayed | 0.1.0-dev.13 | READY FOR TEST |
 | T-011 | Google maps (DEC-026) | Search "PH Palmas Bellas" in Lugar del evento and choose it; switch Mapa / Satélite on both maps | 0.1.0-dev.9 | PASS (Walter, 2026-10-01) |
-| T-012 | Follow streets (DEC-027 item 1) - needs the key | Draw a delivery route with Seguir calles on: the line follows the streets; use Ajustar a calles on an existing route | 0.1.0-dev.12 | PASS on dev.9 (Walter, 2026-10-01: "kind of works, had to play with the zoom"); RETEST on dev.10: wheel zoom while drawing, full screen (D-013) |
-| T-013 | Elevation for drawn courses (item 2) - needs the key | Draw a course: the elevation profile appears by itself | 0.1.0-dev.12 | PASS on dev.9 with extra steps (Walter, 2026-10-01: started as Route, changed to Course, needed Save + Fit to streets; D-012); a save without a name was refused and a route was lost (D-010). RETEST on dev.10 |
-| T-014 | Points on a course, start/finish, laps (items 3-4) | Place Agua at km 2 on a course; set 2 laps and out-and-back; check km in the list, total distance, start/finish markers | 0.1.0-dev.12 | READY FOR TEST |
-| T-015 | Course sheet (item 5) | Open Hoja del recorrido, check map, distances, elevation, stations; print or save as PDF | 0.1.0-dev.12 | READY FOR TEST |
-| T-016 | Route drawing piece by piece (DEC-030) | Draw a course fast: some pieces with 👣 On foot along streets, one with ✏️ Draw across a park path; ↶ Undo one piece; Done. Zoom in, ✎ Edit shape: drag the small middle handle of a piece onto a hidden path, drag a point, right-click a point to remove it; Save. Reopen: the pieces and the elevation are still right | 0.1.0-dev.12 | READY FOR TEST |
-| T-017 | Event types (DEC-031) | Create a Rental: only Delivery / Pickup on its map, no course tools. Create a Race: Course and GPX appear. The type can't be changed afterwards; the Events list shows 🏁 / 📦 | 0.1.0-dev.12 | READY FOR TEST |
-| T-018 | Date limits and warnings (DEC-028) | Event on the 20th: departure before the 5th is refused with the earliest date; return after 7 business days is refused with the latest date. Under Usuarios, change the organization date rules. Send stock to an event location for an Event: 3 days after the event a warning shows, after the expected return it shows overdue (Event page and list) | 0.1.0-dev.12 | READY FOR TEST |
-| T-019 | Race tools (DEC-032) | On a Race: draw a course and watch the live distance; switch km / mi; markers every 0.5 / 1 / 5; Back to start; Out and back; Reverse; Centre; move the mouse over the elevation chart (the spot shows on the map); lock the course (no shape changes), unlock; Go to a place search | 0.1.0-dev.12 | READY FOR TEST |
-| T-010 | Running courses add-on (DEC-023) | Import a GPX from Strava/Garmin/plotaroute: check distance, km markers, elevation profile; export it again as GPX | 0.1.0-dev.12 | READY FOR TEST |
+| T-012 | Follow streets (DEC-027 item 1) - needs the key | Draw a delivery route with Seguir calles on: the line follows the streets; use Ajustar a calles on an existing route | 0.1.0-dev.13 | PASS on dev.9 (Walter, 2026-10-01: "kind of works, had to play with the zoom"); RETEST on dev.10: wheel zoom while drawing, full screen (D-013) |
+| T-013 | Elevation for drawn courses (item 2) - needs the key | Draw a course: the elevation profile appears by itself | 0.1.0-dev.13 | PASS on dev.9 with extra steps (Walter, 2026-10-01: started as Route, changed to Course, needed Save + Fit to streets; D-012); a save without a name was refused and a route was lost (D-010). RETEST on dev.10 |
+| T-014 | Points on a course, start/finish, laps (items 3-4) | Place Agua at km 2 on a course; set 2 laps and out-and-back; check km in the list, total distance, start/finish markers | 0.1.0-dev.13 | READY FOR TEST |
+| T-015 | Course sheet (item 5) | Open Hoja del recorrido, check map, distances, elevation, stations; print or save as PDF | 0.1.0-dev.13 | READY FOR TEST |
+| T-016 | Route drawing piece by piece (DEC-030) | Draw a course fast: some pieces with 👣 On foot along streets, one with ✏️ Draw across a park path; ↶ Undo one piece; Done. Zoom in, ✎ Edit shape: drag the small middle handle of a piece onto a hidden path, drag a point, right-click a point to remove it; Save. Reopen: the pieces and the elevation are still right | 0.1.0-dev.13 | READY FOR TEST |
+| T-017 | Event types (DEC-031) | Create a Rental: only Delivery / Pickup on its map, no course tools. Create a Race: Course and GPX appear. The type can't be changed afterwards; the Events list shows 🏁 / 📦 | 0.1.0-dev.13 | READY FOR TEST |
+| T-018 | Date limits and warnings (DEC-028) | Event on the 20th: departure before the 5th is refused with the earliest date; return after 7 business days is refused with the latest date. Under Usuarios, change the organization date rules. Send stock to an event location for an Event: 3 days after the event a warning shows, after the expected return it shows overdue (Event page and list) | 0.1.0-dev.13 | READY FOR TEST |
+| T-019 | Race tools (DEC-032) | On a Race: draw a course and watch the live distance; switch km / mi; markers every 0.5 / 1 / 5; Back to start; Out and back; Reverse; Centre; move the mouse over the elevation chart (the spot shows on the map); lock the course (no shape changes), unlock; Go to a place search | 0.1.0-dev.13 | READY FOR TEST |
+| T-010 | Running courses add-on (DEC-023) | Import a GPX from Strava/Garmin/plotaroute: check distance, km markers, elevation profile; export it again as GPX | 0.1.0-dev.13 | READY FOR TEST |
 
 ## Known Defects
 
 | ID | Defect | Severity | Reproduction/evidence | Current status | Target |
 | --- | --- | --- | --- | --- | --- |
+| D-014 | Street tools (even On foot) sometimes took a wild route around the map between two clicks; and a red "No street route was found" message treated Walter's own drawing as a failure | Medium | Walter's screenshots, 2026-10-01: "you don't need to find the route, I'm creating it" | FIXED in 0.1.0-dev.13: Draw (straight, exactly through the clicks) is the default; a street piece longer than 1.5 x the direct way (and over 60 m extra) is ignored and the piece stays straight, with a quiet note; no red error. Walter to retest | dev.13 |
 | D-010 | Map item save refused when the name was empty; the message went unnoticed, and pressing another drawing button then discarded the drawing. Walter lost a route. No map save ever reached the server (server log) | High | Walter, 2026-10-01 | FIXED in 0.1.0-dev.10 (automatic name, e.g. "Recorrido (carrera) 1"; asks before discarding an unsaved drawing; Claude browser-checked); Walter to retest | dev.10 |
 | D-011 | Map / Satellite switch stayed in Spanish after changing the language to English, and showed large radio circles on a white box | Low | Walter's screenshots, 2026-10-01 | FIXED in 0.1.0-dev.10 (compact, screen colours, rebuilt on language change; Claude browser-checked); Walter to retest | dev.10 |
 | D-012 | A line drawn as Route and then changed to Course got no elevation until Save + Fit to streets | Medium | Walter, T-013, 2026-10-01 | FIXED in 0.1.0-dev.10 (heights fetched when the type changes to Course); Walter to retest | dev.10 |
@@ -241,7 +243,7 @@ not an approved schedule.
 
 | Environment | Current build | Deployment date | Verification | Status |
 | --- | --- | --- | --- | --- |
-| Development | `0.1.0-dev.12` | 2026-10-01 | 129/129 server tests; browser check with the live Google key; Docker check (migration 008) | Running on Walter's PC (http://127.0.0.1:8095), waiting for Walter's tests |
+| Development | `0.1.0-dev.13` | 2026-10-01 | 129/129 server tests; Docker check; dev.12 browser checks still apply | Running on Walter's PC (http://127.0.0.1:8095), waiting for Walter's tests |
 | Test | None | — | — | Not started |
 | Production | None | — | — | Not started |
 

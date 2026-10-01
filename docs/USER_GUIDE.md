@@ -178,7 +178,10 @@ At the bottom of each Event, **Mapa del evento** holds what the team needs on si
 
 ### Drawing a route or a course
 
-Every click on the map adds one piece, made with the tool chosen at that moment:
+**You draw the route.** Every click on the map adds one piece, made with the tool chosen at that
+moment. **✏️ Dibujar / Draw is selected by default**: the line goes exactly through your clicks.
+The street tools only help: they fit the piece to the street between your two clicks, and if the
+street path would stray from your points, the piece stays straight as you drew it.
 
 | Tool | The piece |
 | --- | --- |

@@ -78,9 +78,11 @@ const TOOL_ICON: Record<SegMode, string> = { w: "👣", b: "🚲", d: "🚗", l:
 const TOOL_LABEL: Record<SegMode, TextKey> = { w: "map.toolFoot", b: "map.toolBike", d: "map.toolCar", l: "map.toolDraw" };
 const TOOL_HINT: Record<SegMode, TextKey> = { w: "map.toolFootHint", b: "map.toolBikeHint", d: "map.toolCarHint", l: "map.toolDrawHint" };
 
-// The tool a new route starts with: on foot for courses, by car for deliveries.
+// Walter draws the route himself ("you don't need to find the route, I'm
+// creating it"): every route starts with Draw; the street tools are a help
+// he switches on to bend a piece onto the street between two of his clicks.
 const byCar = (category: string) => category === "delivery" || category === "pickup";
-const defaultTool = (category: string, routing: boolean): SegMode => (!routing ? "l" : byCar(category) ? "d" : "w");
+const defaultTool = (_category: string, _routing: boolean): SegMode => "l";
 
 // One street piece from Google, through our server.
 async function routeBetween(from: number[], to: number[], mode: "walk" | "bike" | "drive"): Promise<number[][]> {
@@ -133,6 +135,8 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
   const editor = useRef<RouteEditor | null>(null);
   const [canUndo, setCanUndo] = useState(false);
   const [routeBusy, setRouteBusy] = useState(false);
+  // A piece drawn straight because the street route went the long way round.
+  const [notice, setNotice] = useState<string | null>(null);
   const statusRef = useRef<GeoStatus | null>(null);
   statusRef.current = status;
   // DEC-031: running courses only on races (and with the courses add-on).
@@ -144,6 +148,8 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
   const [showMarkers, setShowMarkers] = useShowMarkers();
   const hoverMarker = useRef<L.CircleMarker | null>(null);
   const dist = (m: number) => fmtDist(m, unit, locale);
+  const unitRef = useRef<Unit>(unit);
+  unitRef.current = unit;
   const courses = (items ?? []).filter((f) => f.category === "course" && f.geometry.type === "LineString");
 
   const load = useCallback(async () => {
@@ -382,7 +388,9 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
       route: statusRef.current?.routing ? routeBetween : null,
       mode: () => toolRef.current,
       onBusy: (b) => setRouteBusy(b),
-      onRouteFailed: () => setError("map.noRoute"),
+      onRouteFailed: () => setNotice(t("map.noRoute")),
+      onDetour: (routed, direct) =>
+        setNotice(t("map.detour").replace("{routed}", fmtDist(routed, unitRef.current, locale)).replace("{direct}", fmtDist(direct, unitRef.current, locale))),
       onChange: (s) => {
         setCanUndo(ed.canUndo);
         setDraft((cur) => (cur ? { ...cur, geometry: { type: "LineString", coordinates: joinSegments(s) }, props: pieceProps(cur.props, s) } : cur));
@@ -395,6 +403,7 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
   }
 
   function closeEditor() {
+    setNotice(null);
     editor.current?.stop();
     editor.current = null;
     setCanUndo(false);
@@ -753,6 +762,14 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
             {t("common.cancel")}
           </button>
         </div>
+      )}
+      {notice && drawing === "route" && (
+        <p className="alert warn small" role="status">
+          ⚠️ {notice}{" "}
+          <button type="button" className="link" onClick={() => setNotice(null)} aria-label="OK">
+            ✕
+          </button>
+        </p>
       )}
       <div ref={box} className="map-box tall" />
       {busy && <p className="small muted">{t(busy)}</p>}

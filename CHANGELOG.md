@@ -3,6 +3,23 @@
 Every entry gets an **Intent** and a **Result**. A Result is only marked
 confirmed once actually verified, and can honestly say FAILED.
 
+## 0.1.0-dev.13 — 2026-10-01 (you draw the route) — NOT YET TESTED BY WALTER
+
+**Intent:** Walter: street tools "even on foot take a wild route around
+the map"; "you don't need to find the route, I'm creating it" (D-014).
+
+**Result:**
+- **✏️ Draw is the default tool** for every route: the line goes exactly
+  through the clicks.
+- **👣 / 🚲 / 🚗** only fit a piece to the street between two clicks. If
+  Google's path is longer than 1.5 times the direct way (and more than
+  60 m extra), it is ignored and the piece stays straight, with a quiet
+  note. "Fit to streets" keeps a long piece as it was rather than turning
+  it into a detour.
+- The red "No street route was found" error is gone; at most a quiet note.
+- Checked by Claude: 129/129 server tests; Draw selected by default in the
+  browser; Docker health. The detour check itself was not seen on screen
+  (browser pane hidden); it is a length comparison in the route editor.
 ## 0.1.0-dev.12 — 2026-10-01 (Race vs Rental, date limits, race tools) — NOT YET TESTED BY WALTER
 
 **Intent:** Walter's approved changes: separate races from rentals
