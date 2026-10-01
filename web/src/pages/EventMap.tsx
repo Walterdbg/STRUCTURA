@@ -240,7 +240,7 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
     if (!box.current || map.current) return;
     const center: L.LatLngTuple = event.locationLat !== null && event.locationLng !== null ? [event.locationLat, event.locationLng] : DEFAULT_CENTER;
     const m = L.map(box.current, { scrollWheelZoom: false }).setView(center, event.locationLat !== null ? 16 : 11);
-    void addBaseLayers(m, locale, { map: t("map.layerMap"), satellite: t("map.layerSatellite") }).then((s) => setStatus(s));
+    void addBaseLayers(m, locale, { map: t("map.layerMap"), satellite: t("map.layerSatellite") }, { races: event.eventType === "race" }).then((s) => setStatus(s));
     if (sectionRef.current) addFullscreen(m, sectionRef.current, { enter: t("map.fullscreen"), exit: t("map.exitFullscreen") });
     layerGroup.current = L.featureGroup().addTo(m);
     m.pm.setGlobalOptions({ snappable: true, continueDrawing: false });

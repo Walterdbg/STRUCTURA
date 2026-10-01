@@ -80,6 +80,13 @@ go through STRUCTURA's server; the key never reaches browsers. On the key, enabl
 API (New)**, **Map Tiles API**, **Routes API** and **Elevation API**, and restrict it to
 those four. Without a key, OpenStreetMap is used (and `GEOCODER` decides its search).
 
+## ArcGIS map pictures for race courses (DEC-035)
+
+With `ARCGIS_KEY=...` in `.env` (then `docker compose up -d`), race Event maps, course routes in
+Mapas and the course sheet also offer **ArcGIS Topo, Streets and Imagery**. The key is an ArcGIS
+Location Platform API key (free account at location.arcgis.com) with only the **Static basemap
+tiles** privilege and no referrers; it stays on the server. Without it, those layers are hidden.
+
 ## Where things are kept
 
 | What | Where |

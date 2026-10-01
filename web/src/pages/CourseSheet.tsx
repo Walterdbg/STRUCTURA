@@ -56,7 +56,7 @@ export function CourseSheet({ eventId, courseId }: { eventId: string; courseId: 
   useEffect(() => {
     if (!box.current || !course || coords.length < 2) return;
     const m = L.map(box.current, { zoomControl: false, attributionControl: true, dragging: true, scrollWheelZoom: false });
-    void addBaseLayers(m, locale, { map: t("map.layerMap"), satellite: t("map.layerSatellite") });
+    void addBaseLayers(m, locale, { map: t("map.layerMap"), satellite: t("map.layerSatellite") }, { races: true });
     const line = L.polyline(coords.map((c) => [c[1]!, c[0]!] as L.LatLngTuple), { color: ROUTE_COLOR.course, weight: 5 }).addTo(m);
     for (const mk of showMarkers ? markersAlong(coords, markerStep * METERS[unit]) : []) {
       L.marker([mk.position[1], mk.position[0]], {

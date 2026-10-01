@@ -156,6 +156,23 @@ Roadmap section: Approved Decisions (DEC-033, DEC-034, DEC-030 note), Ready for 
 
 ---
 
+[009]
+Time: 2026-10-01, night
+Area / feature: 0.1.0-dev.15 - ArcGIS map pictures for race courses (DEC-035, B-005)
+Request or objective: Walter: "keep building then"; then "the ArcGIS is only for the routes sections specifically for races"; "I already pay for Google, we keep it"; he asked how to get the ArcGIS key.
+Action taken: Checked the ArcGIS Static Basemap Tiles service (512 px tiles, z/row/col, token in a header, 2M tiles/month free). Server: ARCGIS_KEY config, status flag, tile proxy for topo (arcgis/outdoor), streets, imagery. Screens: layer switch with Google, ArcGIS (race course maps only: race Event map, repository course, course sheet) and OSM; last choice remembered. Gave Walter the key steps (only the Static basemap tiles privilege, no referrers, longest expiry; into .env, not chat).
+Files created: None
+Files modified: server/src/config.ts, server/src/geo.ts, server/test/geo.test.ts, docker-compose.yml, .env.example, web/src/components/basemap.ts, web/src/pages/EventMap.tsx, CourseSheet.tsx, RepositoryPage.tsx, package files (0.1.0-dev.15), CHANGELOG.md, ROADMAP.md (v1.27.0), docs/INSTALL.md
+Decision made: DEC-035 (Walter)
+Verification performed: 136/136 server tests. Browser with a placeholder key: race Event map and repository course offer ArcGIS Topo / Calles / Imágenes; rental map, location map and repository delivery offer Google and OSM only. Docker dev.15 health OK. Real ArcGIS pictures not seen (no key yet).
+Result: PASS for Claude's checks; ArcGIS pictures NOT TESTED live (P-022)
+Observed issue: None
+Follow-up required: Walter creates the ArcGIS key (P-022); then live check T-022
+Roadmap update required: YES (done: v1.27.0)
+Roadmap section: Approved Decisions (DEC-035), Pending (P-022), Ready for test (T-022), Backlog (B-005), Build status
+
+---
+
 
 DEFECTS DISCOVERED TODAY
 ========================
@@ -196,7 +213,7 @@ DEPLOYMENT / BUILD RECORD
 =========================
 
 Deployment performed: YES (local development only)
-Build/version: 0.1.0-dev.10, 0.1.0-dev.11, 0.1.0-dev.12, 0.1.0-dev.13, then 0.1.0-dev.14 (current)
+Build/version: 0.1.0-dev.10, 0.1.0-dev.11, 0.1.0-dev.12, 0.1.0-dev.13, 0.1.0-dev.14, then 0.1.0-dev.15 (current)
 Environment: Development - Docker on Walter's PC, http://127.0.0.1:8095
 Deployment result: PASS (Claude's checks); NOT TESTED by Walter
 Verification performed: health 0.1.0-dev.10, dev.11 and dev.12 (migration 008), Google status/search live

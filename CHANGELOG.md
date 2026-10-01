@@ -3,6 +3,25 @@
 Every entry gets an **Intent** and a **Result**. A Result is only marked
 confirmed once actually verified, and can honestly say FAILED.
 
+## 0.1.0-dev.15 — 2026-10-01 (ArcGIS for race courses) — NOT YET TESTED BY WALTER
+
+**Intent:** B-005, the base maps RunningAhead offers, limited by Walter to
+race course work, with Google kept as the main map (DEC-035).
+
+**Result:**
+- With `ARCGIS_KEY` in `.env`, the layer switch on **Race Event maps,
+  course routes in Mapas and the course sheet** offers **ArcGIS Topo,
+  ArcGIS Streets and ArcGIS Imagery** besides Google and OSM. Other maps
+  (rentals, deliveries, the Event location) show Google and OSM only.
+- Pictures come through our server; the key goes in a header and never
+  reaches the browser. Esri attribution shown. The last choice is
+  remembered in the browser.
+- Without the key nothing changes (P-022).
+- Checked by Claude: 136/136 server tests (tiles through our server, key in
+  the header only, unknown styles refused, hidden without key); browser
+  with a placeholder key: ArcGIS offered on the race map and repository
+  course, not on the rental map, location map or repository delivery.
+  The real pictures are NOT seen yet (no key).
 ## 0.1.0-dev.14 — 2026-10-01 (Maps repository, left menu, motorcycle) — NOT YET TESTED BY WALTER
 
 **Intent:** Walter: routes and race courses made ahead of time in their own

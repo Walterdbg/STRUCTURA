@@ -29,6 +29,7 @@ services:
       DEPLOYMENT_ID: ${DEPLOYMENT_ID:?Set DEPLOYMENT_ID in .env}
       GEOCODER: ${GEOCODER:-none}
       GOOGLE_MAPS_KEY: ${GOOGLE_MAPS_KEY:-}
+      ARCGIS_KEY: ${ARCGIS_KEY:-}
     volumes:
       - structura-files:/data/files
     ports:

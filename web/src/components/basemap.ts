@@ -1,10 +1,13 @@
 import L from "leaflet";
 import { get } from "../api.js";
 
-// The map pictures under every STRUCTURA map (DEC-026). With the Google
-// key: Google streets and satellite, through our server, with a
-// "Mapa / Satélite" switch and Google's copyright for the area on screen
-// (required by Google's terms). Without it: OpenStreetMap streets.
+// The map pictures under every STRUCTURA map (DEC-026, B-005). With the
+// Google key: Google streets and satellite; with the ArcGIS key: ArcGIS
+// Topo, Streets and Imagery (US imagery is often leaf-off, so paths under
+// trees show); OpenStreetMap always. All keyed pictures come through our
+// server. Google's copyright for the area on screen is shown while a Google
+// picture is chosen (Google's terms). The last choice is remembered in this
+// browser.
 
 export interface GeoStatus {
   provider: "google" | "nominatim" | "none";
@@ -13,6 +16,7 @@ export interface GeoStatus {
   satellite: boolean;
   routing: boolean;
   elevation: boolean;
+  arcgis?: boolean;
 }
 
 let statusPromise: Promise<GeoStatus> | null = null;
@@ -24,36 +28,67 @@ export function geoStatus(): Promise<GeoStatus> {
     satellite: false,
     routing: false,
     elevation: false,
+    arcgis: false,
   }));
   return statusPromise;
 }
 
 const GOOGLE_LOGO = '<span class="google-logo">Google</span>';
+const ESRI = "Powered by Esri | Esri, TomTom, Garmin, FAO, NOAA, USGS, &copy; OpenStreetMap contributors, GIS User Community";
+const PREF = "structura.basemap";
 
-export async function addBaseLayers(map: L.Map, locale: string, labels: { map: string; satellite: string }): Promise<GeoStatus> {
+// ArcGIS pictures are offered only where race courses are worked on (Walter,
+// 2026-10-01): race Event maps, course routes in Maps, the course sheet.
+export async function addBaseLayers(map: L.Map, locale: string, labels: { map: string; satellite: string }, opts: { races?: boolean } = {}): Promise<GeoStatus> {
   const status = await geoStatus();
-  if (status.tiles !== "google") {
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "&copy; OpenStreetMap" }).addTo(map);
-    return status;
-  }
   const lang = locale === "en" ? "en" : "es";
-  const roadmap = L.tileLayer(`/api/geo/tiles/roadmap/{z}/{x}/{y}?lang=${lang}`, { maxZoom: 22, attribution: GOOGLE_LOGO });
-  const satellite = L.tileLayer(`/api/geo/tiles/satellite/{z}/{x}/{y}?lang=${lang}`, { maxZoom: 21, attribution: GOOGLE_LOGO });
-  roadmap.addTo(map);
-  L.control.layers({ [`🗺 ${labels.map}`]: roadmap, [`🛰 ${labels.satellite}`]: satellite }, undefined, { position: "topright", collapsed: false }).addTo(map);
+  const es = lang === "es";
+  const layers: Record<string, L.TileLayer> = {};
+  const google = new Set<L.Layer>();
+  if (status.tiles === "google") {
+    const roadmap = L.tileLayer(`/api/geo/tiles/roadmap/{z}/{x}/{y}?lang=${lang}`, { maxZoom: 22, attribution: GOOGLE_LOGO });
+    const satellite = L.tileLayer(`/api/geo/tiles/satellite/{z}/{x}/{y}?lang=${lang}`, { maxZoom: 21, attribution: GOOGLE_LOGO });
+    layers[`🗺 ${labels.map}`] = roadmap;
+    layers[`🛰 ${labels.satellite}`] = satellite;
+    google.add(roadmap).add(satellite);
+  }
+  if (status.arcgis && opts.races) {
+    // 512 px pictures: one zoom level less for the same detail.
+    const esri = (style: string) => L.tileLayer(`/api/geo/arcgis/${style}/{z}/{y}/{x}?lang=${lang}`, { maxZoom: 22, tileSize: 512, zoomOffset: -1, attribution: ESRI });
+    layers["⛰ ArcGIS Topo"] = esri("topo");
+    layers[`🛣 ArcGIS ${es ? "Calles" : "Streets"}`] = esri("streets");
+    layers[`🌳 ArcGIS ${es ? "Imágenes" : "Imagery"}`] = esri("imagery");
+  }
+  layers["🌍 OSM"] = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "&copy; OpenStreetMap" });
 
-  // Copyright text for what is on screen, refreshed as the map moves.
-  let current: "roadmap" | "satellite" = "roadmap";
+  const names = Object.keys(layers);
+  let saved: string | null = null;
+  try {
+    saved = localStorage.getItem(PREF);
+  } catch {
+    /* private window */
+  }
+  const first = saved && layers[saved] ? saved : names[0]!;
+  layers[first]!.addTo(map);
+  if (names.length > 1) L.control.layers(layers, undefined, { position: "topright", collapsed: names.length > 3 }).addTo(map);
+
+  // Google copyright text for what is on screen, refreshed as the map moves.
+  let current: L.Layer = layers[first]!;
   let pending: ReturnType<typeof setTimeout> | null = null;
   const refresh = () => {
     if (pending) clearTimeout(pending);
+    if (!google.has(current)) {
+      map.attributionControl.setPrefix("");
+      return;
+    }
+    const type = current === layers[`🛰 ${labels.satellite}`] ? "satellite" : "roadmap";
     pending = setTimeout(async () => {
       const b = map.getBounds();
       try {
         const r = await get<{ copyright: string }>(
-          `/api/geo/attribution?type=${current}&zoom=${map.getZoom()}&north=${b.getNorth()}&south=${b.getSouth()}&east=${b.getEast()}&west=${b.getWest()}&lang=${lang}`
+          `/api/geo/attribution?type=${type}&zoom=${map.getZoom()}&north=${b.getNorth()}&south=${b.getSouth()}&east=${b.getEast()}&west=${b.getWest()}&lang=${lang}`
         );
-        map.attributionControl.setPrefix(r.copyright ? `<span class="small">${escapeHtml(r.copyright)}</span>` : "");
+        if (google.has(current)) map.attributionControl.setPrefix(r.copyright ? `<span class="small">${escapeHtml(r.copyright)}</span>` : "");
       } catch {
         /* keep the previous text */
       }
@@ -61,13 +96,17 @@ export async function addBaseLayers(map: L.Map, locale: string, labels: { map: s
   };
   map.on("moveend", refresh);
   map.on("baselayerchange", (e: L.LayersControlEvent) => {
-    current = e.layer === satellite ? "satellite" : "roadmap";
+    current = e.layer;
+    try {
+      localStorage.setItem(PREF, e.name);
+    } catch {
+      /* private window */
+    }
     refresh();
   });
   refresh();
   return status;
 }
-
 // ⛶ button (Walter, 2026-10-01): the map, or the section holding it with its
 // tools, fills the screen; the same button or Esc brings it back.
 export function addFullscreen(map: L.Map, target: HTMLElement, labels: { enter: string; exit: string }): void {

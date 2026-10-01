@@ -130,7 +130,35 @@ export function geoRoutes(app: FastifyInstance, db: Db, config: Config): void {
       satellite: Boolean(key),
       routing: Boolean(key),
       elevation: Boolean(key),
+      arcgis: Boolean(config.arcgisKey),
     };
+  });
+
+  // ArcGIS map pictures (B-005): Topo (outdoor), Streets and Imagery, through
+  // our server so the key stays here. 512 px tiles, {z}/{row}/{col}.
+  const ARCGIS_STYLES: Record<string, string> = { topo: "arcgis/outdoor", streets: "arcgis/streets", imagery: "arcgis/imagery" };
+  app.get("/api/geo/arcgis/:style/:z/:y/:x", async (req, reply) => {
+    requireAuth(req);
+    const arcgisKey = config.arcgisKey;
+    if (!arcgisKey) throw notConfigured("ArcGIS map pictures");
+    const p = req.params as Record<string, string>;
+    const style = ARCGIS_STYLES[p.style ?? ""];
+    const [z, y, x] = [p.z, p.y, p.x].map((v) => Number(v));
+    if (!style || ![z, y, x].every((v) => Number.isInteger(v) && v! >= 0) || z! > 22) throw new DomainError("validation", "Invalid tile");
+    const lang = (req.query as Record<string, string | undefined>).lang === "en" ? "en" : "es";
+    try {
+      const res = await fetch(
+        `https://static-map-tiles-api.arcgis.com/arcgis/rest/services/static-basemap-tiles-service/v1/${style}/static/tile/${z}/${y}/${x}?language=${lang}`,
+        { headers: { Authorization: `Bearer ${arcgisKey}` }, signal: AbortSignal.timeout(10000) }
+      );
+      if (!res.ok) throw new Error(`arcgis tile ${res.status}`);
+      return reply
+        .header("content-type", res.headers.get("content-type") ?? "image/png")
+        .header("cache-control", "private, max-age=3600")
+        .send(Buffer.from(await res.arrayBuffer()));
+    } catch {
+      throw unavailable("ArcGIS map pictures");
+    }
   });
 
   // Place search: one box, suggestions while typing; nearest to the map first.

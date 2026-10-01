@@ -146,6 +146,7 @@ export function RepositoryRouteEditor({ routeId, newCategory, canEdit, features 
   const hover = useRef<L.CircleMarker | null>(null);
   const editor = useRef<RouteEditor | null>(null);
   const [status, setStatus] = useState<GeoStatus | null>(null);
+  const [mapReady, setMapReady] = useState(false);
   const [record, setRecord] = useState<RepoRoute | null>(null);
   const [name, setName] = useState("");
   const [category, setCategory] = useState<string>(newCategory && (CATS as readonly string[]).includes(newCategory) ? newCategory : "course");
@@ -181,20 +182,23 @@ export function RepositoryRouteEditor({ routeId, newCategory, canEdit, features 
     );
   }, [routeId]);
 
-  // The map, once.
+  // The map, once its type is known (ArcGIS pictures only for courses).
+  const typeKnown = !routeId || record !== null;
   useEffect(() => {
-    if (!box.current || map.current) return;
+    if (!box.current || map.current || !typeKnown) return;
     const m = L.map(box.current, { scrollWheelZoom: true }).setView([8.98, -79.52], 13);
-    void addBaseLayers(m, locale, { map: t("map.layerMap"), satellite: t("map.layerSatellite") }).then((s) => setStatus(s));
+    void addBaseLayers(m, locale, { map: t("map.layerMap"), satellite: t("map.layerSatellite") }, { races: category === "course" }).then((s) => setStatus(s));
     if (sectionRef.current) addFullscreen(m, sectionRef.current, { enter: t("map.fullscreen"), exit: t("map.exitFullscreen") });
     viewLayer.current = L.layerGroup().addTo(m);
     map.current = m;
+    map.current = m;
+    setMapReady(true);
     return () => {
       m.remove();
       map.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [typeKnown]);
 
   // A new route starts in drawing mode, with the tool its type offers.
   useEffect(() => {
@@ -207,7 +211,7 @@ export function RepositoryRouteEditor({ routeId, newCategory, canEdit, features 
   useEffect(() => {
     if (drawing && map.current && !editor.current) startEditor(routeId ? shapeFromLine(coords, props.anchorIdx, props.segModes) : undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [drawing, status]);
+  }, [drawing, status, mapReady]);
 
   // The saved line (not editing): line, distance markers, start and finish.
   useEffect(() => {
@@ -228,7 +232,7 @@ export function RepositoryRouteEditor({ routeId, newCategory, canEdit, features 
     L.marker([last[1]!, last[0]!], { icon: L.divIcon({ className: "flag-marker finish", html: "🏁", iconSize: [26, 26], iconAnchor: [4, 22] }) }).addTo(g);
     m.fitBounds(line.getBounds().pad(0.15));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [coords, drawing, unit, markerStep, showMarkers, category]);
+  }, [coords, drawing, unit, markerStep, showMarkers, category, mapReady]);
 
   function startEditor(shape?: RouteShape) {
     const m = map.current;

@@ -25,6 +25,9 @@ export interface Config {
   geocoder: "none" | "nominatim";
   // Google Maps Platform key (DEC-026). Server-side only; never sent to browsers.
   googleMapsKey: string | null;
+  // ArcGIS Location Platform key (B-005): ArcGIS Topo / Streets / Imagery map
+  // pictures, through our server. Server-side only.
+  arcgisKey: string | null;
 }
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -61,5 +64,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     now: () => new Date(),
     geocoder: env.GEOCODER === "nominatim" ? "nominatim" : "none",
     googleMapsKey: env.GOOGLE_MAPS_KEY?.trim() || null,
+    arcgisKey: env.ARCGIS_KEY?.trim() || null,
   };
 }

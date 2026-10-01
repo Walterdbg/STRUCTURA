@@ -28,6 +28,7 @@ function fakeGoogle() {
     if (url.includes("places:autocomplete")) return json({ suggestions: [{ placePrediction: { placeId: "ChIJ-palmas-bellas-01", text: { text: "PH Palmas Bellas, Panamá" } } }] });
     if (url.includes("places.googleapis.com/v1/places/")) return json({ displayName: { text: "PH Palmas Bellas" }, formattedAddress: "Panamá", location: { latitude: 9.007344, longitude: -79.50703 } });
     if (url.includes("createSession")) return json({ session: "sess-1", expiry: String(Math.floor(Date.now() / 1000) + 14 * 86400) });
+    if (url.includes("static-basemap-tiles-service")) return new Response(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 1]), { status: 200, headers: { "content-type": "image/png" } });
     if (url.includes("/2dtiles/")) return new Response(new Uint8Array([0x89, 0x50, 0x4e, 0x47]), { status: 200, headers: { "content-type": "image/png" } });
     if (url.includes("/tile/v1/viewport")) return json({ copyright: "Map data ©2026 Google" });
     if (url.includes("computeRoutes") && String(init?.body).includes("TWO_WHEELER") && String(init?.body).includes("-79.9")) return json({});
@@ -48,9 +49,9 @@ afterEach(async () => {
   w = null;
 });
 
-async function setup(googleMapsKey: string | null, features: string[] = ["courses"]) {
+async function setup(googleMapsKey: string | null, features: string[] = ["courses"], arcgisKey: string | null = null) {
   const db = await freshDb();
-  const app = await buildApp({ db, config: testConfig({ googleMapsKey }), logger: false });
+  const app = await buildApp({ db, config: testConfig({ googleMapsKey, arcgisKey }), logger: false });
   w = { db, app, close: async () => (await app.close(), await db.close()) };
   const { tenantId } = await bootstrapTenant(db, { tenantName: "Geo", timezone: "America/Panama", adminEmail: "geo@example.test", adminName: "Geo", adminPassword: TEST_PASSWORD });
   await db.query("UPDATE tenants SET features = $2 WHERE id = $1", [tenantId, features]);
@@ -61,7 +62,7 @@ describe("map services through our server, with Google (DEC-026)", () => {
   it("reports Google, satellite, routing and elevation as available", async () => {
     const { app, cookie } = await setup("test-key");
     const res = await app.inject({ method: "GET", url: "/api/geo/status", headers: { cookie } });
-    expect(res.json()).toEqual({ provider: "google", search: true, tiles: "google", satellite: true, routing: true, elevation: true });
+    expect(res.json()).toEqual({ provider: "google", search: true, tiles: "google", satellite: true, routing: true, elevation: true, arcgis: false });
   });
 
   it("finds a building, then its exact position; the key never reaches the browser", async () => {
@@ -96,6 +97,29 @@ describe("map services through our server, with Google (DEC-026)", () => {
     expect(res.statusCode).toBe(200);
     expect(res.json().coordinates).toHaveLength(3);
     expect(calls.find((c) => c.url.includes("computeRoutes"))!.body).toMatchObject({ travelMode: "DRIVE" });
+  });
+
+  it("serves ArcGIS Topo, Streets and Imagery pictures through our server when its key is set (B-005)", async () => {
+    const { fake, calls } = fakeGoogle();
+    vi.stubGlobal("fetch", fake);
+    const { app, cookie } = await setup("test-key", [], "arcgis-key");
+    expect((await app.inject({ method: "GET", url: "/api/geo/status", headers: { cookie } })).json().arcgis).toBe(true);
+    for (const style of ["topo", "streets", "imagery"]) {
+      const res = await app.inject({ method: "GET", url: `/api/geo/arcgis/${style}/14/7845/4669`, headers: { cookie } });
+      expect(res.statusCode).toBe(200);
+      expect(res.headers["content-type"]).toBe("image/png");
+    }
+    const call = calls.find((c) => c.url.includes("arcgis/outdoor"))!;
+    expect(call.url).toContain("/static/tile/14/7845/4669");
+    expect(call.url).not.toContain("arcgis-key"); // the key goes in a header, never in the address
+    expect(call.headers.Authorization).toBe("Bearer arcgis-key");
+    expect((await app.inject({ method: "GET", url: "/api/geo/arcgis/bing/1/0/0", headers: { cookie } })).statusCode).toBe(400);
+  });
+
+  it("hides ArcGIS without its key", async () => {
+    const { app, cookie } = await setup("test-key", []);
+    expect((await app.inject({ method: "GET", url: "/api/geo/status", headers: { cookie } })).json().arcgis).toBe(false);
+    expect((await app.inject({ method: "GET", url: "/api/geo/arcgis/topo/1/0/0", headers: { cookie } })).statusCode).not.toBe(200);
   });
 
   it("routes by motorcycle for deliveries; where Google has no motorcycle path, the car path is used and said", async () => {
