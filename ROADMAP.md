@@ -5,7 +5,7 @@
 | Field | Value |
 | --- | --- |
 | Project | STRUCTURA (ChatGPT project name: "Inventario") |
-| Roadmap version | `1.13.0` |
+| Roadmap version | `1.14.0` |
 | Current application version/build | `0.1.0-dev.6`: 0.1.0 feature-complete, READY FOR TEST by Walter |
 | Last updated | 2026-09-30 |
 | Document owner | Walter |
@@ -31,6 +31,7 @@
 | 1.11.0 | 2026-09-30 | Claude (for Walter) | Walter's requirement: all tenant data on local machines encrypted, access only through the app or its export tool (DEC-016); design proposal P-014; limitation L-007 | DEC-016 |
 | 1.12.0 | 2026-09-30 | Claude (for Walter) | Walter placed the search + assistant at the end of Phase 1 as version 0.2.0, after 0.1.0 is approved (DEC-017, was P-012). B-004 moved into the Phase 1 plan | DEC-017 |
 | 1.13.0 | 2026-09-30 | Claude (for Walter) | Walter approved the encryption design with a scope: layer 1 (encrypted storage area) for everything; layer 2 (per-file app encryption) only for core data; product photos layer 1 only; users' own source folders out of scope (DEC-018, was P-014) | DEC-018 |
+| 1.14.0 | 2026-09-30 | Claude (for Walter) | Walter's T-002 testing found D-003..D-006 (date rules and form messages); P-015 opened (past dates) | D-003..D-006 |
 
 ## Project Objective
 
@@ -91,7 +92,7 @@ Walter tests the build running on his PC (see docs/USER_GUIDE.md; sign in with h
 | ID | Work item | Test required | Build | Status |
 | --- | --- | --- | --- | --- |
 | T-001 | Accounts (DEC-013) | Sign in; add a user with the *Operador de inventario* profile; sign in as that user and confirm they can record a movement but not create a product | 0.1.0-dev.6 | READY FOR TEST |
-| T-002 | Events (UC-13, AT-01) | Create an Event with only a provisional name, no customer; set event date, departure and expected return; reopen it and check the three dates stayed separate | 0.1.0-dev.6 | READY FOR TEST |
+| T-002 | Events (UC-13, AT-01) | Create an Event with only a provisional name, no customer; set event date, departure and expected return; reopen it and check the three dates stayed separate | 0.1.0-dev.6 | FAIL 2026-09-30 (Walter): saves, but D-003..D-006. Retest in dev.7 |
 | T-003 | Catalog and photos (UC-12, AT-05, AT-36) | Create two products, one with a barcode starting with 0; give each a photo; switch between them and check each keeps its own photo and the barcode keeps its 0 | 0.1.0-dev.6 | READY FOR TEST |
 | T-004 | Movements (UC-03, AT-02, AT-03) | Create a warehouse and an event location; move part of a product's stock with no trip; try to move more than is there (must be refused); correct a movement and check the original stays, marked *Corregido* | 0.1.0-dev.6 | READY FOR TEST |
 | T-005 | Reservations (UC-21, AT-04, AT-31) | Confirm Event A holding all of a product until day 14; an Event B starting day 14 must be refused; starting day 15 must confirm | 0.1.0-dev.6 | READY FOR TEST |
@@ -102,6 +103,10 @@ Walter tests the build running on his PC (see docs/USER_GUIDE.md; sign in with h
 | ID | Defect | Severity | Reproduction/evidence | Current status | Target |
 | --- | --- | --- | --- | --- | --- |
 | D-002 | Empty required field shows the browser's own English bubble ("Please fill out this field") even in Spanish | Low | Walter's screenshot; Working_Log_2026-09-29 DEFECT-002 | OPEN | 0.1.0-dev.7 |
+| D-003 | Event date not checked against the rental period: an event on 26 Jul saved with warehouse departure on 6 Aug (event before the stock leaves) | Medium | Walter's T-002 screenshots, 2026-09-30 | OPEN | 0.1.0-dev.7 |
+| D-004 | After fixing a refused date, the general message "Revise los campos marcados" stays on screen with no field marked, until the next save | Low | Walter's T-002 screenshots | OPEN | 0.1.0-dev.7 |
+| D-005 | Past dates are accepted with no warning (whole rental period 6 Aug–22 Sep already over on 30 Sep) | Medium | Walter's T-002 screenshots | OPEN, rule pending P-015 | 0.1.0-dev.7 |
+| D-006 | Date boxes show mm/dd/yyyy (browser's English) while the screen is in Spanish | Low | Walter's T-002 screenshots; same family as D-002 | OPEN | 0.1.0-dev.7 |
 | D-001 | Saved Event stayed in edit mode | Low | Working_Log_2026-09-29 DEFECT-001 | CLOSED (fixed in dev.3) | — |
 
 ### Known limitations (by design in 0.1.0, not defects)
@@ -143,6 +148,7 @@ Walter tests the build running on his PC (see docs/USER_GUIDE.md; sign in with h
 
 | ID | Question | Options or constraint | Needed by | Owner |
 | --- | --- | --- | --- | --- |
+| P-015 | Past dates on Events (D-005) | Proposed: saving with past dates shows a warning but is allowed (records can be entered after the fact); **confirming** (reserving stock) is refused when the expected return is already past, since stock can't be held for days that are over | Before 0.1.0-dev.7 | Walter |
 | P-011 | Cloud hosting provider and onsite mini-PC model | Not blocking 0.1.0. DEC-014 adds a need: the machine running the local AI model needs roughly 8 GB of memory or more | Phase 4 / first cloud deployment | Walter |
 | P-005 | Licensing policy values (gap G-07) | Pricing, plans, capacity limits, offline grace period. The spec says: configuration only, never invented | Phase 4 | Walter |
 | P-006 | Tax, rounding, currency and retention settings (gap G-10) | Must be explicit configurable policies | Phase 2 | Walter |

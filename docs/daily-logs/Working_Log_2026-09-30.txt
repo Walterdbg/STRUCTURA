@@ -105,11 +105,33 @@ Roadmap section: Approved Decisions; Pending Decisions; Known limitations; Near-
 
 ---
 
+[006]
+Time: 2026-09-30
+Area / feature: Walter's test T-002 (Events) on 0.1.0-dev.6
+Request or objective: Walter tested Event creation: "how bad are you at creating basic controls and basic timeline logic?"
+Action taken: Reviewed his 4 screenshots. First save correctly refused (return 12/02/2025 before departure 08/06/2026). After he corrected it, the general error message stayed with no field marked (D-004). Saved with event date 07/26/2026 before departure 08/06/2026, not caught (D-003). Whole rental period already past, no warning (D-005; rule needs Walter, P-015). Date boxes in mm/dd/yyyy in a Spanish screen (D-006). Recorded all, T-002 marked FAIL.
+Files created: None
+Files modified: ROADMAP.md (v1.14.0), this log
+Decision made: None. P-015 opened.
+Verification performed: Walter's screenshots
+Result: FAIL (T-002)
+Observed issue: D-003, D-004, D-005, D-006
+Follow-up required: Walter answers P-015; fixes in 0.1.0-dev.7
+Roadmap update required: YES (done: v1.14.0)
+Roadmap section: Known Defects; Pending Decisions; Ready for test
+
+---
+
 
 DEFECTS DISCOVERED TODAY
 ========================
 
-None yet. Open from yesterday: DEFECT-002 (for dev.7).
+Open from yesterday: DEFECT-002 (for dev.7).
+
+[DEFECT-003] Event date not checked against departure/return (event 26 Jul, departure 6 Aug saved). Medium. OPEN. Evidence: Walter's screenshots.
+[DEFECT-004] General error message stays after the field is fixed. Low. OPEN.
+[DEFECT-005] Past dates accepted with no warning. Medium. OPEN, rule pending P-015.
+[DEFECT-006] Date boxes show mm/dd/yyyy (browser English) on a Spanish screen. Low. OPEN.
 
 
 DECISIONS MADE TODAY
