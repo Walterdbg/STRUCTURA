@@ -156,13 +156,19 @@ Everything owned, except:
 
 At the bottom of each Event, **Mapa del evento** holds what the team needs on site:
 
-- **📍 Punto**: click where it goes, then choose its type and name it, e.g.
+- **📍 Punto**: click where it goes, then choose its type and name it (a stage platform or bar
+  storage is a point too, no corners to draw), e.g.
   🎤 "Tarima uno", 💧 "Agua km 5", 🚻 "Baños norte", 🍹 "Bodega de bebidas", ⛑️ first aid,
   🚪 entrance, 🅿️ parking.
-- **⬠ Área**: click each corner of a small zone (bar storage, stage platform) and press
-  **Terminar**.
 - **〰 Ruta**: click each point of the route in order and press **Terminar**. Mark
   *Ruta preferida* for the delivery path to use. Its length is shown.
+
+If you leave the name empty, STRUCTURA names it (e.g. "Recorrido (carrera) 1"); rename it any
+time. Starting another drawing before saving asks first, so nothing is lost by accident.
+
+**⛶ Full screen:** the button under + / − on every map. On the Event map the tools come along.
+While drawing, and in full screen, the mouse wheel zooms the map. The Event map is also shown
+while the Event's details are being edited.
 
 Click any item on the map or in the list to rename it, change its shape or remove it.
 Removed items stay in the history. The map never moves stock and never creates

@@ -1,0 +1,115 @@
+DAILY DEVELOPMENT WORKING LOG
+=============================
+
+Date: 2026-10-01
+Project: STRUCTURA
+Application version/build at start: 0.1.0-dev.9 (READY FOR TEST, running at http://127.0.0.1:8095)
+Roadmap version at start: 1.20.0
+Primary goal for today: Google maps key (P-017); Walter's map tests T-011..T-013; server proposal
+Started at: 2026-10-01
+Working by: Claude, for Walter
+
+
+PROTECTED BASELINE / DO NOT BREAK
+---------------------------------
+- Locked requirements in spec v1.3 sections 2.2, 3 and 21.1 (see docs/BUSINESS_RULES.md)
+- Documented gaps G-01..G-10 stay open; no invented answers
+- STRUCTURA stays independent of CITYTRI Hub (DEC-006)
+- The Google key lives only in .env (never in git, never in chat)
+
+
+WORK ENTRIES
+============
+
+[001]
+Time: 2026-10-01, morning
+Area / feature: Hosting proposal; Google Workspace email for ratioillustrata.com
+Request or objective: Walter asked what the map needs (subscription?) and for a server proposal with the fat cut, including a public website and his nephew's Vercel suggestion. He also asked for advice on his Google Workspace "Email setup status" screen.
+Action taken: Explained Google Maps is pay-as-you-go (no subscription). Proposed one small VPS (Docker + Caddy) for Hub and STRUCTURA as separate stacks plus the public site; Vercel fits a website but not our Docker/PostgreSQL apps. Options: Hetzner Germany about $13/month or DigitalOcean New York about $58/month. Guided Walter through Activate Gmail (MX already correct, SPF/DKIM complete) and recommended a DMARC record (p=none first).
+Files created: None
+Files modified: None
+Decision made: None yet (P-011 hosting provider still open; Walter's main domain is ratioillustrata.com, subdomains proposed)
+Verification performed: N/A
+Result: PASS
+Observed issue: None
+Follow-up required: Walter chooses the provider (P-011); adds DMARC
+Roadmap update required: NO
+
+---
+
+[002]
+Time: 2026-10-01, midday
+Area / feature: Google Maps key (P-017)
+Request or objective: Get the Google key working.
+Action taken: Walter created the Google Cloud setup himself: organization ratioillustrata.com, project STRUCTURA (structura-510315), free trial billing ($300, ends 2026-12-31), the 4 APIs, a key restricted to them. The first key appeared in full in a screenshot in chat, so Walter rotated it and the old key was deleted. Walter put the new key in .env; Claude checked only its format (length, no spaces), restarted Docker and ran live checks through our server.
+Files created: None
+Files modified: ROADMAP.md (v1.21.0: P-017 closed, P-018 added)
+Decision made: None (P-018 follow-ups: trial upgrade before 2026-12-31, daily quotas, budget alert, lock key to server IP later)
+Verification performed: Live: place search found "PH Palmas Bellas" with its point; street and satellite pictures; copyright line; walking route along streets 3.3 km; elevation returned
+Result: PASS
+Observed issue: The key was exposed in a screenshot; handled by rotation
+Follow-up required: P-018 (Walter)
+Roadmap update required: YES (done: v1.21.0)
+Roadmap section: Pending Decisions, Ready for test
+
+---
+
+[003]
+Time: 2026-10-01, afternoon
+Area / feature: 0.1.0-dev.10 - map fixes from Walter's T-011..T-013
+Request or objective: Walter's tests: T-011 PASS; T-012 "kind of works, had to play with the zoom"; T-013 "had to save and click on fit to streets", started as a Route then changed to Course; "the saving fails, I lost the route"; no full-screen view; Map/Satellite switch odd ("make that extra map area in a different color"); "area is a point, I don't need to draw any square"; couldn't find the Route button (the Event map was hidden while the Event was in edit mode).
+Action taken: Found from the server log that no map save ever reached the server: the screen refused saves without a name ("Enter a name."), and pressing another drawing button discarded the unsaved drawing silently. Fixes: a missing name no longer blocks saving (automatic name, e.g. "Recorrido (carrera) 1"); an unsaved drawing is never discarded without asking; changing a line's type to Course fetches its heights right away; full-screen button on every map (Event map full screen keeps its tools); mouse wheel zooms while drawing and in full screen; Map/Satellite switch compact, in the screen's colours and in the screen's language (maps are rebuilt on a language change); the Event map stays visible while editing the Event; Area button removed (points cover stage, bar storage, etc.; existing areas still shown); "Name" status box relabelled "Name status" / "¿Nombre definitivo?".
+Files created: docs/daily-logs/Working_Log_2026-10-01.txt
+Files modified: web/src/components/basemap.ts, web/src/components/LocationPicker.tsx, web/src/pages/EventMap.tsx, web/src/pages/EventForm.tsx, web/src/i18n.ts, web/src/styles.css, package.json files and package-lock.json (0.1.0-dev.10), CHANGELOG.md, ROADMAP.md (v1.22.0), docs/USER_GUIDE.md
+Decision made: DEC-029 (Walter): no Area drawing tool; places are points
+Verification performed: Type check and build; 120/120 server tests; in-memory dev run with the live Google key: course drawn with Course gets heights by itself (10.03 km, climb 88 m), saved with no name as "Recorrido (carrera) 1"; route saved; unsaved point + Ruta asks before discarding; Area button gone; switch compact. Docker dev.10: health OK, Google search live.
+Result: PASS for Claude's checks; NOT TESTED by Walter
+Observed issue: A version-bump script missed the @structura/domain dependency references, so the first Docker build failed (npm ci 404); fixed before the build. A PowerShell replace with a single pair garbled styles.css in the working copy; restored from git before any commit.
+Follow-up required: Walter retests T-012/T-013 on dev.10 and the full-screen button (not checked by Claude: browsers allow full screen only from a real click)
+Roadmap update required: YES (done: v1.22.0)
+Roadmap section: Known Defects (D-010..D-013), Approved Decisions (DEC-029), Pending (P-019), Ready for test, Build status
+
+---
+
+
+DEFECTS DISCOVERED TODAY
+========================
+
+[DEFECT-010] Map item save refused without a name and the message went unnoticed; pressing another drawing button discarded the drawing; Walter lost a route. High. FIXED-NOT-TESTED (dev.10).
+[DEFECT-011] Map/Satellite switch stayed in Spanish after switching to English; large radio circles on a white box. Low. FIXED-NOT-TESTED (dev.10).
+[DEFECT-012] A line drawn as Route and changed to Course got no elevation until "Fit to streets". Medium. FIXED-NOT-TESTED (dev.10).
+[DEFECT-013] Event map hidden while the Event is in edit mode; no full-screen view; wheel zoom unavailable while drawing. Medium. FIXED-NOT-TESTED (dev.10).
+
+
+DECISIONS MADE TODAY
+====================
+
+[DECISION-001]
+Decision: DEC-029 - no Area drawing tool; stage, bar storage, etc. are points (existing areas still shown)
+Approved by: Walter ("area is a point, I don't need to draw any square")
+Roadmap update required: YES (done)
+
+Proposed, waiting for Walter: P-019 (proposed DEC-028) warehouse departure at most 15 days before the event date, configurable per organization; same limit for the return?
+
+
+DOCUMENT REGISTER
+=================
+
+docs/daily-logs/Working_Log_2026-10-01.txt | Daily working log | SUPPORTING | 001 | RETAIN
+
+
+DEPLOYMENT / BUILD RECORD
+=========================
+
+Deployment performed: YES (local development only)
+Build/version: 0.1.0-dev.10 (current)
+Environment: Development - Docker on Walter's PC, http://127.0.0.1:8095
+Deployment result: PASS (Claude's checks); NOT TESTED by Walter
+Verification performed: health 0.1.0-dev.10, Google status/search live
+Rollback required: NO
+
+
+END-OF-DAY RECONCILIATION
+=========================
+
+Ended at: (open)

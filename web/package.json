@@ -1,6 +1,6 @@
 {
   "name": "@structura/web",
-  "version": "0.1.0-dev.9",
+  "version": "0.1.0-dev.10",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@geoman-io/leaflet-geoman-free": "^2.20.2",
-    "@structura/domain": "0.1.0-dev.9",
+    "@structura/domain": "0.1.0-dev.10",
     "leaflet": "^1.9.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

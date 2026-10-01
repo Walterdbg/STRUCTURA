@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { DATE_FIELDS, eventFields, pastDateIssues, todayIn, type DateField as DateFieldName } from "@structura/domain";
 import { ApiError, api, newCommand, send, type Command, type EventRecord, type Me, type Member } from "../api.js";
-import { errorKey, hasKey, useT, type TextKey } from "../i18n.js";
+import { LocaleContext, errorKey, hasKey, useT, type TextKey } from "../i18n.js";
 import { DateField } from "../components/DateField.js";
 import { LocationPicker, type MapPoint } from "../components/LocationPicker.js";
 import { TimezoneSelect } from "../components/TimezoneSelect.js";
@@ -100,6 +100,7 @@ function fieldErrors(f: FormState, before: EventRecord | null): Record<string, T
 
 export function EventForm({ me, eventId }: { me: Me; eventId?: string }) {
   const t = useT();
+  const locale = useContext(LocaleContext); // maps are rebuilt in the new language
   const canEdit = me.capabilities.includes("event.manage");
   const [record, setRecord] = useState<EventRecord | null>(null);
   const [form, setForm] = useState<FormState>(() => blank(me));
@@ -271,6 +272,7 @@ export function EventForm({ me, eventId }: { me: Me; eventId?: string }) {
         <div className="wide">
           <span className="label">{t("event.location")}</span>
           <LocationPicker
+            key={locale}
             value={{ name: form.location, lat: form.locationLat, lng: form.locationLng }}
             onChange={onPoint}
             disabled={readOnly}
@@ -334,9 +336,10 @@ export function EventForm({ me, eventId }: { me: Me; eventId?: string }) {
         onChanged={() => void load()}
       />
     )}
-    {record && !editing && (
+    {/* The Event map stays visible while editing (Walter, 2026-10-01). */}
+    {record && (
       <EventMap
-        key={record.id}
+        key={`${record.id}-${locale}`}
         event={record}
         canEdit={me.capabilities.includes("map.edit")}
         features={me.tenant.features ?? []}

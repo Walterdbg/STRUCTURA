@@ -145,6 +145,17 @@ button.icon { padding: 4px 8px; min-width: 36px; }
 .location-picker .results li button { display: block; width: 100%; text-align: left; padding: 6px 10px; font-weight: 400; white-space: normal; }
 /* ---- event map (0.1.0-dev.8) ---- */
 .map-box.tall { height: 420px; margin-top: 8px; }
+/* Map / Satellite switch in the screen's own colours, compact (Walter, 2026-10-01). */
+.leaflet-control-layers { background: var(--surface); color: var(--text); border: 1px solid var(--border) !important; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.35); }
+.leaflet-control-layers-expanded { padding: 4px 8px; }
+.leaflet-control-layers label { margin: 2px 0; font-size: 13px; cursor: pointer; }
+.leaflet-control-layers label > span, .leaflet-control-layers label > div { display: flex; align-items: center; gap: 6px; }
+.leaflet-control-layers input[type=radio] { width: auto; min-height: 0; padding: 0; margin: 0; accent-color: var(--accent); }
+a.map-fullscreen { font-size: 16px; font-weight: 700; color: #222; text-decoration: none; }
+/* Full screen: the map, or the Event map section with its tools. */
+.map-box:fullscreen { height: 100vh; border-radius: 0; }
+.map-full-target:fullscreen { background: var(--bg); padding: 16px; overflow-y: auto; margin: 0; border-radius: 0; }
+.map-full-target:fullscreen .map-box.tall { height: calc(100vh - 170px); }
 .poi-icon { font-size: 20px; line-height: 28px; text-align: center; background: var(--surface); border: 2px solid var(--accent); border-radius: 50%; box-shadow: 0 1px 4px rgba(0,0,0,0.35); }
 .km-marker { font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; color: #fff; background: #7048e8; border: 2px solid #fff; border-radius: 50%; }
 .map-panel { margin-top: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); display: flex; flex-direction: column; gap: 8px; }

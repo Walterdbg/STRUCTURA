@@ -68,4 +68,39 @@ export async function addBaseLayers(map: L.Map, locale: string, labels: { map: s
   return status;
 }
 
-const escapeHtml = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+// ⛶ button (Walter, 2026-10-01): the map, or the section holding it with its
+// tools, fills the screen; the same button or Esc brings it back.
+export function addFullscreen(map: L.Map, target: HTMLElement, labels: { enter: string; exit: string }): void {
+  if (!target.requestFullscreen) return;
+  const Ctl = L.Control.extend({
+    onAdd() {
+      const bar = L.DomUtil.create("div", "leaflet-bar leaflet-control");
+      const a = L.DomUtil.create("a", "map-fullscreen", bar) as HTMLAnchorElement;
+      a.href = "#";
+      a.setAttribute("role", "button");
+      const sync = () => {
+        const on = document.fullscreenElement === target;
+        a.textContent = on ? "✕" : "⛶";
+        a.title = on ? labels.exit : labels.enter;
+        a.setAttribute("aria-label", a.title);
+        // Full screen: the mouse wheel zooms (no page to scroll behind it).
+        if (on) map.scrollWheelZoom.enable();
+        else if (map.getContainer().dataset.drawing !== "1") map.scrollWheelZoom.disable();
+        setTimeout(() => map.invalidateSize(), 50);
+      };
+      sync();
+      L.DomEvent.disableClickPropagation(bar);
+      L.DomEvent.on(a, "click", (e) => {
+        L.DomEvent.preventDefault(e);
+        if (document.fullscreenElement === target) void document.exitFullscreen();
+        else void target.requestFullscreen();
+      });
+      document.addEventListener("fullscreenchange", sync);
+      map.on("unload", () => document.removeEventListener("fullscreenchange", sync));
+      return bar;
+    },
+  });
+  new Ctl({ position: "topleft" }).addTo(map);
+}
+
+const escapeHtml =(s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);

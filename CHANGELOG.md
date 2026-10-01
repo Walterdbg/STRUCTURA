@@ -3,7 +3,32 @@
 Every entry gets an **Intent** and a **Result**. A Result is only marked
 confirmed once actually verified, and can honestly say FAILED.
 
-## 0.1.0-dev.9 — 2026-09-30 (Google maps, course tools 1–5) — NOT YET TESTED BY WALTER
+## 0.1.0-dev.10 — 2026-10-01 (map fixes from Walter's tests) — NOT YET TESTED BY WALTER
+
+**Intent:** Fix what Walter found testing the Google maps (T-011..T-013):
+a route he couldn't save and lost, no full-screen view, zooming while
+drawing, the Map / Satellite switch, and the Area tool he doesn't need.
+
+**Result:**
+- **Saving map items (D-010):** a missing name no longer blocks saving;
+  STRUCTURA names the item, e.g. "Recorrido (carrera) 1". An unsaved
+  drawing is never thrown away without asking.
+- **Course elevation (D-012):** changing a line's type to Course gets its
+  heights right away; no Save + Fit to streets needed.
+- **Full screen and zoom (D-013):** ⛶ button on every map; the Event map
+  goes full screen with its tools. The mouse wheel zooms while drawing and
+  in full screen. The Event map stays visible while the Event is edited.
+- **Map / Satellite switch (D-011):** compact, in the screen's colours and
+  language.
+- **No Area tool (DEC-029):** stage, bar storage and the like are points.
+  Areas drawn before still show.
+- The Event's name status box now reads *Name status* / *¿Nombre
+  definitivo?* instead of a second *Name*.
+- Checked by Claude: 120/120 server tests; browser run with the live
+  Google key (course with heights by itself, saved with no name, warning
+  before discarding); Docker health and live search. Full screen not
+  checked (browsers allow it only from a real click).
+## 0.1.0-dev.9 — 2026-09-30 (Google maps, course tools 1–5) — PARTLY TESTED BY WALTER (T-011..T-013, 2026-10-01)
 
 **Intent:** Walter chose Google for maps (DEC-026) and ordered the course
 tools 1–5 (DEC-027): follow streets, elevation for drawn courses, points

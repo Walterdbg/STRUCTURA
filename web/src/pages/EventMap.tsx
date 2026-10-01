@@ -15,7 +15,7 @@ import {
   type FeatureProps,
 } from "@structura/domain";
 import { ApiError, get, newCommand, send, type EventRecord, type MapFeature } from "../api.js";
-import { addBaseLayers, type GeoStatus } from "../components/basemap.js";
+import { addBaseLayers, addFullscreen, type GeoStatus } from "../components/basemap.js";
 import { parseGpx, toGpx } from "../components/gpx.js";
 import { describeFailure } from "../forms.js";
 import { LocaleContext, useT, type TextKey } from "../i18n.js";
@@ -84,12 +84,15 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
   const t = useT();
   const locale = useContext(LocaleContext);
   const box = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
   const map = useRef<L.Map | null>(null);
   const layerGroup = useRef<L.FeatureGroup | null>(null);
   const drawingLayer = useRef<L.Layer | null>(null);
   const pendingCategory = useRef<string | null>(null);
   const [items, setItems] = useState<MapFeature[] | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
+  const draftRef = useRef<Draft | null>(null);
+  draftRef.current = draft;
   const [editingShape, setEditingShape] = useState(false);
   const [error, setError] = useState<TextKey | null>(null);
   const [busy, setBusy] = useState<TextKey | null>(null);
@@ -182,6 +185,7 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
       setStatus(s);
       setFollowStreets(s.routing);
     });
+    if (sectionRef.current) addFullscreen(m, sectionRef.current, { enter: t("map.fullscreen"), exit: t("map.exitFullscreen") });
     layerGroup.current = L.featureGroup().addTo(m);
     m.pm.setGlobalOptions({ snappable: true, continueDrawing: false });
     m.pm.setLang(locale === "es" ? "es" : "en");
@@ -219,6 +223,17 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
   }, []);
 
   // Draw saved items.
+  // While drawing or reshaping, the mouse wheel zooms the map (Walter,
+  // 2026-10-01); otherwise it scrolls the page.
+  useEffect(() => {
+    const m = map.current;
+    if (!m) return;
+    const active = Boolean(drawing) || editingShape;
+    m.getContainer().dataset.drawing = active ? "1" : "";
+    if (active) m.scrollWheelZoom.enable();
+    else if (!document.fullscreenElement) m.scrollWheelZoom.disable();
+  }, [drawing, editingShape]);
+
   useEffect(() => {
     const g = layerGroup.current;
     const m = map.current;
@@ -256,8 +271,7 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
       layer.on("click", () => {
         // While drawing, a click on an existing item is part of the drawing.
         if (map.current?.pm.globalDrawModeEnabled()) return;
-        setError(null);
-        setDraft(toDraft(f));
+        openItem(f);
       });
       layer.addTo(g);
     }
@@ -271,6 +285,8 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
   function startDraw(kind: Kind, category?: string) {
     const m = map.current;
     if (!m) return;
+    // Never throw away an unsaved drawing without asking.
+    if (draft && !draft.id && !window.confirm(t("map.discardDraft"))) return;
     cancelDraft();
     setError(null);
     setDrawing(kind);
@@ -283,6 +299,15 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
 
   // Finish a route or area with a button (re-clicking the last point fails
   // when it sits under another icon).
+  // Open an item to edit it; an unsaved new drawing is kept unless the person agrees to drop it.
+  function openItem(f: MapFeature) {
+    const d = draftRef.current;
+    if (d && !d.id && !window.confirm(t("map.discardDraft"))) return;
+    if (d && !d.id) cancelDraft();
+    setError(null);
+    setDraft(toDraft(f));
+  }
+
   function finishDrawing() {
     const draw = (map.current?.pm as unknown as { Draw: Record<string, { _finishShape?: () => void }> } | undefined)?.Draw;
     draw?.[drawing === "area" ? "Polygon" : "Line"]?._finishShape?.();
@@ -350,10 +375,10 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
 
   async function save() {
     if (!draft) return;
-    if (!draft.label.trim()) {
-      setError("map.labelRequired");
-      return;
-    }
+    // No name typed: STRUCTURA names it, e.g. "Recorrido (carrera) 2"; a
+    // missing name never blocks saving (Walter lost a course, 2026-10-01).
+    const sameType = (items ?? []).filter((f) => f.category === draft.category && f.id !== draft.id).length;
+    const label = draft.label.trim() || `${t(`map.cat.${draft.category}` as TextKey)} ${sameType + 1}`;
     const geometry = currentGeometry() ?? draft.geometry;
     const props: FeatureProps = { ...draft.props };
     if (!(draft.kind === "route" && draft.category === "course")) {
@@ -368,7 +393,7 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
     const payload = {
       kind: draft.kind,
       category: draft.category,
-      label: draft.label.trim(),
+      label,
       notes: draft.notes.trim() || null,
       preferred: draft.kind === "route" ? draft.preferred : false,
       geometry,
@@ -485,7 +510,7 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
   const draftTotal = isCourse && draftLength !== null ? courseTotal(draftLength, draft!.props) : null;
 
   return (
-    <section className="card">
+    <section className="card map-full-target" ref={sectionRef}>
       <div className="row between">
         <h3 className="flush">{t("map.title")}</h3>
         {canEdit && (
@@ -493,9 +518,7 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
             <button type="button" onClick={() => startDraw("point")}>
               📍 {t("map.addPoint")}
             </button>
-            <button type="button" onClick={() => startDraw("area")}>
-              ⬠ {t("map.addArea")}
-            </button>
+            {/* No Area button: a stage or bar storage is a point (Walter, 2026-10-01). */}
             <button type="button" onClick={() => startDraw("route", "delivery")}>
               〰 {t("map.addRoute")}
             </button>
@@ -545,7 +568,22 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
           <div className="form grid">
             <label>
               <span>{t("map.type")}</span>
-              <select value={draft.category} disabled={!canEdit} onChange={(e) => setDraft({ ...draft, category: e.target.value })}>
+              <select
+                value={draft.category}
+                disabled={!canEdit}
+                onChange={(e) => {
+                  const d = { ...draft, category: e.target.value };
+                  setDraft(d);
+                  // A line turned into a course gets its heights right away
+                  // (Walter, 2026-10-01: no Save + "Fit to streets" needed).
+                  if (d.category === "course" && d.geometry.type === "LineString") {
+                    void snapAndElevate(d, { snap: false }).then((x) => {
+                      setDraft((cur) => (cur && cur.category === "course" ? { ...cur, geometry: x.geometry } : cur));
+                      if (!editingShape) showPreview(x.geometry.coordinates as number[][], x.category);
+                    });
+                  }
+                }}
+              >
                 {categories.map((c) => (
                   <option key={c} value={c}>
                     {draft.kind === "route" ? "" : `${ICON[c]} `}
@@ -693,7 +731,7 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
                 return (
                   <tr key={f.id}>
                     <td>
-                      <button type="button" className="link" onClick={() => setDraft(toDraft(f))}>
+                      <button type="button" className="link" onClick={() => openItem(f)}>
                         {f.kind === "route" ? "〰" : f.kind === "area" ? "⬠" : ICON[f.category]} {f.label}
                       </button>
                       {f.preferred && <span className="tag">{t("map.preferred")}</span>}

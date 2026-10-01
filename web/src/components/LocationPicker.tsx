@@ -3,7 +3,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { ApiError, get } from "../api.js";
 import { uuidv7 } from "@structura/domain";
-import { addBaseLayers, geoStatus } from "./basemap.js";
+import { addBaseLayers, addFullscreen, geoStatus } from "./basemap.js";
 import { LocaleContext, useT } from "../i18n.js";
 
 // The Event location as a point on a map (Walter, 2026-09-30): search a
@@ -55,6 +55,7 @@ export function LocationPicker({ value, onChange, disabled }: { value: MapPoint;
       value.lat !== null ? 15 : 11
     );
     void addBaseLayers(m, locale, { map: t("map.layerMap"), satellite: t("map.layerSatellite") });
+    addFullscreen(m, box.current, { enter: t("map.fullscreen"), exit: t("map.exitFullscreen") });
     map.current = m;
     return () => {
       m.remove();
