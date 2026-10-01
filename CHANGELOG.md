@@ -3,6 +3,64 @@
 Every entry gets an **Intent** and a **Result**. A Result is only marked
 confirmed once actually verified, and can honestly say FAILED.
 
+## 0.1.0-dev.9 — 2026-09-30 (Google maps, course tools 1–5) — NOT YET TESTED BY WALTER
+
+**Intent:** Walter chose Google for maps (DEC-026) and ordered the course
+tools 1–5 (DEC-027): follow streets, elevation for drawn courses, points
+at a distance on a course, start/finish + laps + out-and-back, course
+sheet.
+
+**Result:**
+- **Google connection** (switches on by itself when `GOOGLE_MAPS_KEY` is
+  set in `.env`; until then OpenStreetMap keeps working):
+  - place search that finds buildings, e.g. "PH Palmas Bellas", billed
+    once per search
+  - map pictures with a **🗺 Mapa / 🛰 Satélite** switch, and Google's
+    copyright text for the area on screen
+  - street routing and elevation
+  - everything goes through our server; the key never reaches browsers
+    (tested)
+- **(1) Follow streets:** while drawing a route, **Seguir calles** makes
+  the line follow real streets (driving for delivery, walking for
+  courses). **🛣 Ajustar a calles** re-fits an existing route. Available
+  to every organization.
+- **(2) Elevation for drawn courses:**
+  - heights are added automatically after drawing a course, or with
+    **⛰ Obtener elevación**
+  - a GPX without heights also gets them
+  - courses add-on
+- **(3) Points at a distance on a course** (migration
+  `007_map_feature_props.sql`):
+  - a point can be placed "on the course at km X", and the server puts
+    it exactly on the line
+  - placed points follow the course when its shape changes; if the
+    course is removed they stay where they are, no longer tied to it
+  - the map list shows each point's km ("km 2.00"), or "≈ km" for points
+    within 30 m of a course
+- **(4) Start, finish, laps, out-and-back:**
+  - ▶ and 🏁 markers on courses
+  - a laps setting (1–50) and an out-and-back option
+  - total distance = one pass × (2 if out-and-back) × laps, e.g.
+    "20.07 km (2 × 5.02 km ↔)"
+- **(5) Course sheet:** **📄 Hoja del recorrido** opens a printable page
+  with the map, km markers, start/finish and stations, the distance
+  breakdown, the climb (per pass), the elevation chart, and the stations
+  table by km. **🖨 Imprimir / Guardar PDF** uses the browser's print,
+  formatted for paper.
+- Tests: 130/130 (domain 10, server 120), including the Google services
+  against a simulated Google, and the route-line format checked against
+  Google's own published example.
+- Checked in the browser (dev run, OpenStreetMap):
+  - GPX course with 2 laps, out-and-back: total 20.07 km, start and
+    finish markers
+  - "Agua km 2" placed at km 2.00
+  - course sheet with title, date, place, distance breakdown, elevation,
+    map, station at km 2.00, print button
+- **Not yet checked live, needs Walter's Google key:** Google search,
+  map pictures/satellite, street routing, elevation of drawn courses.
+- Checked in Docker dev.9: migration 007 applied, the OpenStreetMap
+  fallback is active.
+
 ## 0.1.0-dev.8 — 2026-09-30 (event maps, running courses add-on, plans, place search, timezones) — NOT YET TESTED BY WALTER
 
 **Intent:** Walter asked for event maps with routes and small points of

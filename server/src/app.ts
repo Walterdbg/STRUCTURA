@@ -69,7 +69,7 @@ export async function buildApp({ db, config, logger = true, store }: AppOptions)
   mapRoutes(app, db, config);
   inventoryRoutes(app, db, config, files);
   auditRoutes(app, db);
-  geoRoutes(app, config);
+  geoRoutes(app, db, config);
 
   app.get("/api/health", async (_req, reply) => {
     let database: "ok" | "unavailable" = "ok";

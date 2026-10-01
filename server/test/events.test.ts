@@ -164,7 +164,7 @@ describe("location as a map point", () => {
 
   it("place search is off by default and says so; the map point still works", async () => {
     const status = await w.app.inject({ method: "GET", url: "/api/geo/status", headers: { cookie: t.cookie } });
-    expect(status.json()).toEqual({ search: false, provider: "none" });
+    expect(status.json()).toMatchObject({ search: false, provider: "none", tiles: "osm", routing: false });
     const search = await w.app.inject({ method: "GET", url: "/api/geo/search?q=Coronado", headers: { cookie: t.cookie } });
     expect(search.statusCode).toBe(502);
     expect(search.json().details.reason).toBe("not_configured");

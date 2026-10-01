@@ -6,6 +6,7 @@ export type Route =
   | { name: "events" }
   | { name: "eventNew" }
   | { name: "event"; id: string }
+  | { name: "courseSheet"; eventId: string; courseId: string }
   | { name: "inventory" }
   | { name: "itemNew" }
   | { name: "item"; id: string }
@@ -22,6 +23,7 @@ export function parseRoute(hash: string): Route {
   switch (parts[0]) {
     case "events":
       if (parts[1] === "new") return { name: "eventNew" };
+      if (parts[1] && parts[2] === "course" && parts[3]) return { name: "courseSheet", eventId: parts[1], courseId: parts[3] };
       if (parts[1]) return { name: "event", id: parts[1] };
       return { name: "events" };
     case "inventory":

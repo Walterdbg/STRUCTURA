@@ -41,6 +41,21 @@ export type Geometry = z.infer<typeof geometrySchema>;
 
 const KIND_GEOMETRY = { point: "Point", area: "Polygon", route: "LineString" } as const;
 
+// Extra settings (DEC-027). Routes: laps and out-and-back (courses only),
+// and whether the line follows the streets. Points: placed at a distance
+// along a course (e.g. water at km 5).
+export const featurePropsSchema = z
+  .object({
+    laps: z.number().int().min(1).max(50).optional(),
+    outAndBack: z.boolean().optional(),
+    snapped: z.boolean().optional(),
+    courseId: z.string().uuid().optional(),
+    distanceM: z.number().min(0).max(1_000_000).optional(),
+  })
+  .strict()
+  .default({});
+export type FeatureProps = z.infer<typeof featurePropsSchema>;
+
 export const mapFeatureFields = z
   .object({
     kind: z.enum(["point", "area", "route"]),
@@ -56,8 +71,23 @@ export const mapFeatureFields = z
     geometry: geometrySchema,
     preferred: z.boolean().default(false),
     source: z.string().max(300).nullable().optional().transform((s) => s ?? null),
+    props: featurePropsSchema,
   })
   .superRefine((f, ctx) => {
+    const p = f.props;
+    const isCourse = f.kind === "route" && f.category === "course";
+    if ((p.laps !== undefined || p.outAndBack !== undefined) && !isCourse) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["props"], message: "Laps and out-and-back apply to courses only" });
+    }
+    if (p.snapped !== undefined && f.kind !== "route") {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["props"], message: "Only routes follow streets" });
+    }
+    if ((p.courseId === undefined) !== (p.distanceM === undefined)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["props"], message: "A course position needs both the course and the distance" });
+    }
+    if (p.courseId !== undefined && f.kind !== "point") {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["props"], message: "Only points can be placed on a course" });
+    }
     if (f.geometry.type !== KIND_GEOMETRY[f.kind]) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["geometry"], message: `A ${f.kind} needs ${KIND_GEOMETRY[f.kind]} geometry` });
     }
@@ -106,6 +136,53 @@ export function markersAlong(coords: readonly (readonly number[])[], step = 1000
     walked += seg;
   }
   return out;
+}
+
+// The [lng, lat] position `distance` metres along a line (clamped to its ends).
+export function positionAt(coords: readonly (readonly number[])[], distance: number): [number, number] {
+  if (coords.length === 0) throw new Error("empty line");
+  let walked = 0;
+  for (let i = 1; i < coords.length; i++) {
+    const a = coords[i - 1]!;
+    const b = coords[i]!;
+    const seg = haversine(a, b);
+    if (seg > 0 && walked + seg >= distance) {
+      const f = Math.max(0, (distance - walked) / seg);
+      return [a[0]! + (b[0]! - a[0]!) * f, a[1]! + (b[1]! - a[1]!) * f];
+    }
+    walked += seg;
+  }
+  const last = coords[coords.length - 1]!;
+  return [last[0]!, last[1]!];
+}
+
+// Where a point lies along a line: the distance from the start of the
+// nearest spot on the line, and how far the point is from it (metres).
+// Local flat approximation per segment; fine at event scale.
+export function projectOnLine(coords: readonly (readonly number[])[], p: readonly number[]): { distance: number; offset: number } {
+  let best = { distance: 0, offset: Infinity };
+  let walked = 0;
+  for (let i = 1; i < coords.length; i++) {
+    const a = coords[i - 1]!;
+    const b = coords[i]!;
+    const kx = Math.cos(rad((a[1]! + b[1]!) / 2)) * 111_320;
+    const ky = 110_540;
+    const ax = a[0]! * kx, ay = a[1]! * ky, bx = b[0]! * kx, by = b[1]! * ky, px = p[0]! * kx, py = p[1]! * ky;
+    const dx = bx - ax, dy = by - ay;
+    const len2 = dx * dx + dy * dy;
+    const tt = len2 > 0 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2)) : 0;
+    const cx = ax + tt * dx, cy = ay + tt * dy;
+    const offset = Math.hypot(px - cx, py - cy);
+    const seg = haversine(a, b);
+    if (offset < best.offset) best = { distance: walked + tt * seg, offset };
+    walked += seg;
+  }
+  return best;
+}
+
+// A course's full distance: one pass (doubled when out-and-back) times laps.
+export function courseTotal(lengthM: number, props: { laps?: number; outAndBack?: boolean }): number {
+  return lengthM * (props.outAndBack ? 2 : 1) * (props.laps ?? 1);
 }
 
 // Elevation profile and total climb, when the line carries heights

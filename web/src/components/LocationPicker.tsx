@@ -2,6 +2,8 @@ import { useContext, useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { ApiError, get } from "../api.js";
+import { uuidv7 } from "@structura/domain";
+import { addBaseLayers, geoStatus } from "./basemap.js";
 import { LocaleContext, useT } from "../i18n.js";
 
 // The Event location as a point on a map (Walter, 2026-09-30): search a
@@ -18,8 +20,10 @@ export interface MapPoint {
 
 interface Place {
   name: string;
-  lat: number;
-  lng: number;
+  lat?: number;
+  lng?: number;
+  // Google suggestions carry an ID; the exact point is fetched on choice.
+  placeId?: string;
 }
 
 const DEFAULT_CENTER: L.LatLngTuple = [8.98, -79.52]; // Panama City, only as a starting view
@@ -37,9 +41,10 @@ export function LocationPicker({ value, onChange, disabled }: { value: MapPoint;
   const [searchOn, setSearchOn] = useState<boolean | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
+  const session = useRef<string | null>(null);
 
   useEffect(() => {
-    get<{ search: boolean }>("/api/geo/status").then((s) => setSearchOn(s.search), () => setSearchOn(false));
+    void geoStatus().then((s) => setSearchOn(s.search));
   }, []);
 
   // Create the map once.
@@ -49,10 +54,7 @@ export function LocationPicker({ value, onChange, disabled }: { value: MapPoint;
       value.lat !== null && value.lng !== null ? [value.lat, value.lng] : DEFAULT_CENTER,
       value.lat !== null ? 15 : 11
     );
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: "&copy; OpenStreetMap",
-    }).addTo(m);
+    void addBaseLayers(m, locale, { map: t("map.layerMap"), satellite: t("map.layerSatellite") });
     map.current = m;
     return () => {
       m.remove();
@@ -116,7 +118,9 @@ export function LocationPicker({ value, onChange, disabled }: { value: MapPoint;
       try {
         const b = map.current?.getBounds();
         const near = b ? `&near=${[b.getWest(), b.getNorth(), b.getEast(), b.getSouth()].map((v) => v.toFixed(4)).join(",")}` : "";
-        const r = await get<{ items: Place[] }>(`/api/geo/search?q=${encodeURIComponent(query.trim())}&lang=${locale}${near}`);
+        // One session per search, so Google bills the typing + choice once.
+        session.current ??= uuidv7();
+        const r = await get<{ items: Place[] }>(`/api/geo/search?q=${encodeURIComponent(query.trim())}&lang=${locale}${near}&session=${session.current}`);
         setResults(r.items);
         if (r.items.length === 0) setMessage(t("map.noResults"));
       } catch (err) {
@@ -131,12 +135,24 @@ export function LocationPicker({ value, onChange, disabled }: { value: MapPoint;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, disabled, searchOn, locale]);
 
-  function choose(p: Place) {
+  async function choose(p: Place) {
     setResults(null);
     setQuery("");
     setMessage(null);
-    onChange({ name: p.name, lat: round(p.lat), lng: round(p.lng) });
-    map.current?.setView([p.lat, p.lng], 17);
+    let place = p;
+    if (p.placeId && (p.lat === undefined || p.lng === undefined)) {
+      try {
+        place = await get<Place>(`/api/geo/place/${encodeURIComponent(p.placeId)}?lang=${locale}&session=${session.current ?? ""}`);
+      } catch {
+        setMessage(t("map.searchFailed"));
+        return;
+      } finally {
+        session.current = null;
+      }
+    }
+    if (place.lat === undefined || place.lng === undefined) return;
+    onChange({ name: place.name || p.name, lat: round(place.lat), lng: round(place.lng) });
+    map.current?.setView([place.lat, place.lng], 18);
   }
 
   return (
@@ -161,8 +177,8 @@ export function LocationPicker({ value, onChange, disabled }: { value: MapPoint;
         {results && results.length > 0 && (
           <ul className="results" role="listbox">
             {results.map((p) => (
-              <li key={`${p.lat},${p.lng}`}>
-                <button type="button" onClick={() => choose(p)}>
+              <li key={p.placeId ?? `${p.lat},${p.lng}`}>
+                <button type="button" onClick={() => void choose(p)}>
                   📍 {p.name}
                 </button>
               </li>

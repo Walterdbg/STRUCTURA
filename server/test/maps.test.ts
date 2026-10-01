@@ -99,6 +99,59 @@ describe("event map (UC-05, AT-07)", () => {
   });
 });
 
+describe("course tools (DEC-027)", () => {
+  // A straight 1-degree-of-longitude-ish line is long; use a short one: ~2.2 km east.
+  const straight = { ...course, geometry: { type: "LineString", coordinates: [[-79.9, 8.5], [-79.88, 8.5]] } };
+  async function withCourses() {
+    await w.db.query("UPDATE tenants SET features = '{courses}' WHERE id = $1", [t.tenantId]);
+    return (await add(straight)).json().result as { id: string; lengthMeters: number; version: number };
+  }
+
+  it("places a point exactly at a distance on the course (water at km 1)", async () => {
+    const c = await withCourses();
+    const res = await add({ kind: "point", category: "water", label: "Agua km 1", geometry: { type: "Point", coordinates: [0, 0] }, props: { courseId: c.id, distanceM: 1000 } });
+    expect(res.statusCode).toBe(201);
+    const [lng, lat] = res.json().result.geometry.coordinates;
+    expect(lat).toBeCloseTo(8.5, 5);
+    expect(lng).toBeGreaterThan(-79.9);
+    expect(lng).toBeLessThan(-79.88);
+  });
+
+  it("refuses a distance beyond the end of the course", async () => {
+    const c = await withCourses();
+    const res = await add({ kind: "point", category: "water", label: "Lejos", geometry: { type: "Point", coordinates: [0, 0] }, props: { courseId: c.id, distanceM: 50_000 } });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("laps and out-and-back multiply the course distance", async () => {
+    await w.db.query("UPDATE tenants SET features = '{courses}' WHERE id = $1", [t.tenantId]);
+    const res = await add({ ...straight, label: "10K", props: { laps: 2, outAndBack: true } });
+    const r = res.json().result;
+    expect(r.totalMeters).toBe(Math.round(r.lengthMeters * 4));
+    expect((await add({ ...delivery("x"), props: { laps: 2 } })).statusCode).toBe(400); // laps are for courses
+  });
+
+  it("points on a course follow it when its shape changes; removing the course keeps them, untied", async () => {
+    const c = await withCourses();
+    const pt = (await add({ kind: "point", category: "water", label: "Agua", geometry: { type: "Point", coordinates: [0, 0] }, props: { courseId: c.id, distanceM: 1000 } })).json().result;
+    const moved = { ...straight, geometry: { type: "LineString", coordinates: [[-79.9, 8.6], [-79.88, 8.6]] } };
+    await w.app.inject({ method: "PUT", url: `/api/events/${eventId}/map/${c.id}`, headers: { cookie: t.cookie }, payload: command(moved, { expectedVersion: c.version }) });
+    const after = ((await map()).json().items as { id: string; geometry: { coordinates: number[] } }[]).find((i) => i.id === pt.id)!;
+    expect(after.geometry.coordinates[1]).toBeCloseTo(8.6, 5);
+    const ver = ((await map()).json().items as { id: string; version: number }[]).find((i) => i.id === c.id)!.version;
+    await w.app.inject({ method: "POST", url: `/api/events/${eventId}/map/${c.id}/remove`, headers: { cookie: t.cookie }, payload: command({}, { expectedVersion: ver }) });
+    const left = ((await map()).json().items as { id: string; props: Record<string, unknown> }[]).find((i) => i.id === pt.id)!;
+    expect(left.props.courseId).toBeUndefined();
+  });
+
+  it("placing a point on a course needs the add-on", async () => {
+    const c = await withCourses();
+    await w.db.query("UPDATE tenants SET features = '{}' WHERE id = $1", [t.tenantId]);
+    const res = await add({ kind: "point", category: "water", label: "Agua", geometry: { type: "Point", coordinates: [0, 0] }, props: { courseId: c.id, distanceM: 100 } });
+    expect(res.statusCode).toBe(403);
+  });
+});
+
 describe("running courses are a paid add-on (DEC-023)", () => {
   it("is refused when the organization doesn't have it", async () => {
     const res = await add(course);

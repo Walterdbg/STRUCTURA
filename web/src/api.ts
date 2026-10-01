@@ -103,7 +103,9 @@ export interface MapFeature {
   geometry: { type: "Point" | "Polygon" | "LineString"; coordinates: any };
   preferred: boolean;
   source: string | null;
+  props: { laps?: number; outAndBack?: boolean; snapped?: boolean; courseId?: string; distanceM?: number };
   lengthMeters: number | null;
+  totalMeters: number | null;
   version: number;
 }
 

@@ -72,6 +72,14 @@ the typed words leave). `GEOCODER=none` switches it off; the map still
 works by clicking. Before real customers this will move to our own copy of
 the search (DEC-025).
 
+## Google maps (DEC-026)
+
+With `GOOGLE_MAPS_KEY=...` in `.env` (then `docker compose up -d`), STRUCTURA uses Google
+for place search, map pictures (streets + satellite), street routing and elevation. All calls
+go through STRUCTURA's server; the key never reaches browsers. On the key, enable **Places
+API (New)**, **Map Tiles API**, **Routes API** and **Elevation API**, and restrict it to
+those four. Without a key, OpenStreetMap is used (and `GEOCODER` decides its search).
+
 ## Where things are kept
 
 | What | Where |

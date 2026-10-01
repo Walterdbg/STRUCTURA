@@ -173,6 +173,23 @@ Roadmap section: Approved Decisions (DEC-022..025), Pending (P-016 removed), Rea
 
 ---
 
+[010]
+Time: 2026-09-30
+Area / feature: 0.1.0-dev.9 - Google maps, course tools 1-5
+Request or objective: Walter compared our search with Google ("PH Palmas Bellas" found there, not here) and asked whether Google is too expensive; then "yes Google, build 1-5 in that order" (follow streets, elevation for drawn courses, points at a distance, start/finish + laps, course sheet).
+Action taken: Checked Google's current prices (developers.google.com pricing page). Recorded DEC-026 (Google, through our server, OSM fallback) and DEC-027 (items 1-5; 2-5 in the courses add-on). Server: geo.ts rewritten (Places API New autocomplete + details with session tokens, Map Tiles proxy with sessions and copyright, Routes API computeRoutes, Elevation API in batches), polyline codec; migration 007 (map_features.props); map rules: points placed on a course positioned by the server, follow course changes, untied when the course is removed; laps/out-and-back totals. Web: shared basemap (Google streets/satellite switch or OSM), picker with Google place IDs, EventMap rewritten (follow streets, re-fit, elevation, place on course, laps/out-and-back, start/finish markers, km column), CourseSheet page with print styles.
+Files created: server/migrations/007_map_feature_props.sql, server/src/polyline.ts, server/test/geo.test.ts, web/src/components/basemap.ts, web/src/pages/CourseSheet.tsx
+Files modified: domain maps.ts, server geo.ts/config.ts/app.ts/events maps.ts, tests (maps, events, foundation), web EventMap/LocationPicker/api/router/App/i18n/styles, docker-compose.yml, .env.example, all package.json (0.1.0-dev.9), CHANGELOG, ROADMAP (v1.19.0, v1.20.0), USER_GUIDE, INSTALL
+Decision made: DEC-026, DEC-027 (Walter)
+Verification performed: 130/130 tests (Google services against a simulated Google; polyline vs Google's documented example). Browser (dev run, OSM): GPX course 2 laps out-and-back = 20.07 km with start/finish; Agua placed at km 2.00; course sheet complete. Docker dev.9: migration 007, OSM fallback active.
+Result: PASS for what can run without the key; Google parts NOT TESTED live (no key yet, P-017)
+Observed issue: Course sheet showed the climb without saying it was per pass and repeated "out and back"; fixed before the build.
+Follow-up required: Walter adds GOOGLE_MAPS_KEY to .env (P-017); then live check T-011..T-013; L-008 Google logo asset before customers
+Roadmap update required: YES (done: v1.20.0)
+Roadmap section: Approved Decisions, Pending (P-017), Known limitations (L-008), Ready for test (T-011..T-015), Build status
+
+---
+
 
 DEFECTS DISCOVERED TODAY
 ========================
@@ -248,6 +265,11 @@ Decision: DEC-022 event maps (points, areas, routes); DEC-023 running courses as
 Approved by: Walter
 Roadmap update required: YES (done)
 
+[DECISION-010]
+Decision: DEC-026 Google for maps (through our server; OSM fallback); DEC-027 course tools 1-5 in that order (2-5 in the courses add-on)
+Approved by: Walter
+Roadmap update required: YES (done)
+
 
 DOCUMENT REGISTER
 =================
@@ -259,7 +281,7 @@ DEPLOYMENT / BUILD RECORD
 =========================
 
 Deployment performed: YES (local development only)
-Build/version: 0.1.0-dev.7, then 0.1.0-dev.8 (current)
+Build/version: 0.1.0-dev.7, 0.1.0-dev.8, then 0.1.0-dev.9 (current)
 Environment: Development - Docker on Walter's PC, http://127.0.0.1:8095
 Deployment result: PASS (Claude's checks); NOT TESTED by Walter
 Verification performed: health 0.1.0-dev.7, migration 005 applied, past rental refused, place search off

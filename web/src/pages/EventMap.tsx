@@ -3,14 +3,27 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "@geoman-io/leaflet-geoman-free";
 import "@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css";
-import { POINT_CATEGORIES, ROUTE_CATEGORIES, elevationProfile, lineLength, markersAlong } from "@structura/domain";
+import {
+  POINT_CATEGORIES,
+  ROUTE_CATEGORIES,
+  courseTotal,
+  elevationProfile,
+  lineLength,
+  markersAlong,
+  positionAt,
+  projectOnLine,
+  type FeatureProps,
+} from "@structura/domain";
 import { ApiError, get, newCommand, send, type EventRecord, type MapFeature } from "../api.js";
+import { addBaseLayers, type GeoStatus } from "../components/basemap.js";
 import { parseGpx, toGpx } from "../components/gpx.js";
 import { describeFailure } from "../forms.js";
 import { LocaleContext, useT, type TextKey } from "../i18n.js";
 
-// Event map (UC-05, DEC-022): points, small areas and routes; running
-// courses with km markers, elevation and GPX are the paid add-on (DEC-023).
+// Event map (UC-05, DEC-022): points, small areas and routes. Course tools
+// (DEC-023/027, paid "courses" add-on): km markers, elevation, GPX, points
+// placed at a distance, laps / out-and-back, start and finish, course sheet.
+// Routes can follow the streets (Google routing, every organization).
 // Drawing a shape never moves stock and never creates a location.
 
 type Kind = MapFeature["kind"];
@@ -24,9 +37,10 @@ type Draft = {
   preferred: boolean;
   geometry: MapFeature["geometry"];
   source: string | null;
+  props: FeatureProps;
 };
 
-const ICON: Record<string, string> = {
+export const ICON: Record<string, string> = {
   stage: "🎤",
   water: "💧",
   toilets: "🚻",
@@ -36,12 +50,35 @@ const ICON: Record<string, string> = {
   parking: "🅿️",
   other: "📍",
 };
-const ROUTE_COLOR: Record<string, string> = { delivery: "#d9480f", course: "#7048e8", other: "#1971c2" };
+export const ROUTE_COLOR: Record<string, string> = { delivery: "#d9480f", course: "#7048e8", other: "#1971c2" };
 const AREA_COLOR = "#2b8a3e";
 const DEFAULT_CENTER: L.LatLngTuple = [8.98, -79.52];
+const NEAR_COURSE_M = 30;
 
-const km = (m: number, locale: string) =>
+export const km = (m: number, locale: string) =>
   m >= 1000 ? `${(m / 1000).toLocaleString(locale === "es" ? "es-PA" : "en-US", { maximumFractionDigits: 2 })} km` : `${Math.round(m)} m`;
+
+const toDraft = (f: MapFeature): Draft => ({
+  id: f.id,
+  version: f.version,
+  kind: f.kind,
+  category: f.category,
+  label: f.label,
+  notes: f.notes ?? "",
+  preferred: f.preferred,
+  geometry: f.geometry,
+  source: f.source,
+  props: f.props ?? {},
+});
+
+// At most 25 points for the routing service: the first, the last, and
+// evenly spread ones in between.
+function sampleWaypoints(coords: number[][], max = 25): number[][] {
+  if (coords.length <= max) return coords;
+  const out: number[][] = [];
+  for (let i = 0; i < max; i++) out.push(coords[Math.round((i * (coords.length - 1)) / (max - 1))]!);
+  return out;
+}
 
 export function EventMap({ event, canEdit, features }: { event: EventRecord; canEdit: boolean; features: string[] }) {
   const t = useT();
@@ -50,14 +87,21 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
   const map = useRef<L.Map | null>(null);
   const layerGroup = useRef<L.FeatureGroup | null>(null);
   const drawingLayer = useRef<L.Layer | null>(null);
+  const pendingCategory = useRef<string | null>(null);
   const [items, setItems] = useState<MapFeature[] | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [editingShape, setEditingShape] = useState(false);
   const [error, setError] = useState<TextKey | null>(null);
-  const [busy, setBusy] = useState(false);
-  // What is being drawn right now, to show how to finish it.
+  const [busy, setBusy] = useState<TextKey | null>(null);
   const [drawing, setDrawing] = useState<Kind | null>(null);
+  const [status, setStatus] = useState<GeoStatus | null>(null);
+  const [followStreets, setFollowStreets] = useState(true);
+  const followRef = useRef(true);
+  followRef.current = followStreets;
+  const statusRef = useRef<GeoStatus | null>(null);
+  statusRef.current = status;
   const hasCourses = features.includes("courses");
+  const courses = (items ?? []).filter((f) => f.category === "course" && f.geometry.type === "LineString");
 
   const load = useCallback(async () => {
     try {
@@ -72,22 +116,81 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
     void load();
   }, [load]);
 
+  // Show a route draft on the map while it is being prepared.
+  const showPreview = useCallback((coords: number[][], category: string) => {
+    if (drawingLayer.current) map.current?.removeLayer(drawingLayer.current);
+    const preview = L.polyline(
+      coords.map((c) => [c[1]!, c[0]!] as L.LatLngTuple),
+      { color: ROUTE_COLOR[category] ?? "#1971c2", weight: 5 }
+    );
+    preview.addTo(map.current!);
+    drawingLayer.current = preview;
+  }, []);
+
+  // (1) Follow streets and (2) heights for courses, after a route is drawn.
+  const snapAndElevate = useCallback(
+    async (d: Draft, opts: { snap: boolean }) => {
+      if (d.geometry.type !== "LineString") return d;
+      let coords = d.geometry.coordinates as number[][];
+      let props = d.props;
+      const st = statusRef.current;
+      if (opts.snap && st?.routing) {
+        setBusy("map.snapping");
+        try {
+          const res = await fetch("/api/geo/route", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ mode: d.category === "delivery" ? "drive" : "walk", waypoints: sampleWaypoints(coords).map((c) => [c[0], c[1]]) }),
+          });
+          const body = await res.json();
+          if (!res.ok) throw new ApiError(res.status, body?.error ?? "internal", body?.message ?? "", body?.details);
+          coords = body.coordinates as number[][];
+          props = { ...props, snapped: true };
+        } catch (err) {
+          setError(err instanceof ApiError && err.details?.reason === "no_route" ? "map.noRoute" : "map.snapFailed");
+        }
+      }
+      if (d.category === "course" && hasCourses && st?.elevation && !coords.every((c) => c.length > 2)) {
+        setBusy("map.gettingElevation");
+        try {
+          const res = await fetch("/api/geo/elevation", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ coordinates: coords.map((c) => [c[0], c[1]]) }),
+          });
+          const body = await res.json();
+          if (!res.ok) throw new Error(body?.message);
+          coords = body.coordinates as number[][];
+        } catch {
+          setError("map.elevationFailed");
+        }
+      }
+      setBusy(null);
+      return { ...d, props, geometry: { type: "LineString" as const, coordinates: coords } };
+    },
+    [hasCourses]
+  );
+
   // Map, once.
   useEffect(() => {
     if (!box.current || map.current) return;
     const center: L.LatLngTuple = event.locationLat !== null && event.locationLng !== null ? [event.locationLat, event.locationLng] : DEFAULT_CENTER;
     const m = L.map(box.current, { scrollWheelZoom: false }).setView(center, event.locationLat !== null ? 16 : 11);
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "&copy; OpenStreetMap" }).addTo(m);
+    void addBaseLayers(m, locale, { map: t("map.layerMap"), satellite: t("map.layerSatellite") }).then((s) => {
+      setStatus(s);
+      setFollowStreets(s.routing);
+    });
     layerGroup.current = L.featureGroup().addTo(m);
     m.pm.setGlobalOptions({ snappable: true, continueDrawing: false });
-    // The drawing tool's own hints in the screen's language.
     m.pm.setLang(locale === "es" ? "es" : "en");
     m.on("pm:create", (e: { layer: L.Layer; shape: string }) => {
       setDrawing(null);
       drawingLayer.current = e.layer;
       const gj = (e.layer as L.Marker | L.Polyline).toGeoJSON().geometry as MapFeature["geometry"];
       const kind: Kind = e.shape === "Marker" ? "point" : e.shape === "Polygon" ? "area" : "route";
-      setDraft({
+      const draft: Draft = {
         id: null,
         version: null,
         kind,
@@ -97,7 +200,15 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
         preferred: false,
         geometry: roundGeometry(gj),
         source: null,
-      });
+        props: {},
+      };
+      setDraft(draft);
+      if (kind === "route") {
+        void snapAndElevate(draft, { snap: followRef.current }).then((d) => {
+          setDraft(d);
+          showPreview(d.geometry.coordinates as number[][], d.category);
+        });
+      }
     });
     map.current = m;
     return () => {
@@ -106,8 +217,6 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const pendingCategory = useRef<string | null>(null);
 
   // Draw saved items.
   useEffect(() => {
@@ -126,34 +235,29 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
         const ring = (f.geometry.coordinates as number[][][])[0]!.map((c) => [c[1]!, c[0]!] as L.LatLngTuple);
         layer = L.polygon(ring, { color: AREA_COLOR, weight: 2, fillOpacity: 0.25 });
       } else {
-        const line = (f.geometry.coordinates as number[][]).map((c) => [c[1]!, c[0]!] as L.LatLngTuple);
+        const coords = f.geometry.coordinates as number[][];
+        const line = coords.map((c) => [c[1]!, c[0]!] as L.LatLngTuple);
         layer = L.polyline(line, { color: ROUTE_COLOR[f.category] ?? "#1971c2", weight: f.preferred ? 6 : 4, dashArray: f.preferred ? undefined : "8 6" });
         if (f.category === "course") {
-          for (const mk of markersAlong(f.geometry.coordinates as number[][])) {
+          for (const mk of markersAlong(coords)) {
             L.marker([mk.position[1], mk.position[0]], {
               icon: L.divIcon({ className: "km-marker", html: String(Math.round(mk.distance / 1000)), iconSize: [22, 22], iconAnchor: [11, 11] }),
               interactive: false,
             }).addTo(g);
           }
+          // (4) Start and finish (the finish is back at the start when out-and-back).
+          const first = coords[0]!;
+          const last = f.props?.outAndBack ? first : coords[coords.length - 1]!;
+          L.marker([first[1]!, first[0]!], { icon: L.divIcon({ className: "flag-marker", html: "▶", iconSize: [26, 26], iconAnchor: [13, 13] }), title: t("map.start") }).addTo(g);
+          L.marker([last[1]!, last[0]!], { icon: L.divIcon({ className: "flag-marker finish", html: "🏁", iconSize: [26, 26], iconAnchor: [4, 22] }), title: t("map.finishLine") }).addTo(g);
         }
       }
       (layer as L.Path).bindTooltip?.(label, { direction: "top" });
       layer.on("click", () => {
-        // While drawing, a click on an existing item is part of the drawing
-        // (e.g. ending a route at the stage), not a request to open it.
+        // While drawing, a click on an existing item is part of the drawing.
         if (map.current?.pm.globalDrawModeEnabled()) return;
         setError(null);
-        setDraft({
-          id: f.id,
-          version: f.version,
-          kind: f.kind,
-          category: f.category,
-          label: f.label,
-          notes: f.notes ?? "",
-          preferred: f.preferred,
-          geometry: f.geometry,
-          source: f.source,
-        });
+        setDraft(toDraft(f));
       });
       layer.addTo(g);
     }
@@ -177,12 +281,11 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
     } as L.PM.DrawModeOptions);
   }
 
-  // Finish a route or area with a button instead of the precise "click the
-  // last point again", which fails when the point sits under another icon.
+  // Finish a route or area with a button (re-clicking the last point fails
+  // when it sits under another icon).
   function finishDrawing() {
     const draw = (map.current?.pm as unknown as { Draw: Record<string, { _finishShape?: () => void }> } | undefined)?.Draw;
-    const shape = drawing === "area" ? "Polygon" : "Line";
-    draw?.[shape]?._finishShape?.();
+    draw?.[drawing === "area" ? "Polygon" : "Line"]?._finishShape?.();
   }
 
   function cancelDraft() {
@@ -192,13 +295,10 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
       map.current?.removeLayer(drawingLayer.current);
       drawingLayer.current = null;
     }
-    if (editingShape) {
-      setEditingShape(false);
-    }
+    if (editingShape) setEditingShape(false);
     setDraft(null);
   }
 
-  // Edit the shape of a saved item: show it as an editable layer.
   function editShape() {
     if (!draft || !map.current) return;
     const g = draft.geometry;
@@ -217,15 +317,53 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
     setEditingShape(true);
   }
 
+  // Current shape of the draft (taking an open shape edit into account).
+  function currentGeometry(): MapFeature["geometry"] | null {
+    if (!draft) return null;
+    if (editingShape && drawingLayer.current) {
+      return roundGeometry((drawingLayer.current as L.Marker | L.Polyline).toGeoJSON().geometry as MapFeature["geometry"]);
+    }
+    return draft.geometry;
+  }
+
+  async function refit() {
+    if (!draft) return;
+    const geometry = currentGeometry();
+    if (!geometry || geometry.type !== "LineString") return;
+    setError(null);
+    const base = { ...draft, geometry: { type: "LineString" as const, coordinates: (geometry.coordinates as number[][]).map((c) => [c[0]!, c[1]!]) } };
+    const d = await snapAndElevate(base, { snap: true });
+    if (editingShape && drawingLayer.current) {
+      map.current?.removeLayer(drawingLayer.current);
+      drawingLayer.current = null;
+      setEditingShape(false);
+    }
+    setDraft(d);
+    showPreview(d.geometry.coordinates as number[][], d.category);
+  }
+
+  async function addElevation() {
+    if (!draft) return;
+    const d = await snapAndElevate({ ...draft, geometry: currentGeometry() ?? draft.geometry }, { snap: false });
+    setDraft(d);
+  }
+
   async function save() {
     if (!draft) return;
     if (!draft.label.trim()) {
       setError("map.labelRequired");
       return;
     }
-    let geometry = draft.geometry;
-    if (editingShape && drawingLayer.current) {
-      geometry = roundGeometry((drawingLayer.current as L.Marker | L.Polyline).toGeoJSON().geometry as MapFeature["geometry"]);
+    const geometry = currentGeometry() ?? draft.geometry;
+    const props: FeatureProps = { ...draft.props };
+    if (!(draft.kind === "route" && draft.category === "course")) {
+      delete props.laps;
+      delete props.outAndBack;
+    }
+    if (draft.kind !== "route") delete props.snapped;
+    if (draft.kind !== "point") {
+      delete props.courseId;
+      delete props.distanceM;
     }
     const payload = {
       kind: draft.kind,
@@ -235,8 +373,9 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
       preferred: draft.kind === "route" ? draft.preferred : false,
       geometry,
       source: draft.source,
+      props,
     };
-    setBusy(true);
+    setBusy("common.saving");
     setError(null);
     try {
       if (draft.id) await send("PUT", `/api/events/${event.id}/map/${draft.id}`, newCommand(payload, draft.version));
@@ -245,15 +384,16 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
       await load();
     } catch (err) {
       const kind = err instanceof ApiError ? err.kind : "internal";
-      setError(kind === "license_restricted" ? "map.coursesLocked" : kind === "validation" ? "map.badShape" : describeFailure(err).message);
+      const tooFar = err instanceof ApiError && typeof err.details?.lengthMeters === "number";
+      setError(kind === "license_restricted" ? "map.coursesLocked" : tooFar ? "map.beyondEnd" : kind === "validation" ? "map.badShape" : describeFailure(err).message);
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   }
 
   async function remove() {
     if (!draft?.id || !window.confirm(t("map.removeConfirm"))) return;
-    setBusy(true);
+    setBusy("common.saving");
     try {
       await send("POST", `/api/events/${event.id}/map/${draft.id}/remove`, newCommand({}, draft.version));
       cancelDraft();
@@ -261,7 +401,7 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
     } catch (err) {
       setError(describeFailure(err).message);
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   }
 
@@ -271,7 +411,7 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
     try {
       const { name, coordinates } = parseGpx(await file.text());
       cancelDraft();
-      setDraft({
+      let d: Draft = {
         id: null,
         version: null,
         kind: "route",
@@ -281,12 +421,17 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
         preferred: false,
         geometry: { type: "LineString", coordinates },
         source: file.name,
-      });
+        props: {},
+      };
       const b = L.latLngBounds(coordinates.map((c) => [c[1]!, c[0]!] as L.LatLngTuple));
       map.current?.fitBounds(b.pad(0.1));
-      const preview = L.polyline(coordinates.map((c) => [c[1]!, c[0]!] as L.LatLngTuple), { color: ROUTE_COLOR.course, weight: 4 });
-      preview.addTo(map.current!);
-      drawingLayer.current = preview;
+      showPreview(coordinates, "course");
+      setDraft(d);
+      // A GPX without heights gets them from the elevation service.
+      if (!coordinates.every((c) => c.length > 2)) {
+        d = await snapAndElevate(d, { snap: false });
+        setDraft(d);
+      }
     } catch {
       setError("map.gpxInvalid");
     }
@@ -301,9 +446,43 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
     URL.revokeObjectURL(a.href);
   }
 
+  // (3) Preview a point placed on a course before saving.
+  function placeOnCourse(courseId: string, kmText: string) {
+    if (!draft) return;
+    if (!courseId) {
+      const props = { ...draft.props };
+      delete props.courseId;
+      delete props.distanceM;
+      setDraft({ ...draft, props });
+      return;
+    }
+    const c = courses.find((x) => x.id === courseId);
+    const meters = Math.max(0, Number(kmText.replace(",", ".")) * 1000 || 0);
+    if (!c) return;
+    const [lng, lat] = positionAt(c.geometry.coordinates as number[][], meters);
+    const geometry = { type: "Point" as const, coordinates: [Math.round(lng * 1e6) / 1e6, Math.round(lat * 1e6) / 1e6] };
+    if (drawingLayer.current instanceof L.Marker) drawingLayer.current.setLatLng([lat, lng]);
+    setDraft({ ...draft, geometry, props: { ...draft.props, courseId, distanceM: meters } });
+  }
+
+  // Where a point is along the nearest course (km), linked or close by.
+  function kmOf(f: MapFeature): { meters: number; exact: boolean } | null {
+    if (f.kind !== "point") return null;
+    if (f.props?.courseId && f.props.distanceM !== undefined) return { meters: f.props.distanceM, exact: true };
+    let best: { meters: number; offset: number } | null = null;
+    for (const c of courses) {
+      const p = projectOnLine(c.geometry.coordinates as number[][], f.geometry.coordinates as number[]);
+      if (p.offset <= NEAR_COURSE_M && (!best || p.offset < best.offset)) best = { meters: p.distance, offset: p.offset };
+    }
+    return best ? { meters: best.meters, exact: false } : null;
+  }
+
   const categories = draft?.kind === "route" ? ROUTE_CATEGORIES.filter((c) => c !== "course" || hasCourses) : POINT_CATEGORIES;
-  const draftLength = draft?.geometry.type === "LineString" ? lineLength(draft.geometry.coordinates as number[][]) : null;
-  const profile = draft?.category === "course" && draft.geometry.type === "LineString" ? elevationProfile(draft.geometry.coordinates as number[][]) : null;
+  const draftCoords = draft?.geometry.type === "LineString" ? (draft.geometry.coordinates as number[][]) : null;
+  const draftLength = draftCoords ? lineLength(draftCoords) : null;
+  const isCourse = draft?.kind === "route" && draft.category === "course";
+  const profile = isCourse && draftCoords ? elevationProfile(draftCoords) : null;
+  const draftTotal = isCourse && draftLength !== null ? courseTotal(draftLength, draft!.props) : null;
 
   return (
     <section className="card">
@@ -340,8 +519,14 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
       </div>
       <p className="muted small">{canEdit ? t("map.hint") : t("map.viewOnly")}</p>
       {drawing && (
-        <p className="drawing-hint">
-          {t(drawing === "point" ? "map.drawPoint" : drawing === "area" ? "map.drawArea" : "map.drawRoute")}
+        <div className="drawing-hint">
+          <span>{t(drawing === "point" ? "map.drawPoint" : drawing === "area" ? "map.drawArea" : "map.drawRoute")}</span>
+          {drawing === "route" && status?.routing && (
+            <label className="check" title={t("map.followStreetsHint")}>
+              <input type="checkbox" checked={followStreets} onChange={(e) => setFollowStreets(e.target.checked)} />
+              <span>{t("map.followStreets")}</span>
+            </label>
+          )}
           {drawing !== "point" && (
             <button type="button" className="primary" onClick={finishDrawing}>
               ✓ {t("map.finish")}
@@ -350,9 +535,10 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
           <button type="button" onClick={cancelDraft}>
             {t("common.cancel")}
           </button>
-        </p>
+        </div>
       )}
       <div ref={box} className="map-box tall" />
+      {busy && <p className="small muted">{t(busy)}</p>}
 
       {draft && (
         <div className="map-panel">
@@ -382,15 +568,66 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
                 <span>{t("map.preferred")}</span>
               </label>
             )}
+            {isCourse && (
+              <>
+                <label>
+                  <span>{t("map.laps")}</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={draft.props.laps ?? 1}
+                    disabled={!canEdit}
+                    onChange={(e) => setDraft({ ...draft, props: { ...draft.props, laps: Math.min(50, Math.max(1, Number(e.target.value) || 1)) } })}
+                  />
+                </label>
+                <label className="check">
+                  <input type="checkbox" checked={draft.props.outAndBack ?? false} disabled={!canEdit} onChange={(e) => setDraft({ ...draft, props: { ...draft.props, outAndBack: e.target.checked } })} />
+                  <span>{t("map.outAndBack")}</span>
+                </label>
+              </>
+            )}
+            {draft.kind === "point" && hasCourses && courses.length > 0 && (
+              <div className="wide row">
+                <label>
+                  <span>{t("map.onCourse")}</span>
+                  <select value={draft.props.courseId ?? ""} disabled={!canEdit} onChange={(e) => placeOnCourse(e.target.value, String((draft.props.distanceM ?? 0) / 1000))}>
+                    <option value="">{t("map.onCourseNone")}</option>
+                    {courses.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {draft.props.courseId && (
+                  <label>
+                    <span>{t("map.atKm")}</span>
+                    <input
+                      inputMode="decimal"
+                      defaultValue={String((draft.props.distanceM ?? 0) / 1000)}
+                      disabled={!canEdit}
+                      onChange={(e) => placeOnCourse(draft.props.courseId!, e.target.value)}
+                    />
+                  </label>
+                )}
+              </div>
+            )}
           </div>
           {draftLength !== null && (
             <p className="small">
               {t("map.length")}: <strong>{km(draftLength, locale)}</strong>
+              {draftTotal !== null && draftTotal !== draftLength && (
+                <>
+                  {" "}
+                  · {t("map.total")}: <strong>{km(draftTotal, locale)}</strong>
+                </>
+              )}
               {draft.source && <span className="muted"> · {draft.source}</span>}
             </p>
           )}
           {profile && <ElevationChart profile={profile} locale={locale} />}
-          {draft.category === "course" && !profile && <p className="small muted">{t("map.noElevation")}</p>}
+          {isCourse && !profile && <p className="small muted">{t("map.noElevation")}</p>}
           {error && (
             <p className="bad" role="alert">
               {t(error)}
@@ -398,10 +635,20 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
           )}
           {canEdit && (
             <div className="row">
-              <button type="button" className="primary" disabled={busy} onClick={() => void save()}>
-                {busy ? t("common.saving") : t("common.save")}
+              <button type="button" className="primary" disabled={busy !== null} onClick={() => void save()}>
+                {busy === "common.saving" ? t("common.saving") : t("common.save")}
               </button>
-              {draft.id && !editingShape && !(draft.category === "course" && profile) && (
+              {draft.kind === "route" && status?.routing && (
+                <button type="button" disabled={busy !== null} onClick={() => void refit()}>
+                  🛣 {t("map.snapAgain")}
+                </button>
+              )}
+              {isCourse && !profile && status?.elevation && (
+                <button type="button" disabled={busy !== null} onClick={() => void addElevation()}>
+                  ⛰ {t("map.getElevation")}
+                </button>
+              )}
+              {draft.id && !editingShape && !(isCourse && profile) && !draft.props.courseId && (
                 <button type="button" onClick={editShape}>
                   ✎ {t("map.editShape")}
                 </button>
@@ -436,30 +683,46 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
               <tr>
                 <th>{t("map.label")}</th>
                 <th>{t("map.type")}</th>
-                <th className="num">{t("map.length")}</th>
+                <th className="num">{t("map.length")} / km</th>
                 <th />
               </tr>
             </thead>
             <tbody>
-              {items.map((f) => (
-                <tr key={f.id}>
-                  <td>
-                    <button type="button" className="link" onClick={() => setDraft({ id: f.id, version: f.version, kind: f.kind, category: f.category, label: f.label, notes: f.notes ?? "", preferred: f.preferred, geometry: f.geometry, source: f.source })}>
-                      {f.kind === "route" ? "〰" : f.kind === "area" ? "⬠" : ICON[f.category]} {f.label}
-                    </button>
-                    {f.preferred && <span className="tag">{t("map.preferred")}</span>}
-                  </td>
-                  <td className="small">{t(`map.cat.${f.category}` as TextKey)}</td>
-                  <td className="num small">{f.lengthMeters !== null ? km(f.lengthMeters, locale) : ""}</td>
-                  <td>
-                    {f.category === "course" && hasCourses && (
-                      <button type="button" onClick={() => exportGpx(f)}>
-                        ⤓ GPX
+              {items.map((f) => {
+                const at = kmOf(f);
+                return (
+                  <tr key={f.id}>
+                    <td>
+                      <button type="button" className="link" onClick={() => setDraft(toDraft(f))}>
+                        {f.kind === "route" ? "〰" : f.kind === "area" ? "⬠" : ICON[f.category]} {f.label}
                       </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                      {f.preferred && <span className="tag">{t("map.preferred")}</span>}
+                    </td>
+                    <td className="small">{t(`map.cat.${f.category}` as TextKey)}</td>
+                    <td className="num small">
+                      {f.totalMeters !== null && f.totalMeters !== f.lengthMeters
+                        ? `${km(f.totalMeters, locale)} (${f.props?.laps ?? 1} × ${km(f.lengthMeters ?? 0, locale)}${f.props?.outAndBack ? " ↔" : ""})`
+                        : f.lengthMeters !== null
+                          ? km(f.lengthMeters, locale)
+                          : at
+                            ? `${at.exact ? "km" : t("map.nearKm")} ${(at.meters / 1000).toFixed(2)}`
+                            : ""}
+                    </td>
+                    <td className="row">
+                      {f.category === "course" && hasCourses && (
+                        <>
+                          <button type="button" onClick={() => exportGpx(f)}>
+                            ⤓ GPX
+                          </button>
+                          <a className="button" href={`#/events/${event.id}/course/${f.id}`}>
+                            📄 {t("map.sheet")}
+                          </a>
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -469,7 +732,7 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
   );
 }
 
-function ElevationChart({ profile, locale }: { profile: NonNullable<ReturnType<typeof elevationProfile>>; locale: string }) {
+export function ElevationChart({ profile, locale }: { profile: NonNullable<ReturnType<typeof elevationProfile>>; locale: string }) {
   const t = useT();
   const w = 600;
   const h = 120;
@@ -493,7 +756,7 @@ function ElevationChart({ profile, locale }: { profile: NonNullable<ReturnType<t
   );
 }
 
-function roundGeometry(g: MapFeature["geometry"]): MapFeature["geometry"] {
+export function roundGeometry(g: MapFeature["geometry"]): MapFeature["geometry"] {
   const r = (c: number[]) => c.map((v, i) => (i < 2 ? Math.round(v * 1e6) / 1e6 : v));
   if (g.type === "Point") return { type: "Point", coordinates: r(g.coordinates as number[]) };
   if (g.type === "LineString") return { type: "LineString", coordinates: (g.coordinates as number[][]).map(r) };

@@ -158,3 +158,24 @@ button.icon { padding: 4px 8px; min-width: 36px; }
 .search-box .results { position: absolute; left: 0; right: 0; top: calc(100% + 2px); z-index: 1000; box-shadow: 0 6px 18px rgba(0,0,0,0.3); }
 .search-box .results li button { border: none; border-radius: 0; background: none; display: block; width: 100%; text-align: left; padding: 8px 10px; white-space: normal; font-weight: 400; }
 .search-box .results li button:hover { background: var(--tag-bg); }
+
+/* ---- course tools (0.1.0-dev.9) ---- */
+.flag-marker { font-size: 18px; line-height: 26px; text-align: center; background: var(--surface); border: 2px solid #7048e8; border-radius: 50%; }
+.flag-marker.finish { background: none; border: none; font-size: 22px; }
+.google-logo { font-weight: 700; letter-spacing: 0.02em; }
+.sheet .sheet-head h2 { margin: 12px 0 2px; font-size: 1.5rem; }
+.sheet-stats { display: flex; flex-wrap: wrap; gap: 12px 32px; margin: 12px 0; }
+.sheet-stats > div { display: flex; flex-direction: column; gap: 2px; }
+.sheet-stats strong { font-size: 1.15rem; }
+.sheet-map { height: 460px; border-radius: 8px; border: 1px solid var(--border); margin: 8px 0; }
+.sheet-label { font-weight: 600; font-size: 11px; padding: 1px 4px; }
+.sheet-foot { margin-top: 16px; }
+@media print {
+  :root { --bg: #fff; --surface: #fff; --text: #000; --muted: #444; --border: #bbb; }
+  body { background: #fff; }
+  .top, .nav, .status, .no-print, .leaflet-control-zoom, .leaflet-control-layers { display: none !important; }
+  .page { max-width: none; padding: 0; }
+  .card.sheet { border: none; padding: 0; margin: 0; }
+  .sheet-map { height: 520px; page-break-inside: avoid; }
+  .elevation { page-break-inside: avoid; }
+}

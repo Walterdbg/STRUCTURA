@@ -4,6 +4,7 @@ import { ApiError, api, newCommand, send, type Me } from "./api.js";
 import { LocaleContext, loadLocale, saveLocale, translate } from "./i18n.js";
 import { useRoute } from "./router.js";
 import { EventForm } from "./pages/EventForm.js";
+import { CourseSheet } from "./pages/CourseSheet.js";
 import { EventsList } from "./pages/EventsList.js";
 import { InventoryList } from "./pages/InventoryList.js";
 import { ItemForm } from "./pages/ItemForm.js";
@@ -76,6 +77,7 @@ export function App() {
     // key: a different Event (or "new") always starts from a fresh form.
     if (route.name === "eventNew") body = <EventForm key="new" me={me} />;
     else if (route.name === "event") body = <EventForm key={route.id} me={me} eventId={route.id} />;
+    else if (route.name === "courseSheet") body = <CourseSheet key={route.courseId} eventId={route.eventId} courseId={route.courseId} />;
     else if (route.name === "inventory") body = <InventoryList canManage={can("inventory.manage")} canMove={can("movement.post")} />;
     else if (route.name === "itemNew") body = <ItemForm key="new" canManage={can("inventory.manage")} canMove={can("movement.post")} canCorrect={can("movement.correct")} />;
     else if (route.name === "item")

@@ -179,6 +179,25 @@ Organizations with the *Recorridos* add-on also get:
 
 Without the add-on these buttons show 🔒 *Recorridos (complemento)*.
 
+**Course tools (add-on):**
+
+- **Follow streets (every organization):** while drawing a route, keep **Seguir calles**
+  on and the line follows the real streets between your clicks. **🛣 Ajustar a calles**
+  re-fits a route drawn earlier. (Needs the Google key.)
+- **Elevation:** a drawn course gets its heights automatically (or press **⛰ Obtener
+  elevación**). A GPX without heights gets them too. (Needs the Google key.)
+- **Stations on the course:** on a point, choose **Ubicar en el recorrido**, pick the course
+  and type the km (e.g. 2.5). The point sits exactly on the line and follows the course if
+  its shape changes. The list shows each point's km.
+- **Start, finish, laps:** courses show ▶ start and 🏁 finish. Set **Vueltas** (laps) and
+  **Ida y vuelta** (out and back); the total distance is calculated, e.g. 2 × 5 km out and
+  back = 20 km.
+- **📄 Hoja del recorrido:** a printable page with the map, distance, climb, elevation chart
+  and the stations by km. **🖨 Imprimir / Guardar PDF** to print it or save a PDF.
+
+**Map / Satellite:** with the Google key, every map has a **🗺 Mapa / 🛰 Satélite** switch at
+the top right, and place search finds buildings (e.g. "PH Palmas Bellas").
+
 ## Change history
 
 People with the audit permission see **Historial de cambios** at the

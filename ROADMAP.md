@@ -5,8 +5,8 @@
 | Field | Value |
 | --- | --- |
 | Project | STRUCTURA (ChatGPT project name: "Inventario") |
-| Roadmap version | `1.18.0` |
-| Current application version/build | `0.1.0-dev.8`: + event maps, running courses add-on, plans, place search, timezones with time; READY FOR TEST |
+| Roadmap version | `1.20.0` |
+| Current application version/build | `0.1.0-dev.9`: + Google maps (needs key), course tools 1-5; READY FOR TEST |
 | Last updated | 2026-09-30 |
 | Document owner | Walter |
 | Current environment | Development (Docker on Walter's PC, port 8095) |
@@ -38,6 +38,8 @@
 | 1.16.0 | 2026-09-30 | Claude (for Walter) | Build 0.1.0-dev.7: D-002..D-009 fixed; My account (D-009); Event location as a map point (DEC-021); place-search provider pending (P-016); tests T-007, T-008 added | D-002..D-009, DEC-021 |
 | 1.17.0 | 2026-09-30 | Claude (for Walter) | Walter added event maps (points, small areas, routes; UC-05 brought forward) and running courses like Strava as a paid add-on (DEC-022, DEC-023); building in 0.1.0-dev.8 | DEC-022, DEC-023 |
 | 1.18.0 | 2026-09-30 | Claude (for Walter) | Build 0.1.0-dev.8: event maps, courses add-on, plans/tiers (DEC-024), place search on for testing (DEC-025, was P-016), timezones with offset and time; tests T-009, T-010 | DEC-024, DEC-025 |
+| 1.19.0 | 2026-09-30 | Claude (for Walter) | Walter chose Google for maps (DEC-026, supersedes DEC-025 for search) and ordered course tools 1-5 (DEC-027); building in 0.1.0-dev.9; Google key pending from Walter | DEC-026, DEC-027 |
+| 1.20.0 | 2026-09-30 | Claude (for Walter) | Build 0.1.0-dev.9: Google connection (search, streets + satellite, routing, elevation; through our server; OpenStreetMap fallback) and course tools 1-5; tests T-011..T-015; L-008 (Google logo), P-017 (Google key) | DEC-026, DEC-027 |
 
 ## Project Objective
 
@@ -97,16 +99,21 @@ Walter tests the build running on his PC (see docs/USER_GUIDE.md; sign in with h
 
 | ID | Work item | Test required | Build | Status |
 | --- | --- | --- | --- | --- |
-| T-001 | Accounts (DEC-013) | Sign in; add a user with the *Operador de inventario* profile; sign in as that user and confirm they can record a movement but not create a product | 0.1.0-dev.8 | READY FOR TEST |
-| T-002 | Events (UC-13, AT-01) | Create an Event with only a provisional name, no customer; set event date, departure and expected return; reopen it and check the three dates stayed separate | 0.1.0-dev.8 | RETEST: FAILED on dev.6 (D-003..D-006); fixed in dev.7 |
-| T-003 | Catalog and photos (UC-12, AT-05, AT-36) | Create two products, one with a barcode starting with 0; give each a photo; switch between them and check each keeps its own photo and the barcode keeps its 0 | 0.1.0-dev.8 | READY FOR TEST |
-| T-004 | Movements (UC-03, AT-02, AT-03) | Create a warehouse and an event location; move part of a product's stock with no trip; try to move more than is there (must be refused); correct a movement and check the original stays, marked *Corregido* | 0.1.0-dev.8 | READY FOR TEST |
-| T-005 | Reservations (UC-21, AT-04, AT-31) | Confirm Event A holding all of a product until day 14; an Event B starting day 14 must be refused; starting day 15 must confirm | 0.1.0-dev.8 | READY FOR TEST |
-| T-006 | Change history (AT-18) | Open *Historial de cambios* on an Event and a product; check who/what/when is shown | 0.1.0-dev.8 | READY FOR TEST |
-| T-007 | My account (D-009) | Click your name (👤) at the top: change the language and save (the whole screen changes, also after signing in again); change your password. Under Usuarios, switch a user off and give a user a new password | 0.1.0-dev.8 | READY FOR TEST |
-| T-008 | Map location (DEC-021, DEC-025) | On an Event, type a place in Lugar del evento and choose a suggestion (or click the map), drag the pin, save; reopen and check the point and name stayed | 0.1.0-dev.8 | READY FOR TEST |
-| T-009 | Event map (DEC-022, AT-07) | On an Event's Mapa del evento: add a stage point and a water station, draw a small area (bar storage), draw a delivery route with Terminar and mark it preferred; reopen and check everything stayed | 0.1.0-dev.8 | READY FOR TEST |
-| T-010 | Running courses add-on (DEC-023) | Import a GPX from Strava/Garmin/plotaroute: check distance, km markers, elevation profile; export it again as GPX | 0.1.0-dev.8 | READY FOR TEST |
+| T-001 | Accounts (DEC-013) | Sign in; add a user with the *Operador de inventario* profile; sign in as that user and confirm they can record a movement but not create a product | 0.1.0-dev.9 | READY FOR TEST |
+| T-002 | Events (UC-13, AT-01) | Create an Event with only a provisional name, no customer; set event date, departure and expected return; reopen it and check the three dates stayed separate | 0.1.0-dev.9 | RETEST: FAILED on dev.6 (D-003..D-006); fixed in dev.7 |
+| T-003 | Catalog and photos (UC-12, AT-05, AT-36) | Create two products, one with a barcode starting with 0; give each a photo; switch between them and check each keeps its own photo and the barcode keeps its 0 | 0.1.0-dev.9 | READY FOR TEST |
+| T-004 | Movements (UC-03, AT-02, AT-03) | Create a warehouse and an event location; move part of a product's stock with no trip; try to move more than is there (must be refused); correct a movement and check the original stays, marked *Corregido* | 0.1.0-dev.9 | READY FOR TEST |
+| T-005 | Reservations (UC-21, AT-04, AT-31) | Confirm Event A holding all of a product until day 14; an Event B starting day 14 must be refused; starting day 15 must confirm | 0.1.0-dev.9 | READY FOR TEST |
+| T-006 | Change history (AT-18) | Open *Historial de cambios* on an Event and a product; check who/what/when is shown | 0.1.0-dev.9 | READY FOR TEST |
+| T-007 | My account (D-009) | Click your name (👤) at the top: change the language and save (the whole screen changes, also after signing in again); change your password. Under Usuarios, switch a user off and give a user a new password | 0.1.0-dev.9 | READY FOR TEST |
+| T-008 | Map location (DEC-021, DEC-025) | On an Event, type a place in Lugar del evento and choose a suggestion (or click the map), drag the pin, save; reopen and check the point and name stayed | 0.1.0-dev.9 | READY FOR TEST |
+| T-009 | Event map (DEC-022, AT-07) | On an Event's Mapa del evento: add a stage point and a water station, draw a small area (bar storage), draw a delivery route with Terminar and mark it preferred; reopen and check everything stayed | 0.1.0-dev.9 | READY FOR TEST |
+| T-011 | Google maps (DEC-026) - after the key is in .env | Search "PH Palmas Bellas" in Lugar del evento and choose it; switch Mapa / Satélite on both maps | 0.1.0-dev.9 | WAITING FOR KEY |
+| T-012 | Follow streets (DEC-027 item 1) - needs the key | Draw a delivery route with Seguir calles on: the line follows the streets; use Ajustar a calles on an existing route | 0.1.0-dev.9 | WAITING FOR KEY |
+| T-013 | Elevation for drawn courses (item 2) - needs the key | Draw a course: the elevation profile appears by itself | 0.1.0-dev.9 | WAITING FOR KEY |
+| T-014 | Points on a course, start/finish, laps (items 3-4) | Place Agua at km 2 on a course; set 2 laps and out-and-back; check km in the list, total distance, start/finish markers | 0.1.0-dev.9 | READY FOR TEST |
+| T-015 | Course sheet (item 5) | Open Hoja del recorrido, check map, distances, elevation, stations; print or save as PDF | 0.1.0-dev.9 | READY FOR TEST |
+| T-010 | Running courses add-on (DEC-023) | Import a GPX from Strava/Garmin/plotaroute: check distance, km markers, elevation profile; export it again as GPX | 0.1.0-dev.9 | READY FOR TEST |
 
 ## Known Defects
 
@@ -132,6 +139,7 @@ Walter tests the build running on his PC (see docs/USER_GUIDE.md; sign in with h
 | L-004 | Quantity tracking only; individual (serial) assets not yet | Assets module (later 0.x) |
 | L-005 | If the database transaction fails after a photo's bytes were stored, an unreferenced file stays on disk (never shown) | Cleanup job with the worker queue (pg-boss) |
 | L-006 | Only cloud mode is tested; ENGINE_MODE=local runs the same app without sync yet | Phase 4 |
+| L-008 | Google map pictures show a text "Google" mark and Google's copyright line; Google's terms ask for the official Google logo image, to be confirmed before customers | Add the official logo asset with the first customer release |
 | L-007 | Photos and backups are stored unencrypted in 0.1.0 (DEC-016/018 not built yet). Acceptable only for synthetic test data | DEC-018: layer 2 (core data, backups) in 0.2.0; layer 1 encrypted storage area with the onsite box (Phase 4) and at first cloud deployment. Must be in place before any real tenant data |
 
 ## Approved Decisions
@@ -162,12 +170,15 @@ Walter tests the build running on his PC (see docs/USER_GUIDE.md; sign in with h
 | DEC-023 | 2026-09-30 | **Running courses like Strava are a paid add-on** ("Running courses"): course routes with total distance, km markers, elevation profile and climb (from the GPX file's own heights), GPX import/export (Strava, Garmin, plotaroute). Enabled per organization; enforced by the server (a tenant without it can't save a course). An operator switches it on until the Phase 4 license system; prices remain undefined (gap G-07) | Walter: "running routes also, like Strava ... could be an additional paid feature" | Maps, licensing |
 | DEC-024 | 2026-09-30 | **Plans (tiers) are configurable**: a plan lists the features it includes; each organization has one plan plus individual add-ons; what it can use = plan + add-ons, enforced by the server. Managed with the operator tool `features.js` until the Phase 4 license system. No plan contents hard-coded; plan names and prices stay Walter's (G-07). **Walter's test organizations always get full access** | Walter: "be sure that we can control what is part of what tier ... always give me a user with full access" | Licensing |
 | DEC-025 | 2026-09-30 | Place search for the Event map is **on**, using OpenStreetMap's public search through our server (option A), while testing; our own copy inside our environment (option B) before real customers. One box: typing shows suggestions; nearest to the map view first | Walter: "the search isn't activated, that isn't the way" (was P-016). Limit: the free search knows streets, areas, landmarks, not every building | Maps |
+| DEC-026 | 2026-09-30 | **Google for maps**: Google map pictures (streets + **satellite**, Map Tiles API), Google place search (Places API New, finds buildings like "PH Palmas Bellas"), Google street routing (Routes API) and elevation (Elevation API). All calls go through STRUCTURA's server; the key never reaches browsers. Google's terms require Google results to be shown on Google maps, so map pictures switch too. OpenStreetMap stays the automatic fallback when no key is set. Only typed search words, map views and route points go to Google; no Event data. Cost: free monthly amounts, then roughly $2.83 per 1,000 searches, $0.60 per 1,000 map tiles, about $5 per 1,000 routes (checked 2026-09-30) | Walter: "yes Google". Supersedes DEC-025 (OpenStreetMap search) when a key is present | Maps |
+| DEC-027 | 2026-09-30 | Course tools, in this order: (1) **follow streets** (snap to road) when drawing routes, for every organization; (2) **elevation for drawn courses**; (3) **points at a distance on a course** (e.g. water at km 5, positioned exactly, km shown in the list); (4) **start/finish markers, laps and out-and-back**; (5) **course sheet** to print or save as PDF. Items 2-5 belong to the paid "courses" add-on (DEC-023). A public share link isn't added (spec 14: no public links in the baseline) | Walter: "build 1-5 in that order" | Maps, courses add-on |
 | DEC-020 | 2026-09-30 | Refines DEC-019: an Event can be created **after its rental period has started** (warehouse departure in the past is allowed, e.g. a week into the rental), but **the event date and the expected return must be today or later**. Confirming (reserving) is refused only when the expected return is already past. Event date must still lie between departure and expected return | Walter: "I can create the event a week into the rental period, but the rental period and the event must end after today". Read as today-or-later: a rental ending today is still current | Events, reservations |
 
 ## Pending Decisions
 
 | ID | Question | Options or constraint | Needed by | Owner |
 | --- | --- | --- | --- | --- |
+| P-017 | Google Maps Platform key (DEC-026) | Walter creates it (Places API (New), Map Tiles API, Routes API, Elevation API; restrict the key to these) and puts GOOGLE_MAPS_KEY=... in .env; then restart Docker. Until then OpenStreetMap is used and T-011..T-013 wait | Now | Walter |
 | P-011 | Cloud hosting provider and onsite mini-PC model | Not blocking 0.1.0. DEC-014 adds a need: the machine running the local AI model needs roughly 8 GB of memory or more | Phase 4 / first cloud deployment | Walter |
 | P-005 | Licensing policy values (gap G-07) | Pricing, plans, capacity limits, offline grace period. The spec says: configuration only, never invented | Phase 4 | Walter |
 | P-006 | Tax, rounding, currency and retention settings (gap G-10) | Must be explicit configurable policies | Phase 2 | Walter |
@@ -208,7 +219,7 @@ not an approved schedule.
 
 | Environment | Current build | Deployment date | Verification | Status |
 | --- | --- | --- | --- | --- |
-| Development | `0.1.0-dev.8` | 2026-09-30 | 117/117 tests; browser check; Docker check | Running on Walter's PC (http://127.0.0.1:8095), waiting for Walter's tests |
+| Development | `0.1.0-dev.9` | 2026-09-30 | 130/130 tests; browser check (OpenStreetMap); Docker check | Running on Walter's PC (http://127.0.0.1:8095), waiting for Walter's tests and Google key |
 | Test | None | — | — | Not started |
 | Production | None | — | — | Not started |
 

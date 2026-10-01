@@ -23,6 +23,8 @@ export interface Config {
   now: () => Date;
   // Place search provider for the Event map (P-016). "none" = off.
   geocoder: "none" | "nominatim";
+  // Google Maps Platform key (DEC-026). Server-side only; never sent to browsers.
+  googleMapsKey: string | null;
 }
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -58,5 +60,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     filesDir: env.FILES_DIR || path.resolve("data", "files"),
     now: () => new Date(),
     geocoder: env.GEOCODER === "nominatim" ? "nominatim" : "none",
+    googleMapsKey: env.GOOGLE_MAPS_KEY?.trim() || null,
   };
 }
