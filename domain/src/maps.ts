@@ -51,6 +51,11 @@ export const featurePropsSchema = z
     snapped: z.boolean().optional(),
     courseId: z.string().uuid().optional(),
     distanceM: z.number().min(0).max(1_000_000).optional(),
+    // Routes drawn piece by piece (Walter, 2026-10-01): where each clicked
+    // point sits in the line, and the tool used for each piece
+    // (w = on foot, b = by bike, d = by car, l = straight), so the pieces can be edited.
+    anchorIdx: z.array(z.number().int().min(0)).min(2).max(2000).optional(),
+    segModes: z.array(z.enum(["w", "b", "d", "l"])).max(1999).optional(),
   })
   .strict()
   .default({});
@@ -87,6 +92,18 @@ export const mapFeatureFields = z
     }
     if (p.courseId !== undefined && f.kind !== "point") {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["props"], message: "Only points can be placed on a course" });
+    }
+    if (p.anchorIdx !== undefined || p.segModes !== undefined) {
+      const n = f.geometry.type === "LineString" ? f.geometry.coordinates.length : 0;
+      const idx = p.anchorIdx ?? [];
+      const ok =
+        f.kind === "route" &&
+        p.segModes !== undefined &&
+        p.segModes.length === idx.length - 1 &&
+        idx[0] === 0 &&
+        idx[idx.length - 1] === n - 1 &&
+        idx.every((v, i) => i === 0 || v > idx[i - 1]!);
+      if (!ok) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["props"], message: "The route's pieces don't match its line" });
     }
     if (f.geometry.type !== KIND_GEOMETRY[f.kind]) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["geometry"], message: `A ${f.kind} needs ${KIND_GEOMETRY[f.kind]} geometry` });

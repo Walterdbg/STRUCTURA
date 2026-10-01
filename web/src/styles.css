@@ -189,4 +189,15 @@ a.map-fullscreen { font-size: 16px; font-weight: 700; color: #222; text-decorati
   .card.sheet { border: none; padding: 0; margin: 0; }
   .sheet-map { height: 520px; page-break-inside: avoid; }
   .elevation { page-break-inside: avoid; }
-}
+}/* Route editor (DEC-030): points, middle handles, tool buttons. */
+.route-anchor { background: #fff; border: 3px solid #1971c2; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.5); cursor: grab; }
+.route-anchor.start { border-color: #2b8a3e; }
+.route-anchor.end { border-color: #c92a2a; }
+.route-mid { background: rgba(255,255,255,0.7); border: 2px solid #495057; border-radius: 50%; cursor: grab; opacity: 0.8; }
+.route-mid:hover { opacity: 1; background: #fff; }
+.route-editing { cursor: crosshair; }
+.seg-tools { display: inline-flex; gap: 0; }
+.seg-tools button { border-radius: 0; margin-left: -1px; }
+.seg-tools button:first-child { border-radius: 6px 0 0 6px; margin-left: 0; }
+.seg-tools button:last-child { border-radius: 0 6px 6px 0; }
+.drawing-hint { flex-wrap: wrap; }

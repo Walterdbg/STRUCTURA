@@ -17,6 +17,7 @@ import {
 import { ApiError, get, newCommand, send, type EventRecord, type MapFeature } from "../api.js";
 import { addBaseLayers, addFullscreen, type GeoStatus } from "../components/basemap.js";
 import { parseGpx, toGpx } from "../components/gpx.js";
+import { RouteEditor, anchorIndexes, joinSegments, shapeFromLine, type RouteShape, type SegMode } from "../components/routeEditor.js";
 import { describeFailure } from "../forms.js";
 import { LocaleContext, useT, type TextKey } from "../i18n.js";
 
@@ -71,12 +72,36 @@ const toDraft = (f: MapFeature): Draft => ({
   props: f.props ?? {},
 });
 
-// At most 25 points for the routing service: the first, the last, and
-// evenly spread ones in between.
-function sampleWaypoints(coords: number[][], max = 25): number[][] {
-  if (coords.length <= max) return coords;
-  const out: number[][] = [];
-  for (let i = 0; i < max; i++) out.push(coords[Math.round((i * (coords.length - 1)) / (max - 1))]!);
+const TOOL_ICON: Record<SegMode, string> = { w: "👣", b: "🚲", d: "🚗", l: "✏️" };
+const TOOL_LABEL: Record<SegMode, TextKey> = { w: "map.toolFoot", b: "map.toolBike", d: "map.toolCar", l: "map.toolDraw" };
+const TOOL_HINT: Record<SegMode, TextKey> = { w: "map.toolFootHint", b: "map.toolBikeHint", d: "map.toolCarHint", l: "map.toolDrawHint" };
+
+// The tool a new route starts with: on foot for courses, by car for deliveries.
+const defaultTool = (category: string, routing: boolean): SegMode => (!routing ? "l" : category === "delivery" ? "d" : "w");
+
+// One street piece from Google, through our server.
+async function routeBetween(from: number[], to: number[], mode: "walk" | "bike" | "drive"): Promise<number[][]> {
+  const res = await fetch("/api/geo/route", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ mode, waypoints: [from, to] }),
+  });
+  const body = await res.json();
+  if (!res.ok) throw new ApiError(res.status, body?.error ?? "internal", body?.message ?? "", body?.details);
+  return body.coordinates as number[][];
+}
+
+// The pieces of a route kept with it (DEC-030), so it can be edited later.
+function pieceProps(props: FeatureProps, shape: RouteShape | null): FeatureProps {
+  const out: FeatureProps = { ...props };
+  delete out.anchorIdx;
+  delete out.segModes;
+  if (shape && shape.segments.length > 0) {
+    out.anchorIdx = anchorIndexes(shape);
+    out.segModes = shape.segments.map((s) => s.mode);
+    out.snapped = shape.segments.some((s) => s.mode !== "l");
+  }
   return out;
 }
 
@@ -98,9 +123,13 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
   const [busy, setBusy] = useState<TextKey | null>(null);
   const [drawing, setDrawing] = useState<Kind | null>(null);
   const [status, setStatus] = useState<GeoStatus | null>(null);
-  const [followStreets, setFollowStreets] = useState(true);
-  const followRef = useRef(true);
-  followRef.current = followStreets;
+  // Route drawing (DEC-030): the tool for the next piece, and the editor.
+  const [tool, setTool] = useState<SegMode>("w");
+  const toolRef = useRef<SegMode>("w");
+  toolRef.current = tool;
+  const editor = useRef<RouteEditor | null>(null);
+  const [canUndo, setCanUndo] = useState(false);
+  const [routeBusy, setRouteBusy] = useState(false);
   const statusRef = useRef<GeoStatus | null>(null);
   statusRef.current = status;
   const hasCourses = features.includes("courses");
@@ -130,31 +159,14 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
     drawingLayer.current = preview;
   }, []);
 
-  // (1) Follow streets and (2) heights for courses, after a route is drawn.
+  // Heights for courses (DEC-027 item 2), once the line is drawn or changed.
   const snapAndElevate = useCallback(
-    async (d: Draft, opts: { snap: boolean }) => {
+    async (d: Draft, _opts: { snap: boolean }) => {
       if (d.geometry.type !== "LineString") return d;
       let coords = d.geometry.coordinates as number[][];
-      let props = d.props;
+      const props = d.props;
       const st = statusRef.current;
-      if (opts.snap && st?.routing) {
-        setBusy("map.snapping");
-        try {
-          const res = await fetch("/api/geo/route", {
-            method: "POST",
-            credentials: "same-origin",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ mode: d.category === "delivery" ? "drive" : "walk", waypoints: sampleWaypoints(coords).map((c) => [c[0], c[1]]) }),
-          });
-          const body = await res.json();
-          if (!res.ok) throw new ApiError(res.status, body?.error ?? "internal", body?.message ?? "", body?.details);
-          coords = body.coordinates as number[][];
-          props = { ...props, snapped: true };
-        } catch (err) {
-          setError(err instanceof ApiError && err.details?.reason === "no_route" ? "map.noRoute" : "map.snapFailed");
-        }
-      }
-      if (d.category === "course" && hasCourses && st?.elevation && !coords.every((c) => c.length > 2)) {
+      if (coords.length >= 2 && d.category === "course" && hasCourses && st?.elevation && !coords.every((c) => c.length > 2)) {
         setBusy("map.gettingElevation");
         try {
           const res = await fetch("/api/geo/elevation", {
@@ -181,10 +193,7 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
     if (!box.current || map.current) return;
     const center: L.LatLngTuple = event.locationLat !== null && event.locationLng !== null ? [event.locationLat, event.locationLng] : DEFAULT_CENTER;
     const m = L.map(box.current, { scrollWheelZoom: false }).setView(center, event.locationLat !== null ? 16 : 11);
-    void addBaseLayers(m, locale, { map: t("map.layerMap"), satellite: t("map.layerSatellite") }).then((s) => {
-      setStatus(s);
-      setFollowStreets(s.routing);
-    });
+    void addBaseLayers(m, locale, { map: t("map.layerMap"), satellite: t("map.layerSatellite") }).then((s) => setStatus(s));
     if (sectionRef.current) addFullscreen(m, sectionRef.current, { enter: t("map.fullscreen"), exit: t("map.exitFullscreen") });
     layerGroup.current = L.featureGroup().addTo(m);
     m.pm.setGlobalOptions({ snappable: true, continueDrawing: false });
@@ -207,12 +216,6 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
         props: {},
       };
       setDraft(draft);
-      if (kind === "route") {
-        void snapAndElevate(draft, { snap: followRef.current }).then((d) => {
-          setDraft(d);
-          showPreview(d.geometry.coordinates as number[][], d.category);
-        });
-      }
     });
     map.current = m;
     return () => {
@@ -233,6 +236,21 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
     if (active) m.scrollWheelZoom.enable();
     else if (!document.fullscreenElement) m.scrollWheelZoom.disable();
   }, [drawing, editingShape]);
+
+  // Ctrl+Z (Cmd+Z) undoes the last step while a route is being drawn.
+  useEffect(() => {
+    if (drawing !== "route") return;
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        editor.current?.undo();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [drawing]);
 
   useEffect(() => {
     const g = layerGroup.current;
@@ -270,7 +288,7 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
       (layer as L.Path).bindTooltip?.(label, { direction: "top" });
       layer.on("click", () => {
         // While drawing, a click on an existing item is part of the drawing.
-        if (map.current?.pm.globalDrawModeEnabled()) return;
+        if (map.current?.pm.globalDrawModeEnabled() || editor.current) return;
         openItem(f);
       });
       layer.addTo(g);
@@ -291,6 +309,14 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
     setError(null);
     setDrawing(kind);
     pendingCategory.current = category ?? null;
+    if (kind === "route") {
+      // Routes are drawn piece by piece with the route editor (DEC-030).
+      const cat = category ?? "delivery";
+      setTool(defaultTool(cat, Boolean(statusRef.current?.routing)));
+      setDraft({ id: null, version: null, kind: "route", category: cat, label: "", notes: "", preferred: false, geometry: { type: "LineString", coordinates: [] }, source: null, props: {} });
+      openEditor(cat, undefined);
+      return;
+    }
     m.pm.enableDraw(kind === "point" ? "Marker" : kind === "area" ? "Polygon" : "Line", {
       markerStyle: { icon: L.divIcon({ className: "poi-icon", html: "📍", iconSize: [28, 28], iconAnchor: [14, 14] }) },
       pathOptions: { color: kind === "area" ? AREA_COLOR : ROUTE_COLOR[category ?? "delivery"] },
@@ -308,13 +334,64 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
     setDraft(toDraft(f));
   }
 
-  function finishDrawing() {
-    const draw = (map.current?.pm as unknown as { Draw: Record<string, { _finishShape?: () => void }> } | undefined)?.Draw;
-    draw?.[drawing === "area" ? "Polygon" : "Line"]?._finishShape?.();
+  // The route editor on the map: new route (no shape) or a saved one.
+  function openEditor(category: string, shape: RouteShape | undefined) {
+    const m = map.current;
+    if (!m) return;
+    editor.current?.stop();
+    const ed = new RouteEditor(m, {
+      color: ROUTE_COLOR[category] ?? "#1971c2",
+      route: statusRef.current?.routing ? routeBetween : null,
+      mode: () => toolRef.current,
+      onBusy: (b) => setRouteBusy(b),
+      onRouteFailed: () => setError("map.noRoute"),
+      onChange: (s) => {
+        setCanUndo(ed.canUndo);
+        setDraft((cur) => (cur ? { ...cur, geometry: { type: "LineString", coordinates: joinSegments(s) }, props: pieceProps(cur.props, s) } : cur));
+      },
+    });
+    ed.start(shape);
+    editor.current = ed;
+    setCanUndo(false);
+    setDrawing("route");
+  }
+
+  function closeEditor() {
+    editor.current?.stop();
+    editor.current = null;
+    setCanUndo(false);
+    setRouteBusy(false);
+  }
+
+  // "Done": stop drawing, keep the route on screen with its panel; a course
+  // gets its heights.
+  async function finishDrawing() {
+    if (drawing !== "route") {
+      const draw = (map.current?.pm as unknown as { Draw: Record<string, { _finishShape?: () => void }> } | undefined)?.Draw;
+      draw?.[drawing === "area" ? "Polygon" : "Line"]?._finishShape?.();
+      return;
+    }
+    const ed = editor.current;
+    const d = draftRef.current;
+    if (!ed || !d) return;
+    const shape = ed.value;
+    closeEditor();
+    setDrawing(null);
+    setEditingShape(false);
+    const coords = joinSegments(shape);
+    const next: Draft = { ...d, geometry: { type: "LineString", coordinates: coords }, props: pieceProps(d.props, shape) };
+    setDraft(next);
+    if (coords.length >= 2) {
+      showPreview(coords, next.category);
+      const withHeights = await snapAndElevate(next, { snap: false });
+      setDraft((cur) => (cur && cur.id === next.id ? { ...cur, geometry: withHeights.geometry } : cur));
+      showPreview(withHeights.geometry.coordinates as number[][], next.category);
+    }
   }
 
   function cancelDraft() {
     map.current?.pm.disableDraw();
+    closeEditor();
     setDrawing(null);
     if (drawingLayer.current) {
       map.current?.removeLayer(drawingLayer.current);
@@ -327,6 +404,17 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
   function editShape() {
     if (!draft || !map.current) return;
     const g = draft.geometry;
+    if (g.type === "LineString") {
+      // Routes: the pieces come back, each with its tool (DEC-030).
+      if (drawingLayer.current) {
+        map.current.removeLayer(drawingLayer.current);
+        drawingLayer.current = null;
+      }
+      setTool(defaultTool(draft.category, Boolean(status?.routing)));
+      setEditingShape(true);
+      openEditor(draft.category, shapeFromLine(g.coordinates as number[][], draft.props.anchorIdx, draft.props.segModes));
+      return;
+    }
     let layer: L.Layer;
     if (g.type === "Point") {
       const [lng, lat] = g.coordinates as number[];
@@ -345,26 +433,23 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
   // Current shape of the draft (taking an open shape edit into account).
   function currentGeometry(): MapFeature["geometry"] | null {
     if (!draft) return null;
+    if (editor.current) return { type: "LineString", coordinates: joinSegments(editor.current.value) };
     if (editingShape && drawingLayer.current) {
       return roundGeometry((drawingLayer.current as L.Marker | L.Polyline).toGeoJSON().geometry as MapFeature["geometry"]);
     }
     return draft.geometry;
   }
 
-  async function refit() {
-    if (!draft) return;
-    const geometry = currentGeometry();
-    if (!geometry || geometry.type !== "LineString") return;
+  // "Fit to streets": every piece remade along the streets (on foot, or by
+  // car for deliveries), then the route stays open to adjust details.
+  function refit() {
+    if (!draft || draft.geometry.type !== "LineString") return;
     setError(null);
-    const base = { ...draft, geometry: { type: "LineString" as const, coordinates: (geometry.coordinates as number[][]).map((c) => [c[0]!, c[1]!]) } };
-    const d = await snapAndElevate(base, { snap: true });
-    if (editingShape && drawingLayer.current) {
-      map.current?.removeLayer(drawingLayer.current);
-      drawingLayer.current = null;
-      setEditingShape(false);
-    }
-    setDraft(d);
-    showPreview(d.geometry.coordinates as number[][], d.category);
+    if (!editor.current) editShape();
+    const streets: SegMode = draft.category === "delivery" ? "d" : "w";
+    setTool(streets);
+    toolRef.current = streets;
+    editor.current?.remakeAll();
   }
 
   async function addElevation() {
@@ -379,8 +464,17 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
     // missing name never blocks saving (Walter lost a course, 2026-10-01).
     const sameType = (items ?? []).filter((f) => f.category === draft.category && f.id !== draft.id).length;
     const label = draft.label.trim() || `${t(`map.cat.${draft.category}` as TextKey)} ${sameType + 1}`;
-    const geometry = currentGeometry() ?? draft.geometry;
-    const props: FeatureProps = { ...draft.props };
+    let geometry = currentGeometry() ?? draft.geometry;
+    let props: FeatureProps = { ...draft.props };
+    if (editor.current) props = pieceProps(props, editor.current.value);
+    if (geometry.type === "LineString" && geometry.coordinates.length < 2) {
+      setError("map.needTwoPoints");
+      return;
+    }
+    // A course keeps its heights: pieces changed since the last fetch get them now.
+    if (geometry.type === "LineString" && draft.category === "course" && !(geometry.coordinates as number[][]).every((c) => c.length > 2)) {
+      geometry = (await snapAndElevate({ ...draft, geometry }, { snap: false })).geometry;
+    }
     if (!(draft.kind === "route" && draft.category === "course")) {
       delete props.laps;
       delete props.outAndBack;
@@ -543,16 +637,33 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
       <p className="muted small">{canEdit ? t("map.hint") : t("map.viewOnly")}</p>
       {drawing && (
         <div className="drawing-hint">
-          <span>{t(drawing === "point" ? "map.drawPoint" : drawing === "area" ? "map.drawArea" : "map.drawRoute")}</span>
-          {drawing === "route" && status?.routing && (
-            <label className="check" title={t("map.followStreetsHint")}>
-              <input type="checkbox" checked={followStreets} onChange={(e) => setFollowStreets(e.target.checked)} />
-              <span>{t("map.followStreets")}</span>
-            </label>
+          <span>{t(drawing === "point" ? "map.drawPoint" : drawing === "area" ? "map.drawArea" : "map.drawRouteSeg")}</span>
+          {drawing === "route" && (
+            <>
+              {/* The tool for the next piece (DEC-030), like RunningAhead. */}
+              <span className="seg-tools" role="group" aria-label={t("map.tool")}>
+                {status?.routing &&
+                  (["w", "b", "d"] as SegMode[]).map((m) => (
+                    <button key={m} type="button" className={tool === m ? "primary" : ""} aria-pressed={tool === m} title={t(TOOL_HINT[m])} onClick={() => setTool(m)}>
+                      {TOOL_ICON[m]} {t(TOOL_LABEL[m])}
+                    </button>
+                  ))}
+                <button type="button" className={tool === "l" ? "primary" : ""} aria-pressed={tool === "l"} title={t(TOOL_HINT.l)} onClick={() => setTool("l")}>
+                  {TOOL_ICON.l} {t(TOOL_LABEL.l)}
+                </button>
+              </span>
+              <button type="button" disabled={!canUndo} onClick={() => editor.current?.undo()} title="Ctrl+Z">
+                ↶ {t("map.undo")}
+              </button>
+              <button type="button" disabled={!draft || (draft.geometry.coordinates as number[][]).length === 0} onClick={() => window.confirm(t("map.clearConfirm")) && editor.current?.clear()}>
+                🧽 {t("map.clearRoute")}
+              </button>
+              {routeBusy && <span className="small muted">{t("map.snapping")}</span>}
+            </>
           )}
           {drawing !== "point" && (
-            <button type="button" className="primary" onClick={finishDrawing}>
-              ✓ {t("map.finish")}
+            <button type="button" className="primary" onClick={() => void finishDrawing()}>
+              ✓ {t(drawing === "route" ? "map.done" : "map.finish")}
             </button>
           )}
           <button type="button" onClick={cancelDraft}>
@@ -665,7 +776,7 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
             </p>
           )}
           {profile && <ElevationChart profile={profile} locale={locale} />}
-          {isCourse && !profile && <p className="small muted">{t("map.noElevation")}</p>}
+          {isCourse && !profile && !drawing && <p className="small muted">{t("map.noElevation")}</p>}
           {error && (
             <p className="bad" role="alert">
               {t(error)}
@@ -673,7 +784,7 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
           )}
           {canEdit && (
             <div className="row">
-              <button type="button" className="primary" disabled={busy !== null} onClick={() => void save()}>
+              <button type="button" className="primary" disabled={busy !== null || routeBusy} onClick={() => void save()}>
                 {busy === "common.saving" ? t("common.saving") : t("common.save")}
               </button>
               {draft.kind === "route" && status?.routing && (
@@ -681,12 +792,12 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
                   🛣 {t("map.snapAgain")}
                 </button>
               )}
-              {isCourse && !profile && status?.elevation && (
+              {isCourse && !profile && !drawing && status?.elevation && (
                 <button type="button" disabled={busy !== null} onClick={() => void addElevation()}>
                   ⛰ {t("map.getElevation")}
                 </button>
               )}
-              {draft.id && !editingShape && !(isCourse && profile) && !draft.props.courseId && (
+              {(draft.id || draft.kind === "route") && !editingShape && !drawing && !draft.props.courseId && (
                 <button type="button" onClick={editShape}>
                   ✎ {t("map.editShape")}
                 </button>

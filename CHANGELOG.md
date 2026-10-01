@@ -3,6 +3,31 @@
 Every entry gets an **Intent** and a **Result**. A Result is only marked
 confirmed once actually verified, and can honestly say FAILED.
 
+## 0.1.0-dev.11 — 2026-10-01 (routes drawn piece by piece) — NOT YET TESTED BY WALTER
+
+**Intent:** Walter's main need for courses (DEC-030): draw the main route
+fast, then add the small details by hand, zoomed in, like RunningAhead's
+"on foot" and "draw" tools.
+
+**Result:**
+- Each click adds one piece, made with the chosen tool: **👣 On foot**,
+  **🚲 By bike**, **🚗 By car** (follow streets and paths) or **✏️ Draw**
+  (straight, exactly where clicked). The tool can change at any click.
+- **↶ Undo** (or Ctrl+Z) one step at a time; **🧽 Clear**; **✓ Done**.
+- Details: drag the small handle in the middle of a piece to add a point
+  there; drag a point; right-click or double-click a point to remove it.
+  The pieces touching a changed point are remade with the chosen tool.
+- Saved routes keep their points and each piece's tool, so **✎ Edit
+  shape** brings the pieces back. Older routes and GPX files open as
+  pieces kept exactly as they were until changed. Courses get their
+  heights again after a change.
+- **🛣 Fit to streets** now remakes every piece along the streets and
+  leaves the route open for details.
+- Checked by Claude: 122/122 server tests (piece data validated; walking,
+  cycling and driving routes); browser run with the live Google key:
+  on-foot piece + straight piece, middle handle dragged, undo, done,
+  saved with heights (1.33 km), reopened, a point dragged with On foot,
+  saved again with new heights (1.68 km); Docker health.
 ## 0.1.0-dev.10 — 2026-10-01 (map fixes from Walter's tests) — NOT YET TESTED BY WALTER
 
 **Intent:** Fix what Walter found testing the Google maps (T-011..T-013):

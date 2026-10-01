@@ -97,6 +97,17 @@ describe("map services through our server, with Google (DEC-026)", () => {
     expect(calls.find((c) => c.url.includes("computeRoutes"))!.body).toMatchObject({ travelMode: "DRIVE" });
   });
 
+  it("routes on foot and by bike too (DEC-030 tools)", async () => {
+    const { fake, calls } = fakeGoogle();
+    vi.stubGlobal("fetch", fake);
+    const { app, cookie } = await setup("test-key", []);
+    for (const [mode, travel] of [["walk", "WALK"], ["bike", "BICYCLE"]] as const) {
+      const res = await app.inject({ method: "POST", url: "/api/geo/route", headers: { cookie }, payload: { mode, waypoints: [[-79.5, 9.0], [-79.51, 9.004]] } });
+      expect(res.statusCode).toBe(200);
+      expect(calls.filter((c) => c.url.includes("computeRoutes")).pop()!.body).toMatchObject({ travelMode: travel });
+    }
+  });
+
   it("adds heights to a drawn course in batches; needs the courses add-on", async () => {
     const { fake } = fakeGoogle();
     vi.stubGlobal("fetch", fake);

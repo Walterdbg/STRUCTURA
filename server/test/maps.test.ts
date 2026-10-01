@@ -88,6 +88,17 @@ describe("event map (UC-05, AT-07)", () => {
     expect(await count(w.db, "map_features")).toBe(1);
   });
 
+  it("keeps a route's pieces and tools (DEC-030) and refuses pieces that don't match the line", async () => {
+    const pieces = { anchorIdx: [0, 1, 2], segModes: ["w", "l"] };
+    const res = await add({ ...delivery("Por tramos"), props: pieces });
+    expect(res.statusCode).toBe(201);
+    expect(res.json().result.props).toMatchObject(pieces);
+    expect((await add({ ...delivery("Malo"), props: { anchorIdx: [0, 2], segModes: ["w", "l"] } })).statusCode).toBe(400); // one tool per piece
+    expect((await add({ ...delivery("Malo"), props: { anchorIdx: [0, 1], segModes: ["w"] } })).statusCode).toBe(400); // must reach the end
+    expect((await add({ ...delivery("Malo"), props: { anchorIdx: [0, 1, 2], segModes: ["w", "x"] } })).statusCode).toBe(400);
+    expect((await add({ ...stage, props: { anchorIdx: [0, 1], segModes: ["l"] } })).statusCode).toBe(400); // only routes
+  });
+
   it("needs map.edit to change it; everyone in the organization can see it; other organizations can't", async () => {
     await add(stage);
     await w.app.inject({ method: "POST", url: "/api/members", headers: { cookie: t.cookie }, payload: command({ email: "op@example.test", displayName: "Op", password: "operator-pass-1", preset: "inventory_operator" }) });

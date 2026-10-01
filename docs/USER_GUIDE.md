@@ -160,8 +160,33 @@ At the bottom of each Event, **Mapa del evento** holds what the team needs on si
   storage is a point too, no corners to draw), e.g.
   🎤 "Tarima uno", 💧 "Agua km 5", 🚻 "Baños norte", 🍹 "Bodega de bebidas", ⛑️ first aid,
   🚪 entrance, 🅿️ parking.
-- **〰 Ruta**: click each point of the route in order and press **Terminar**. Mark
-  *Ruta preferida* for the delivery path to use. Its length is shown.
+- **〰 Ruta**: drawn piece by piece (see *Drawing a route* below). Mark *Ruta preferida* for
+  the delivery path to use. Its length is shown.
+
+### Drawing a route or a course
+
+Every click on the map adds one piece, made with the tool chosen at that moment:
+
+| Tool | The piece |
+| --- | --- |
+| 👣 **A pie / On foot** | follows streets and paths you can walk (start of courses) |
+| 🚲 **En bici / By bike** | follows bike-friendly streets |
+| 🚗 **En auto / By car** | follows roads (start of delivery routes) |
+| ✏️ **Dibujar / Draw** | a straight line exactly where you click, for paths the map doesn't know |
+
+Change the tool at any click: along the avenue on foot, across the park path with Draw, on foot
+again. **↶ Deshacer** (or Ctrl+Z) takes back one step; **🧽 Borrar todo** starts again; **✓ Listo**
+ends the drawing.
+
+**Adding the details:** zoom in (the mouse wheel zooms while drawing) and:
+
+- drag the **small handle in the middle of a piece** to add a point there and bend the line;
+- drag any **point** to move it;
+- **right-click or double-click** a point to remove it.
+
+The pieces touching the point you changed are remade with the tool chosen at that moment, so
+choose ✏️ Draw before placing a point on a hidden path. To change a saved route, open it and press
+**✎ Editar forma**: its points and pieces come back.
 
 If you leave the name empty, STRUCTURA names it (e.g. "Recorrido (carrera) 1"); rename it any
 time. Starting another drawing before saving asks first, so nothing is lost by accident.
@@ -187,9 +212,8 @@ Without the add-on these buttons show 🔒 *Recorridos (complemento)*.
 
 **Course tools (add-on):**
 
-- **Follow streets (every organization):** while drawing a route, keep **Seguir calles**
-  on and the line follows the real streets between your clicks. **🛣 Ajustar a calles**
-  re-fits a route drawn earlier. (Needs the Google key.)
+- **Follow streets (every organization):** the 👣 / 🚲 / 🚗 tools above. **🛣 Ajustar a calles**
+  remakes every piece of a route along the streets. (Needs the Google key.)
 - **Elevation:** a drawn course gets its heights automatically (or press **⛰ Obtener
   elevación**). A GPX without heights gets them too. (Needs the Google key.)
 - **Stations on the course:** on a point, choose **Ubicar en el recorrido**, pick the course

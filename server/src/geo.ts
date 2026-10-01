@@ -104,7 +104,7 @@ async function tileSession(key: string, type: "roadmap" | "satellite", locale: s
 // ---------------------------------------------------------------- input rules
 const position = z.tuple([z.number().min(-180).max(180), z.number().min(-90).max(90)]).rest(z.number());
 const routeBody = z.object({
-  mode: z.enum(["drive", "walk"]),
+  mode: z.enum(["drive", "walk", "bike"]),
   waypoints: z.array(position).min(2).max(25),
 });
 const elevationBody = z.object({ coordinates: z.array(position).min(2).max(5000) });
@@ -239,7 +239,7 @@ export function geoRoutes(app: FastifyInstance, db: Db, config: Config): void {
             origin: ll(pts[0]!),
             destination: ll(pts[pts.length - 1]!),
             intermediates: pts.slice(1, -1).map(ll),
-            travelMode: body.data.mode === "drive" ? "DRIVE" : "WALK",
+            travelMode: ({ drive: "DRIVE", walk: "WALK", bike: "BICYCLE" } as const)[body.data.mode],
             polylineQuality: "HIGH_QUALITY",
           },
         }

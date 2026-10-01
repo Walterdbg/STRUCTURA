@@ -71,6 +71,40 @@ Roadmap section: Known Defects (D-010..D-013), Approved Decisions (DEC-029), Pen
 
 ---
 
+[004]
+Time: 2026-10-01, afternoon
+Area / feature: Base maps like RunningAhead (research only)
+Request or objective: Walter asked to review RunningAhead's map layers (no Bing): ArcGIS Topo / Street / Imagery, OSM; ArcGIS imagery shows US paths when trees have no leaves.
+Action taken: Checked ArcGIS Location Platform pricing (2 million basemap tiles a month free, then about $0.15 per 1,000; commercial apps allowed) and World Imagery Wayback (150+ dated versions since 2014). Walter: "adding the maps is for next". Recorded as backlog B-005.
+Files created: None
+Files modified: ROADMAP.md (v1.23.0, B-005)
+Decision made: None (deferred by Walter)
+Verification performed: N/A (research; Wayback commercial terms still to confirm)
+Result: PASS
+Observed issue: None
+Follow-up required: B-005 after DEC-030 is tested; Walter creates an ArcGIS account then
+Roadmap update required: YES (done)
+Roadmap section: Backlog
+
+---
+
+[005]
+Time: 2026-10-01, afternoon
+Area / feature: 0.1.0-dev.11 - routes drawn piece by piece (DEC-030)
+Request or objective: Walter: "focus in the functionality that I described": create the main route, then manually add the small details; "the on foot and the draw functions"; "draw it fast, then grab the point along and be super precise when you zoom in". He asked whether RunningAhead's code is free to use.
+Action taken: New route editor (web/src/components/routeEditor.ts): pieces with a tool each (on foot, by bike, by car, straight), undo / clear / done, middle handles to add points, drag points, right-click or double-click to remove; pieces next to a change are remade with the current tool. Routes keep their points and tools (props anchorIdx / segModes, validated in the shared rules); older routes and GPX files open as exact pieces. Server routing accepts bike (BICYCLE). Fit to streets remakes every piece. RunningAhead's code not used: no open licence found; our libraries (Leaflet, Geoman) are open source.
+Files created: web/src/components/routeEditor.ts
+Files modified: web/src/pages/EventMap.tsx, web/src/i18n.ts, web/src/styles.css, domain/src/maps.ts, server/src/geo.ts, server/test/maps.test.ts, server/test/geo.test.ts, package files (0.1.0-dev.11), CHANGELOG.md, ROADMAP.md (v1.23.0), docs/USER_GUIDE.md
+Decision made: DEC-030 (Walter's described functionality)
+Verification performed: 122/122 server tests. Browser (dev run, live Google key): on-foot piece (Google route) + straight piece; middle handle dragged (new point, length 1.33 -> 1.43 km); undo back to 3 points; Done gave heights; saved as "Recorrido (carrera) 1" with anchorIdx [0,54,55], segModes [w,l]; reopened with Edit shape, the 3 points came back; a point dragged with On foot remade both pieces (1.68 km), saved with heights. Docker dev.11 health OK.
+Result: PASS for Claude's checks; NOT TESTED by Walter
+Observed issue: A new text key "map.clear" clashed with an existing one; renamed to map.clearRoute before the build.
+Follow-up required: Walter tests T-016 (and T-012/T-013 on this build)
+Roadmap update required: YES (done: v1.23.0)
+Roadmap section: Approved Decisions (DEC-030), Ready for test (T-016), Backlog (B-005), Build status
+
+---
+
 
 DEFECTS DISCOVERED TODAY
 ========================
@@ -89,6 +123,11 @@ Decision: DEC-029 - no Area drawing tool; stage, bar storage, etc. are points (e
 Approved by: Walter ("area is a point, I don't need to draw any square")
 Roadmap update required: YES (done)
 
+[DECISION-002]
+Decision: DEC-030 - routes drawn piece by piece (on foot / by bike / by car / draw), undo, details by dragging
+Approved by: Walter (described the functionality and asked to focus on it)
+Roadmap update required: YES (done)
+
 Proposed, waiting for Walter: P-019 (proposed DEC-028) warehouse departure at most 15 days before the event date, configurable per organization; same limit for the return?
 
 
@@ -102,10 +141,10 @@ DEPLOYMENT / BUILD RECORD
 =========================
 
 Deployment performed: YES (local development only)
-Build/version: 0.1.0-dev.10 (current)
+Build/version: 0.1.0-dev.10, then 0.1.0-dev.11 (current)
 Environment: Development - Docker on Walter's PC, http://127.0.0.1:8095
 Deployment result: PASS (Claude's checks); NOT TESTED by Walter
-Verification performed: health 0.1.0-dev.10, Google status/search live
+Verification performed: health 0.1.0-dev.10 and 0.1.0-dev.11, Google status/search live
 Rollback required: NO
 
 
