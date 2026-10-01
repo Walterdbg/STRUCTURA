@@ -150,7 +150,7 @@ Decision made: DEC-033, DEC-034 (Walter); DEC-030 refined (courses by hand; Goog
 Verification performed: 134/134 server tests. Browser (dev run): menu and tabs; repository list with 2 routes; course opened, saved as v2 (heights added, versions v2/v1 listed), duplicated; rental Event picker offers only the delivery route, race Event offers all; copy added with source "Del repositorio: 10K Cinta Costera v2" and heights; Event course saved back to the repository; delivery tools 🚗 🏍 ✏️, course ✏️ only. Docker dev.14: migration 009 applied.
 Result: PASS for Claude's checks; NOT TESTED by Walter
 Observed issue: A stale test copy kept the test port, so the first repository check hit an old server (404); fixed by restarting it. Dates in the repository showed mm/dd in Spanish; fixed to dd/mm before the build.
-Follow-up required: Walter tests T-020, T-021 (and earlier); confirm the interpretation of "both" (own section + Event copies)
+Follow-up required: Walter tests T-020, T-021 (and earlier). Walter confirmed: his two answers were Maps as its own section and Events taking GPX copies
 Roadmap update required: YES (done: v1.26.0)
 Roadmap section: Approved Decisions (DEC-033, DEC-034, DEC-030 note), Ready for test (T-020, T-021), Backlog (B-006), Build status
 
