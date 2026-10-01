@@ -3,6 +3,37 @@
 Every entry gets an **Intent** and a **Result**. A Result is only marked
 confirmed once actually verified, and can honestly say FAILED.
 
+## 0.1.0-dev.12 — 2026-10-01 (Race vs Rental, date limits, race tools) — NOT YET TESTED BY WALTER
+
+**Intent:** Walter's approved changes: separate races from rentals
+(DEC-031), logistics limits and equipment-out warnings (DEC-028), and race
+tools closer to RunningAhead (DEC-032).
+
+**Result:**
+- **Event type** chosen at creation, never changed: **📦 Rental &
+  deliveries** (default) or **🏁 Race**. Rentals have no course tools; the
+  server refuses courses on them. New **↩ Pickup** route next to **🚚
+  Delivery**. Migration 008 (existing Events with a course become races).
+- **Date limits** (per organization, Usuarios page, recorded in the
+  history): departure at most 15 days before the event, return at most 7
+  business days after; the form shows the allowed range and, if broken,
+  the earliest / latest allowed date. Checked only when dates change.
+- **Equipment still out**: warning 3 days after the event, **overdue**
+  after the expected return, on the Event page and the Events list; it
+  clears when everything is back.
+- **Race tools**: live distance while drawing; km / mi; distance markers
+  every 0.5 / 1 / 5 (show / hide); Back to start; Out and back drawn on the
+  map; Reverse; Lock course; Centre; elevation chart that shows the spot
+  on the map; Go to a place search. The course sheet uses the same units
+  and markers.
+- Events list: type icon, event date column, dates in the language's
+  format.
+- Checked by Claude: 129/129 server tests (types, limits with business
+  days, settings, warnings over time, races-only courses, locked courses);
+  browser run: limit messages with dates, race creation, drawing with
+  out-and-back / undo / back to start / reverse, miles and markers,
+  elevation hover on the map, lock, rental map without course tools, date
+  rules card; Docker dev.12 with migration 008.
 ## 0.1.0-dev.11 — 2026-10-01 (routes drawn piece by piece) — NOT YET TESTED BY WALTER
 
 **Intent:** Walter's main need for courses (DEC-030): draw the main route

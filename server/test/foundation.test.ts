@@ -34,7 +34,7 @@ describe("migrations", () => {
   it("apply once; running again changes nothing", async () => {
     expect(await migrate(db, testConfig().migrationsDir)).toEqual([]);
     const { rows } = await db.query<{ name: string }>("SELECT name FROM schema_migrations");
-    expect(rows.map((r) => r.name)).toEqual(["001_foundation.sql", "002_identity_events.sql", "003_inventory.sql", "004_reservations.sql", "005_event_location_point.sql", "006_event_maps.sql", "007_map_feature_props.sql"]);
+    expect(rows.map((r) => r.name)).toEqual(["001_foundation.sql", "002_identity_events.sql", "003_inventory.sql", "004_reservations.sql", "005_event_location_point.sql", "006_event_maps.sql", "007_map_feature_props.sql", "008_event_types_date_rules.sql"]);
   });
 });
 

@@ -139,6 +139,38 @@ export class RouteEditor {
     });
   }
 
+  // DEC-032 item 3: close the loop back to the start with the chosen tool.
+  closeLoop() {
+    this.run(async () => {
+      const s = this.shape;
+      if (s.anchors.length < 2) return;
+      const seg = await this.build(s.anchors[s.anchors.length - 1]!, s.anchors[0]!, this.opts.mode());
+      s.segments.push(seg);
+      s.anchors.push([...s.anchors[0]!]);
+    });
+  }
+
+  // DEC-032 item 4: come back the same way. The return is drawn, piece by
+  // piece, exactly over the way out, so distance markers continue on it.
+  outAndBack() {
+    this.run(async () => {
+      const s = this.shape;
+      if (s.segments.length === 0) return;
+      const back = [...s.segments].reverse().map((g) => ({ mode: g.mode, coords: [...g.coords].reverse().map((c) => [...c]) }));
+      s.segments.push(...back);
+      s.anchors.push(...s.anchors.slice(0, -1).reverse().map((a) => [...a]));
+    });
+  }
+
+  // DEC-032 item 5: start and finish swap.
+  reverse() {
+    this.run(async () => {
+      const s = this.shape;
+      s.anchors.reverse();
+      s.segments = s.segments.reverse().map((g) => ({ mode: g.mode, coords: [...g.coords].reverse() }));
+    });
+  }
+
   // Remake every piece with the chosen tool (e.g. "follow the streets" for all).
   remakeAll() {
     this.run(async () => {

@@ -229,3 +229,25 @@ describe("rules enforced below the app", () => {
     expect(res.statusCode).toBe(403);
   });
 });
+
+describe("equipment still out after the event (DEC-028)", () => {
+  it("warns 3 days after the event, is overdue after the expected return, and clears once everything is back", async () => {
+    const ev = (
+      await post("/api/events", { designation: "Feria", responsibleUserId: t.adminId, timezone: "America/Panama", departureDate: "2026-10-01", eventDate: "2026-10-02", expectedReturnDate: "2026-10-09" })
+    ).json().result as Ev;
+    const move = (from: string, to: string) =>
+      post("/api/movements", { reason: "transfer", sourceLocationId: from, destinationLocationId: to, eventId: ev.id, lines: [{ itemId: mic.id, quantity: "4" }] });
+    expect((await move(warehouse, eventSite)).statusCode).toBe(201);
+    const at = async (iso: string) => {
+      w.setNow!(new Date(iso));
+      return (await current(ev)) as Ev & { equipmentOut: boolean; returnAlert: string | null };
+    };
+    expect(await at("2026-10-05T17:00:00Z")).toMatchObject({ equipmentOut: true, returnAlert: null });
+    expect((await at("2026-10-06T17:00:00Z")).returnAlert).toBe("ended_out");
+    expect((await at("2026-10-10T17:00:00Z")).returnAlert).toBe("overdue");
+    const list = await w.app.inject({ method: "GET", url: "/api/events", headers: { cookie: t.cookie } });
+    expect(list.json().items.find((e: { id: string }) => e.id === ev.id).returnAlert).toBe("overdue");
+    expect((await move(eventSite, warehouse)).statusCode).toBe(201);
+    expect(await at("2026-10-10T18:00:00Z")).toMatchObject({ equipmentOut: false, returnAlert: null });
+  });
+});

@@ -105,6 +105,23 @@ Roadmap section: Approved Decisions (DEC-030), Ready for test (T-016), Backlog (
 
 ---
 
+[006]
+Time: 2026-10-01, evening
+Area / feature: 0.1.0-dev.12 - Race vs Rental (DEC-031), date limits and warnings (DEC-028), race tools (DEC-032)
+Request or objective: Walter's answers on the pending approvals: P-020 yes, "the rental cannot become a race"; P-021 good; P-019 yes, return "seven business days after the event", a warning "after three days" when equipment is still out, and return by a specific day or pick it up; P-011 keep testing locally, Hetzner fine if it covers everything; P-018 later. He asked for an efficient workflow designed from the spec, questions only when needed, and said he won't test until his changes are in.
+Action taken: Spec checked (no rule on event types or return deadlines). Migration 008 (events.event_type; tenants date-rule columns). Shared rules: event type, limitIssues with business days, returnAlert, pickup route type, course lock. Server: type fixed after creation, limits checked when dates change, equipment-out and alert on every Event, date-rules settings endpoint (tenant.admin, audited), courses only on races, locked courses keep their shape. Screens: type choice at creation, limit hints and messages with dates, warning banners and list tags, date rules card on Usuarios, Delivery / Pickup buttons, race tools 1-9 (live distance, km/mi, markers, back to start, out and back, reverse, lock, centre, elevation hover, go-to search), course sheet units.
+Files created: server/migrations/008_event_types_date_rules.sql, web/src/components/units.ts, web/src/components/MapSearch.tsx, web/src/pages/DateRulesCard.tsx
+Files modified: domain/src/events.ts, domain/src/maps.ts, server/src/events/service.ts, server/src/events/routes.ts, server/src/events/maps.ts, server tests (events, reservations, maps, foundation), web/src/pages/EventForm.tsx, EventsList.tsx, EventMap.tsx, CourseSheet.tsx, App.tsx, api.ts, i18n.ts, styles.css, components/routeEditor.ts, package files (0.1.0-dev.12), CHANGELOG.md, ROADMAP.md (v1.24.0), docs/USER_GUIDE.md
+Decision made: DEC-028, DEC-031, DEC-032 (Walter). Interpretation recorded: the type is fixed in both directions (Walter said a rental can't become a race; a race turning into a rental would orphan its courses). To confirm with Walter if he wants otherwise.
+Verification performed: 129/129 server tests. Browser (dev run, live Google key): both limit messages at once with 05/10/2026 and 29/10/2026; race created; course drawn: out and back 60.12 -> 120.24 km, undo, back to start, reverse keeps distance; Done gave heights; elevation hover shows "50.61 km · 0 m" on chart and map; miles 58.05 mi with markers 1, 2, 3...; lock hides shape editing and shows 🔒; rental map shows only Delivery / Pickup; date rules card shown; Events list shows type icons and dates. Docker dev.12: migration 008 applied, all 6 existing Events rental (none had a saved course), defaults 15 / 7 / 3.
+Result: PASS for Claude's checks; NOT TESTED by Walter
+Observed issue: None new
+Follow-up required: Walter tests T-016..T-019 (and earlier ones) on dev.12
+Roadmap update required: YES (done: v1.24.0)
+Roadmap section: Approved Decisions (DEC-028, DEC-031, DEC-032), Pending (P-019..P-021 approved, P-011 note), Ready for test (T-017..T-019), Build status
+
+---
+
 
 DEFECTS DISCOVERED TODAY
 ========================
@@ -128,7 +145,10 @@ Decision: DEC-030 - routes drawn piece by piece (on foot / by bike / by car / dr
 Approved by: Walter (described the functionality and asked to focus on it)
 Roadmap update required: YES (done)
 
-Proposed, waiting for Walter: P-020 (DEC-031 event types: Race vs Rental / delivery), P-021 (DEC-032 race tools like RunningAhead, items 1-9); P-019 (proposed DEC-028) warehouse departure at most 15 days before the event date, configurable per organization; same limit for the return?
+[DECISION-003]
+Decision: DEC-028 departure 15 days before / return 7 business days after / warning after 3 days / overdue after the expected return; DEC-031 Race vs Rental, type fixed; DEC-032 race tools 1-9
+Approved by: Walter (answers to P-019, P-020, P-021)
+Roadmap update required: YES (done)
 
 
 DOCUMENT REGISTER
@@ -141,10 +161,10 @@ DEPLOYMENT / BUILD RECORD
 =========================
 
 Deployment performed: YES (local development only)
-Build/version: 0.1.0-dev.10, then 0.1.0-dev.11 (current)
+Build/version: 0.1.0-dev.10, 0.1.0-dev.11, then 0.1.0-dev.12 (current)
 Environment: Development - Docker on Walter's PC, http://127.0.0.1:8095
 Deployment result: PASS (Claude's checks); NOT TESTED by Walter
-Verification performed: health 0.1.0-dev.10 and 0.1.0-dev.11, Google status/search live
+Verification performed: health 0.1.0-dev.10, dev.11 and dev.12 (migration 008), Google status/search live
 Rollback required: NO
 
 

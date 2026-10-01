@@ -18,6 +18,8 @@ import { ApiError, get, newCommand, send, type EventRecord, type MapFeature } fr
 import { addBaseLayers, addFullscreen, type GeoStatus } from "../components/basemap.js";
 import { parseGpx, toGpx } from "../components/gpx.js";
 import { RouteEditor, anchorIndexes, joinSegments, shapeFromLine, type RouteShape, type SegMode } from "../components/routeEditor.js";
+import { MapSearch } from "../components/MapSearch.js";
+import { MARKER_STEPS, METERS, fmtDist, markerLabel, useMarkerStep, useShowMarkers, useUnit, type Unit } from "../components/units.js";
 import { describeFailure } from "../forms.js";
 import { LocaleContext, useT, type TextKey } from "../i18n.js";
 
@@ -51,7 +53,7 @@ export const ICON: Record<string, string> = {
   parking: "🅿️",
   other: "📍",
 };
-export const ROUTE_COLOR: Record<string, string> = { delivery: "#d9480f", course: "#7048e8", other: "#1971c2" };
+export const ROUTE_COLOR: Record<string, string> = { delivery: "#d9480f", pickup: "#0c8599", course: "#7048e8", other: "#1971c2" };
 const AREA_COLOR = "#2b8a3e";
 const DEFAULT_CENTER: L.LatLngTuple = [8.98, -79.52];
 const NEAR_COURSE_M = 30;
@@ -77,7 +79,8 @@ const TOOL_LABEL: Record<SegMode, TextKey> = { w: "map.toolFoot", b: "map.toolBi
 const TOOL_HINT: Record<SegMode, TextKey> = { w: "map.toolFootHint", b: "map.toolBikeHint", d: "map.toolCarHint", l: "map.toolDrawHint" };
 
 // The tool a new route starts with: on foot for courses, by car for deliveries.
-const defaultTool = (category: string, routing: boolean): SegMode => (!routing ? "l" : category === "delivery" ? "d" : "w");
+const byCar = (category: string) => category === "delivery" || category === "pickup";
+const defaultTool = (category: string, routing: boolean): SegMode => (!routing ? "l" : byCar(category) ? "d" : "w");
 
 // One street piece from Google, through our server.
 async function routeBetween(from: number[], to: number[], mode: "walk" | "bike" | "drive"): Promise<number[][]> {
@@ -132,7 +135,15 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
   const [routeBusy, setRouteBusy] = useState(false);
   const statusRef = useRef<GeoStatus | null>(null);
   statusRef.current = status;
-  const hasCourses = features.includes("courses");
+  // DEC-031: running courses only on races (and with the courses add-on).
+  const isRace = event.eventType === "race";
+  const hasCourses = isRace && features.includes("courses");
+  // DEC-032 items 1-2: km or miles, and distance markers (viewer's choice).
+  const [unit, setUnit] = useUnit();
+  const [markerStep, setMarkerStep] = useMarkerStep();
+  const [showMarkers, setShowMarkers] = useShowMarkers();
+  const hoverMarker = useRef<L.CircleMarker | null>(null);
+  const dist = (m: number) => fmtDist(m, unit, locale);
   const courses = (items ?? []).filter((f) => f.category === "course" && f.geometry.type === "LineString");
 
   const load = useCallback(async () => {
@@ -272,9 +283,9 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
         const line = coords.map((c) => [c[1]!, c[0]!] as L.LatLngTuple);
         layer = L.polyline(line, { color: ROUTE_COLOR[f.category] ?? "#1971c2", weight: f.preferred ? 6 : 4, dashArray: f.preferred ? undefined : "8 6" });
         if (f.category === "course") {
-          for (const mk of markersAlong(coords)) {
+          for (const mk of showMarkers ? markersAlong(coords, markerStep * METERS[unit]) : []) {
             L.marker([mk.position[1], mk.position[0]], {
-              icon: L.divIcon({ className: "km-marker", html: String(Math.round(mk.distance / 1000)), iconSize: [22, 22], iconAnchor: [11, 11] }),
+              icon: L.divIcon({ className: "km-marker", html: markerLabel(mk.distance, unit), iconSize: [24, 24], iconAnchor: [12, 12] }),
               interactive: false,
             }).addTo(g);
           }
@@ -298,7 +309,34 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
       if (b.isValid()) m.fitBounds(b.pad(0.2), { maxZoom: 17 });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, editingShape]);
+  }, [items, editingShape, unit, markerStep, showMarkers]);
+
+  // DEC-032 item 7: zoom the map to a route or course.
+  function centreOn(geom: MapFeature["geometry"]) {
+    if (geom.type !== "LineString" || (geom.coordinates as number[][]).length < 2) return;
+    const b = L.latLngBounds((geom.coordinates as number[][]).map((c) => [c[1]!, c[0]!] as L.LatLngTuple));
+    map.current?.fitBounds(b.pad(0.1));
+  }
+
+  // DEC-032 item 8: the spot on the course under the mouse in the elevation chart.
+  function showHover(coords: number[][] | null, at: { distance: number; elevation: number } | null) {
+    const m = map.current;
+    if (!m) return;
+    if (!coords || !at) {
+      hoverMarker.current?.remove();
+      hoverMarker.current = null;
+      return;
+    }
+    const [lng, lat] = positionAt(coords, at.distance);
+    const text = `${dist(at.distance)} · ${Math.round(at.elevation)} m`;
+    if (!hoverMarker.current) {
+      hoverMarker.current = L.circleMarker([lat, lng], { radius: 7, color: "#fff", weight: 3, fillColor: "#e8590c", fillOpacity: 1, interactive: false }).addTo(m);
+      hoverMarker.current.bindTooltip(text, { permanent: true, direction: "top", offset: [0, -8] });
+    } else {
+      hoverMarker.current.setLatLng([lat, lng]);
+      hoverMarker.current.setTooltipContent(text);
+    }
+  }
 
   function startDraw(kind: Kind, category?: string) {
     const m = map.current;
@@ -446,7 +484,7 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
     if (!draft || draft.geometry.type !== "LineString") return;
     setError(null);
     if (!editor.current) editShape();
-    const streets: SegMode = draft.category === "delivery" ? "d" : "w";
+    const streets: SegMode = byCar(draft.category) ? "d" : "w";
     setTool(streets);
     toolRef.current = streets;
     editor.current?.remakeAll();
@@ -614,9 +652,13 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
             </button>
             {/* No Area button: a stage or bar storage is a point (Walter, 2026-10-01). */}
             <button type="button" onClick={() => startDraw("route", "delivery")}>
-              〰 {t("map.addRoute")}
+              🚚 {t("map.addRoute")}
             </button>
-            {hasCourses ? (
+            <button type="button" onClick={() => startDraw("route", "pickup")}>
+              ↩ {t("map.addPickup")}
+            </button>
+            {/* DEC-031: no course tools on a rental Event. */}
+            {!isRace ? null : hasCourses ? (
               <>
                 <button type="button" onClick={() => startDraw("route", "course")}>
                   🏃 {t("map.addCourse")}
@@ -634,7 +676,32 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
           </div>
         )}
       </div>
-      <p className="muted small">{canEdit ? t("map.hint") : t("map.viewOnly")}</p>
+      <div className="row between map-tools">
+        <p className="muted small flush">{canEdit ? t(isRace ? "map.hint" : "map.hintRental") : t("map.viewOnly")}</p>
+        <div className="row">
+          <MapSearch onPick={(lat, lng) => map.current?.setView([lat, lng], 17)} />
+          {/* DEC-032 items 1-2: units and distance markers. */}
+          <select aria-label={t("map.unit")} value={unit} onChange={(e) => setUnit(e.target.value as Unit)}>
+            <option value="km">km</option>
+            <option value="mi">mi</option>
+          </select>
+          {hasCourses && (
+            <>
+              <label className="check">
+                <input type="checkbox" checked={showMarkers} onChange={(e) => setShowMarkers(e.target.checked)} />
+                <span>{t("map.markers")}</span>
+              </label>
+              <select aria-label={t("map.markerEvery")} value={markerStep} onChange={(e) => setMarkerStep(Number(e.target.value))} disabled={!showMarkers}>
+                {MARKER_STEPS.map((s) => (
+                  <option key={s} value={s}>
+                    {t("map.every")} {s} {unit}
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
+        </div>
+      </div>
       {drawing && (
         <div className="drawing-hint">
           <span>{t(drawing === "point" ? "map.drawPoint" : drawing === "area" ? "map.drawArea" : "map.drawRouteSeg")}</span>
@@ -658,6 +725,22 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
               <button type="button" disabled={!draft || (draft.geometry.coordinates as number[][]).length === 0} onClick={() => window.confirm(t("map.clearConfirm")) && editor.current?.clear()}>
                 🧽 {t("map.clearRoute")}
               </button>
+              {/* DEC-032 items 3-5, for courses. */}
+              {draft?.category === "course" && (
+                <>
+                  <button type="button" title={t("map.backToStartHint")} disabled={(draft.geometry.coordinates as number[][]).length < 2} onClick={() => editor.current?.closeLoop()}>
+                    ↻ {t("map.backToStart")}
+                  </button>
+                  <button type="button" title={t("map.outAndBackHint")} disabled={(draft.geometry.coordinates as number[][]).length < 2} onClick={() => editor.current?.outAndBack()}>
+                    ⇆ {t("map.outAndBackDraw")}
+                  </button>
+                  <button type="button" title={t("map.reverseHint")} disabled={(draft.geometry.coordinates as number[][]).length < 2} onClick={() => editor.current?.reverse()}>
+                    ⇄ {t("map.reverse")}
+                  </button>
+                </>
+              )}
+              {/* DEC-032 item 1: the distance, always in view while drawing. */}
+              <strong className="live-dist">{dist(lineLength((draft?.geometry.coordinates as number[][]) ?? []))}</strong>
               {routeBusy && <span className="small muted">{t("map.snapping")}</span>}
             </>
           )}
@@ -730,10 +813,20 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
                     onChange={(e) => setDraft({ ...draft, props: { ...draft.props, laps: Math.min(50, Math.max(1, Number(e.target.value) || 1)) } })}
                   />
                 </label>
-                <label className="check">
-                  <input type="checkbox" checked={draft.props.outAndBack ?? false} disabled={!canEdit} onChange={(e) => setDraft({ ...draft, props: { ...draft.props, outAndBack: e.target.checked } })} />
-                  <span>{t("map.outAndBack")}</span>
-                </label>
+                {/* Older courses only: out-and-back is now drawn on the map (DEC-032 item 4). */}
+                {draft.props.outAndBack && (
+                  <label className="check">
+                    <input type="checkbox" checked disabled={!canEdit} onChange={() => setDraft({ ...draft, props: { ...draft.props, outAndBack: false } })} />
+                    <span>{t("map.outAndBack")}</span>
+                  </label>
+                )}
+                {/* DEC-032 item 6: a final course is locked against changes. */}
+                {draft.id && (
+                  <label className="check">
+                    <input type="checkbox" checked={draft.props.locked ?? false} disabled={!canEdit || Boolean(drawing)} onChange={(e) => setDraft({ ...draft, props: { ...draft.props, locked: e.target.checked } })} />
+                    <span>🔒 {t("map.locked")}</span>
+                  </label>
+                )}
               </>
             )}
             {draft.kind === "point" && hasCourses && courses.length > 0 && (
@@ -765,17 +858,17 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
           </div>
           {draftLength !== null && (
             <p className="small">
-              {t("map.length")}: <strong>{km(draftLength, locale)}</strong>
+              {t("map.length")}: <strong>{dist(draftLength)}</strong>
               {draftTotal !== null && draftTotal !== draftLength && (
                 <>
                   {" "}
-                  · {t("map.total")}: <strong>{km(draftTotal, locale)}</strong>
+                  · {t("map.total")}: <strong>{dist(draftTotal)}</strong>
                 </>
               )}
               {draft.source && <span className="muted"> · {draft.source}</span>}
             </p>
           )}
-          {profile && <ElevationChart profile={profile} locale={locale} />}
+          {profile && <ElevationChart profile={profile} locale={locale} unit={unit} onHover={(at) => showHover(draftCoords, at)} />}
           {isCourse && !profile && !drawing && <p className="small muted">{t("map.noElevation")}</p>}
           {error && (
             <p className="bad" role="alert">
@@ -787,7 +880,12 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
               <button type="button" className="primary" disabled={busy !== null || routeBusy} onClick={() => void save()}>
                 {busy === "common.saving" ? t("common.saving") : t("common.save")}
               </button>
-              {draft.kind === "route" && status?.routing && (
+              {draft.kind === "route" && (draftCoords?.length ?? 0) >= 2 && (
+                <button type="button" title={t("map.centreHint")} onClick={() => draft && centreOn(draft.geometry)}>
+                  ⊙ {t("map.centre")}
+                </button>
+              )}
+              {draft.kind === "route" && status?.routing && !draft.props.locked && (
                 <button type="button" disabled={busy !== null} onClick={() => void refit()}>
                   🛣 {t("map.snapAgain")}
                 </button>
@@ -797,7 +895,7 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
                   ⛰ {t("map.getElevation")}
                 </button>
               )}
-              {(draft.id || draft.kind === "route") && !editingShape && !drawing && !draft.props.courseId && (
+              {(draft.id || draft.kind === "route") && !editingShape && !drawing && !draft.props.courseId && !draft.props.locked && (
                 <button type="button" onClick={editShape}>
                   ✎ {t("map.editShape")}
                 </button>
@@ -832,7 +930,7 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
               <tr>
                 <th>{t("map.label")}</th>
                 <th>{t("map.type")}</th>
-                <th className="num">{t("map.length")} / km</th>
+                <th className="num">{t("map.length")}</th>
                 <th />
               </tr>
             </thead>
@@ -846,18 +944,24 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
                         {f.kind === "route" ? "〰" : f.kind === "area" ? "⬠" : ICON[f.category]} {f.label}
                       </button>
                       {f.preferred && <span className="tag">{t("map.preferred")}</span>}
+                      {f.props?.locked && <span className="tag" title={t("map.locked")}>🔒</span>}
                     </td>
                     <td className="small">{t(`map.cat.${f.category}` as TextKey)}</td>
                     <td className="num small">
                       {f.totalMeters !== null && f.totalMeters !== f.lengthMeters
-                        ? `${km(f.totalMeters, locale)} (${f.props?.laps ?? 1} × ${km(f.lengthMeters ?? 0, locale)}${f.props?.outAndBack ? " ↔" : ""})`
+                        ? `${dist(f.totalMeters)} (${f.props?.laps ?? 1} × ${dist(f.lengthMeters ?? 0)}${f.props?.outAndBack ? " ↔" : ""})`
                         : f.lengthMeters !== null
-                          ? km(f.lengthMeters, locale)
+                          ? dist(f.lengthMeters)
                           : at
-                            ? `${at.exact ? "km" : t("map.nearKm")} ${(at.meters / 1000).toFixed(2)}`
+                            ? `${at.exact ? "" : `${t("map.nearKm")} `}${dist(at.meters)}`
                             : ""}
                     </td>
                     <td className="row">
+                      {f.kind === "route" && (
+                        <button type="button" title={t("map.centreHint")} onClick={() => centreOn(f.geometry)}>
+                          ⊙
+                        </button>
+                      )}
                       {f.category === "course" && hasCourses && (
                         <>
                           <button type="button" onClick={() => exportGpx(f)}>
@@ -881,8 +985,20 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
   );
 }
 
-export function ElevationChart({ profile, locale }: { profile: NonNullable<ReturnType<typeof elevationProfile>>; locale: string }) {
+export function ElevationChart({
+  profile,
+  locale,
+  unit = "km",
+  onHover,
+}: {
+  profile: NonNullable<ReturnType<typeof elevationProfile>>;
+  locale: string;
+  unit?: Unit;
+  // DEC-032 item 8: where the mouse is along the course (null when it leaves).
+  onHover?: (at: { distance: number; elevation: number } | null) => void;
+}) {
   const t = useT();
+  const [hover, setHover] = useState<{ x: number; distance: number; elevation: number } | null>(null);
   const w = 600;
   const h = 120;
   const pts = profile.points;
@@ -894,12 +1010,39 @@ export function ElevationChart({ profile, locale }: { profile: NonNullable<Retur
   const path = pts.map((p, i) => `${i ? "L" : "M"}${((p.distance / maxD) * w).toFixed(1)},${(h - ((p.elevation - lo) / span) * (h - 10) - 5).toFixed(1)}`).join(" ");
   return (
     <div className="elevation">
-      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" role="img" aria-label={t("map.elevation")}>
+      <svg
+        viewBox={`0 0 ${w} ${h}`}
+        preserveAspectRatio="none"
+        role="img"
+        aria-label={t("map.elevation")}
+        onMouseMove={(e) => {
+          const r = e.currentTarget.getBoundingClientRect();
+          const d = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * maxD;
+          // The nearest measured point at that distance.
+          let best = pts[0]!;
+          for (const p of pts) if (Math.abs(p.distance - d) < Math.abs(best.distance - d)) best = p;
+          setHover({ x: (best.distance / maxD) * w, distance: best.distance, elevation: best.elevation });
+          onHover?.({ distance: best.distance, elevation: best.elevation });
+        }}
+        onMouseLeave={() => {
+          setHover(null);
+          onHover?.(null);
+        }}
+      >
         <path d={`${path} L${w},${h} L0,${h} Z`} className="area" />
         <path d={path} className="line" />
+        {hover && <line x1={hover.x} x2={hover.x} y1={0} y2={h} className="cursor" />}
       </svg>
       <p className="small">
-        {t("map.elevation")}: {Math.round(lo)}–{Math.round(hi)} m · ↑ {Math.round(profile.gain)} m · ↓ {Math.round(profile.loss)} m · {km(maxD, locale)}
+        {hover ? (
+          <strong>
+            {fmtDist(hover.distance, unit, locale)} · {Math.round(hover.elevation)} m
+          </strong>
+        ) : (
+          <>
+            {t("map.elevation")}: {Math.round(lo)}–{Math.round(hi)} m · ↑ {Math.round(profile.gain)} m · ↓ {Math.round(profile.loss)} m · {fmtDist(maxD, unit, locale)}
+          </>
+        )}
       </p>
     </div>
   );

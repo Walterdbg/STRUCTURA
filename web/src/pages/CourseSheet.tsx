@@ -5,7 +5,8 @@ import { courseTotal, elevationProfile, haversine, markersAlong, projectOnLine }
 import { api, get, type EventRecord, type MapFeature } from "../api.js";
 import { addBaseLayers } from "../components/basemap.js";
 import { LocaleContext, useT, type TextKey } from "../i18n.js";
-import { ElevationChart, ICON, ROUTE_COLOR, km } from "./EventMap.js";
+import { ElevationChart, ICON, ROUTE_COLOR } from "./EventMap.js";
+import { METERS, fmtDist, markerLabel, useMarkerStep, useShowMarkers, useUnit } from "../components/units.js";
 
 // Course sheet (DEC-027 item 5): one printable page per course with the
 // map, distance (laps / out-and-back), elevation and the stations by km.
@@ -20,6 +21,11 @@ const isLoop = (c: number[][]) => c.length > 2 && haversine(c[0]!, c[c.length - 
 export function CourseSheet({ eventId, courseId }: { eventId: string; courseId: string }) {
   const t = useT();
   const locale = useContext(LocaleContext);
+  // Same units and distance markers as chosen on the Event map (DEC-032).
+  const [unit] = useUnit();
+  const [markerStep] = useMarkerStep();
+  const [showMarkers] = useShowMarkers();
+  const km = (m: number, _l?: string) => fmtDist(m, unit, locale);
   const box = useRef<HTMLDivElement>(null);
   const [event, setEvent] = useState<EventRecord | null>(null);
   const [items, setItems] = useState<MapFeature[] | null>(null);
@@ -52,9 +58,9 @@ export function CourseSheet({ eventId, courseId }: { eventId: string; courseId: 
     const m = L.map(box.current, { zoomControl: false, attributionControl: true, dragging: true, scrollWheelZoom: false });
     void addBaseLayers(m, locale, { map: t("map.layerMap"), satellite: t("map.layerSatellite") });
     const line = L.polyline(coords.map((c) => [c[1]!, c[0]!] as L.LatLngTuple), { color: ROUTE_COLOR.course, weight: 5 }).addTo(m);
-    for (const mk of markersAlong(coords)) {
+    for (const mk of showMarkers ? markersAlong(coords, markerStep * METERS[unit]) : []) {
       L.marker([mk.position[1], mk.position[0]], {
-        icon: L.divIcon({ className: "km-marker", html: String(Math.round(mk.distance / 1000)), iconSize: [22, 22], iconAnchor: [11, 11] }),
+        icon: L.divIcon({ className: "km-marker", html: markerLabel(mk.distance, unit), iconSize: [24, 24], iconAnchor: [12, 12] }),
         interactive: false,
       }).addTo(m);
     }
@@ -129,7 +135,7 @@ export function CourseSheet({ eventId, courseId }: { eventId: string; courseId: 
         </div>
       </div>
       <div ref={box} className="sheet-map" />
-      {profile && <ElevationChart profile={profile} locale={locale} />}
+      {profile && <ElevationChart profile={profile} locale={locale} unit={unit} />}
       <h3>{t("sheet.stations")}</h3>
       {stations.length === 0 ? (
         <p className="muted">{t("sheet.noStations")}</p>
@@ -138,7 +144,7 @@ export function CourseSheet({ eventId, courseId }: { eventId: string; courseId: 
           <tbody>
             {stations.map((s) => (
               <tr key={s.f.id}>
-                <td className="num">km {(s.meters / 1000).toFixed(2)}</td>
+                <td className="num">{km(s.meters)}</td>
                 <td>
                   {ICON[s.f.category]} {s.f.label}
                 </td>

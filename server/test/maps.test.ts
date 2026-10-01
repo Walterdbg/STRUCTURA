@@ -14,7 +14,7 @@ beforeEach(async () => {
       method: "POST",
       url: "/api/events",
       headers: { cookie: t.cookie },
-      payload: command({ designation: "Triatlón Coronado", responsibleUserId: t.adminId, timezone: "America/Panama" }),
+      payload: command({ designation: "Triatlón Coronado", eventType: "race", responsibleUserId: t.adminId, timezone: "America/Panama" }),
     })
   ).json().result.id;
 });
@@ -192,5 +192,36 @@ describe("running courses are a paid add-on (DEC-023)", () => {
     expect(res.statusCode).toBe(201);
     expect(res.json().result.geometry.coordinates[1]).toEqual([-79.882, 8.525, 12]);
     expect((await map()).json().features).toEqual(["courses"]);
+  });
+});
+
+describe("races only (DEC-031) and locked courses (DEC-032)", () => {
+  it("a rental Event can't have a running course; deliveries and pickups are fine", async () => {
+    await w.db.query("UPDATE tenants SET features = '{courses}' WHERE id = $1", [t.tenantId]);
+    const rental = (
+      await w.app.inject({ method: "POST", url: "/api/events", headers: { cookie: t.cookie }, payload: command({ designation: "Alquiler sillas", responsibleUserId: t.adminId, timezone: "America/Panama" }) })
+    ).json().result;
+    const addTo = (payload: Record<string, unknown>) =>
+      w.app.inject({ method: "POST", url: `/api/events/${rental.id}/map`, headers: { cookie: t.cookie }, payload: command(payload) });
+    const refused = await addTo(course);
+    expect(refused.statusCode).toBe(400);
+    expect(refused.json().details).toMatchObject({ reason: "not_a_race" });
+    expect((await addTo(delivery("Entrega"))).statusCode).toBe(201);
+    expect((await addTo({ ...delivery("Recogida"), category: "pickup" })).statusCode).toBe(201);
+  });
+
+  it("a locked course keeps its shape until it is unlocked", async () => {
+    await w.db.query("UPDATE tenants SET features = '{courses}' WHERE id = $1", [t.tenantId]);
+    const c = (await add({ ...course, props: { locked: true } })).json().result;
+    const edit = (payload: Record<string, unknown>, v: number) =>
+      w.app.inject({ method: "PUT", url: `/api/events/${eventId}/map/${c.id}`, headers: { cookie: t.cookie }, payload: command(payload, { expectedVersion: v }) });
+    const moved = { ...course, geometry: { type: "LineString", coordinates: [[-79.892, 8.525], [-79.88, 8.53]] } };
+    const refused = await edit({ ...moved, props: { locked: true } }, 1);
+    expect(refused.statusCode).toBe(400);
+    expect(refused.json().details).toMatchObject({ reason: "locked" });
+    expect((await edit({ ...course, label: "10K final", props: { locked: true } }, 1)).statusCode).toBe(200); // name can change
+    expect((await edit({ ...course, label: "10K final", props: { locked: false } }, 2)).statusCode).toBe(200); // unlock
+    expect((await edit({ ...moved, props: {} }, 3)).statusCode).toBe(200);
+    expect((await add({ ...delivery("x"), props: { locked: true } })).statusCode).toBe(400); // only courses lock
   });
 });

@@ -1,9 +1,16 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { ApiError, api, type EventRecord } from "../api.js";
-import { errorKey, useT, type TextKey } from "../i18n.js";
+import { LocaleContext, errorKey, useT, type TextKey } from "../i18n.js";
+
+const showDate = (iso: string | null, locale: string, none: string) => {
+  if (!iso) return none;
+  const [y, m, d] = iso.split("-");
+  return locale === "es" ? `${d}/${m}/${y}` : `${m}/${d}/${y}`;
+};
 
 export function EventsList({ canCreate }: { canCreate: boolean }) {
   const t = useT();
+  const locale = useContext(LocaleContext);
   const [search, setSearch] = useState("");
   const [items, setItems] = useState<EventRecord[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +59,7 @@ export function EventsList({ canCreate }: { canCreate: boolean }) {
               <tr>
                 <th>{t("event.designation")}</th>
                 <th>{t("event.departureDate")}</th>
+                <th>{t("event.eventDate")}</th>
                 <th>{t("event.expectedReturnDate")}</th>
                 <th>{t("event.responsible")}</th>
                 <th>{t("event.state")}</th>
@@ -61,11 +69,15 @@ export function EventsList({ canCreate }: { canCreate: boolean }) {
               {items.map((e) => (
                 <tr key={e.id}>
                   <td>
+                    <span title={t(`event.type.${e.eventType}`)}>{e.eventType === "race" ? "🏁" : "📦"}</span>{" "}
                     <a href={`#/events/${e.id}`}>{e.designation}</a>
                     {e.designationStatus === "provisional" && <span className="tag">{t("event.provisional")}</span>}
+                    {e.returnAlert === "overdue" && <span className="tag bad">⛔ {t("event.alert.overdueShort")}</span>}
+                    {e.returnAlert === "ended_out" && <span className="tag warn">⚠️ {t("event.alert.endedOutShort")}</span>}
                   </td>
-                  <td>{e.departureDate ?? t("common.none")}</td>
-                  <td>{e.expectedReturnDate ?? t("common.none")}</td>
+                  <td>{showDate(e.departureDate, locale, t("common.none"))}</td>
+                  <td>{showDate(e.eventDate, locale, t("common.none"))}</td>
+                  <td>{showDate(e.expectedReturnDate, locale, t("common.none"))}</td>
                   <td>{e.responsibleName}</td>
                   <td>{t(`state.${e.fulfillmentState}` as TextKey)}</td>
                 </tr>

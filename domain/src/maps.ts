@@ -3,7 +3,8 @@ import { z } from "zod";
 // Event maps (UC-05, DEC-022) and running courses (DEC-023).
 
 export const POINT_CATEGORIES = ["stage", "water", "toilets", "bar_storage", "first_aid", "entrance", "parking", "other"] as const;
-export const ROUTE_CATEGORIES = ["delivery", "course", "other"] as const;
+// DEC-031: deliveries and pickups for every Event; courses only for races.
+export const ROUTE_CATEGORIES = ["delivery", "pickup", "course", "other"] as const;
 export type PointCategory = (typeof POINT_CATEGORIES)[number];
 export type RouteCategory = (typeof ROUTE_CATEGORIES)[number];
 
@@ -56,6 +57,8 @@ export const featurePropsSchema = z
     // (w = on foot, b = by bike, d = by car, l = straight), so the pieces can be edited.
     anchorIdx: z.array(z.number().int().min(0)).min(2).max(2000).optional(),
     segModes: z.array(z.enum(["w", "b", "d", "l"])).max(1999).optional(),
+    // DEC-032 item 6: a locked course can't change shape until unlocked.
+    locked: z.boolean().optional(),
   })
   .strict()
   .default({});
@@ -83,6 +86,9 @@ export const mapFeatureFields = z
     const isCourse = f.kind === "route" && f.category === "course";
     if ((p.laps !== undefined || p.outAndBack !== undefined) && !isCourse) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["props"], message: "Laps and out-and-back apply to courses only" });
+    }
+    if (p.locked !== undefined && !isCourse) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["props"], message: "Only courses can be locked" });
     }
     if (p.snapped !== undefined && f.kind !== "route") {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["props"], message: "Only routes follow streets" });

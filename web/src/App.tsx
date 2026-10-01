@@ -13,6 +13,7 @@ import { MovementForm } from "./pages/MovementForm.js";
 import { MovementsList } from "./pages/MovementsList.js";
 import { Login } from "./pages/Login.js";
 import { Members } from "./pages/Members.js";
+import { DateRulesCard } from "./pages/DateRulesCard.js";
 import { MyAccount } from "./pages/MyAccount.js";
 import { SystemStatus } from "./pages/SystemStatus.js";
 
@@ -85,7 +86,13 @@ export function App() {
     else if (route.name === "locations") body = <Locations canManage={can("inventory.manage")} />;
     else if (route.name === "movements") body = <MovementsList canMove={can("movement.post")} canCorrect={can("movement.correct")} />;
     else if (route.name === "movementNew") body = <MovementForm key={route.itemId ?? "any"} presetItemId={route.itemId} />;
-    else if (route.name === "members" && can("tenant.admin")) body = <Members />;
+    else if (route.name === "members" && can("tenant.admin"))
+    body = (
+      <>
+        <Members />
+        <DateRulesCard />
+      </>
+    );
     else if (route.name === "account") body = <MyAccount me={me} onSaved={refresh} onLocale={setLocale} />;
     else body = <EventsList canCreate={can("event.manage")} />;
   }

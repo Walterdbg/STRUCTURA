@@ -98,7 +98,13 @@ the right movement.
 
 ## Events
 
-**Eventos → + Crear evento**. Only a name (it can be provisional, e.g.
+**Eventos → + Crear evento**. First choose the **type**, which can't be changed later:
+
+- **📦 Alquiler y entregas / Rental & deliveries** (the default): rented equipment, a location,
+  deliveries and pickups. Its map has points and delivery / pickup routes, no race courses.
+- **🏁 Carrera / Race**: everything a rental has, plus race courses (with the courses add-on).
+
+Then only a name (it can be provisional, e.g.
 "Evento interno — octubre"), the responsible person and the timezone are
 required. No customer is needed.
 
@@ -108,6 +114,13 @@ written dd/mm/aaaa in Spanish (mm/dd/yyyy in English).
 - The event date must be between the departure and the expected return.
 - The event date and the expected return can't be in the past. The departure can be:
   you can record an Event a week into its rental.
+- The **warehouse departure** can be at most **15 days before** the event, and the **expected
+  return** at most **7 business days after** it (Monday to Friday). The form shows the allowed
+  range; if a date is outside it, the message gives the earliest or latest allowed date. An
+  administrator can change these numbers under **Usuarios → Reglas de fechas**.
+- **Equipment still out:** 3 days after the event, if equipment sent for it hasn't come back, the
+  Event shows a warning (also in the Events list). After the expected return it shows **Retorno
+  vencido**: return it or go and pick it up.
 - Once an Event is created, it stays editable after its dates pass (notes, responsible…).
 
 **Location:** type the place or address in *Lugar del evento*. Suggestions appear
@@ -201,7 +214,7 @@ inventory locations.
 
 ### Running courses (paid add-on)
 
-Organizations with the *Recorridos* add-on also get:
+On **race** Events, organizations with the *Recorridos* add-on also get:
 
 - **🏃 Recorrido**: draw a race course, with km markers on the map and the total distance.
 - **⤒ GPX**: import a course from Strava, Garmin or plotaroute. If the file has heights,
@@ -224,6 +237,19 @@ Without the add-on these buttons show 🔒 *Recorridos (complemento)*.
   back = 20 km.
 - **📄 Hoja del recorrido:** a printable page with the map, distance, climb, elevation chart
   and the stations by km. **🖨 Imprimir / Guardar PDF** to print it or save a PDF.
+
+**Race tools (race Events):**
+
+- The **distance** is always shown while drawing. Choose **km** or **mi** above the map.
+- **Distance markers** every 0.5, 1 or 5 km (or miles); tick or untick *Marcas de distancia*.
+- While drawing a course: **↻ Volver al inicio** closes it back to the start, **⇆ Ida y vuelta**
+  adds the way back over the same path (markers continue on it), **⇄ Invertir** swaps start and
+  finish.
+- **🔒 Recorrido bloqueado:** tick it on a final course and save; its shape can't change until
+  it's unticked. Both are recorded in the history.
+- **⊙ Centrar** shows the whole route; **🔍 Ir a un lugar** moves the map to any address.
+- Move the mouse over the **elevation chart**: the spot shows on the map with its distance and
+  height.
 
 **Map / Satellite:** with the Google key, every map has a **🗺 Mapa / 🛰 Satélite** switch at
 the top right, and place search finds buildings (e.g. "PH Palmas Bellas").

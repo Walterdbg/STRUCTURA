@@ -82,6 +82,14 @@ async function assertAddOn(t: Db, tenantId: string, f: MapFeatureFields) {
   }
 }
 
+// DEC-031: running courses (and points placed on one) only on races.
+function assertRace(eventType: string, f: MapFeatureFields) {
+  const usesCourses = (f.kind === "route" && f.category === "course") || f.props.courseId !== undefined;
+  if (usesCourses && eventType !== "race") {
+    throw new DomainError("validation", "Running courses are only for race Events", { field: "category", reason: "not_a_race" });
+  }
+}
+
 // A point placed on a course (e.g. water at km 5) gets its position from
 // the course itself, so it sits exactly on the line (DEC-027 item 3).
 async function placeOnCourse(t: Db, tenantId: string, eventId: string, f: MapFeatureFields): Promise<MapFeatureFields> {
@@ -159,7 +167,8 @@ export async function createFeature(db: Db, ctx: CommandContext, eventId: string
     ctx,
     { commandId: cmd.commandId, commandType: "map.feature.create", occurredAt: cmd.occurredAt, payload: { eventId, ...cmd.payload } },
     async (t) => {
-      await getEvent(t, ctx.tenantId, eventId);
+      const ev = await getEvent(t, ctx.tenantId, eventId);
+      assertRace(ev.eventType, cmd.payload);
       await assertAddOn(t, ctx.tenantId, cmd.payload);
       const f = await placeOnCourse(t, ctx.tenantId, eventId, cmd.payload);
       const id = uuidv7();
@@ -190,6 +199,11 @@ export async function updateFeature(db: Db, ctx: CommandContext, eventId: string
         throw new DomainError("stale_version", "Someone else changed this map item. Reload the map and try again.");
       }
       if (before.kind !== cmd.payload.kind) throw new DomainError("validation", "A map item can't change its kind", { field: "kind" });
+      assertRace((await getEvent(t, ctx.tenantId, eventId)).eventType, cmd.payload);
+      // DEC-032 item 6: a locked course keeps its shape until it is unlocked.
+      if (before.props?.locked && JSON.stringify(before.geometry) !== JSON.stringify(cmd.payload.geometry)) {
+        throw new DomainError("validation", "This course is locked. Unlock it before changing its shape.", { field: "geometry", reason: "locked" });
+      }
       await assertAddOn(t, ctx.tenantId, cmd.payload);
       if (cmd.payload.props.courseId === id) throw new DomainError("validation", "A point can't be placed on itself", { field: "props" });
       const f = await placeOnCourse(t, ctx.tenantId, eventId, cmd.payload);
@@ -211,7 +225,11 @@ export async function updateFeature(db: Db, ctx: CommandContext, eventId: string
             action: "map.feature.updated",
             recordType: "event",
             recordId: eventId,
-            change: { id, before: { label: before.label, category: before.category, version: before.version }, after: { label: f.label, category: f.category } },
+            change: {
+              id,
+              before: { label: before.label, category: before.category, version: before.version, locked: before.props?.locked ?? false },
+              after: { label: f.label, category: f.category, locked: f.props.locked ?? false },
+            },
           },
         ],
         outbox: [{ aggregateType: "event", aggregateId: eventId, payload: { type: "map.feature.updated", feature: after } }],

@@ -201,3 +201,23 @@ a.map-fullscreen { font-size: 16px; font-weight: 700; color: #222; text-decorati
 .seg-tools button:first-child { border-radius: 6px 0 0 6px; margin-left: 0; }
 .seg-tools button:last-child { border-radius: 0 6px 6px 0; }
 .drawing-hint { flex-wrap: wrap; }
+/* Event type choice (DEC-031) and return warnings (DEC-028). */
+.type-choice { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
+.type-choice .label { flex-basis: 100%; }
+.type-choice button { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 220px; padding: 10px 14px; text-align: left; }
+.type-choice button small { font-weight: 400; opacity: 0.85; }
+.type-choice > small { flex-basis: 100%; }
+.alert { padding: 8px 12px; border-radius: 6px; margin: 8px 0; }
+.alert.warn { background: rgba(245, 159, 0, 0.15); border: 1px solid #f59f00; }
+.alert.bad { background: rgba(224, 49, 49, 0.15); border: 1px solid #e03131; }
+.tag.warn { border-color: #f59f00; color: #f59f00; }
+.tag.bad { border-color: #e03131; color: #ff6b6b; }
+/* Race tools (DEC-032). */
+.map-tools { margin: 6px 0; gap: 8px; flex-wrap: wrap; }
+.map-tools .row { flex-wrap: wrap; gap: 6px; align-items: center; }
+.map-search { position: relative; min-width: 220px; }
+.map-search .results { position: absolute; z-index: 1000; left: 0; right: 0; list-style: none; margin: 2px 0 0; padding: 4px 0; border: 1px solid var(--border); border-radius: 6px; max-height: 220px; overflow-y: auto; background: var(--surface); }
+.map-search .results li button { display: block; width: 100%; text-align: left; padding: 6px 10px; font-weight: 400; white-space: normal; border: none; border-radius: 0; }
+.live-dist { font-size: 1.3em; padding: 2px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }
+.elevation svg { cursor: crosshair; }
+.elevation .cursor { stroke: #e8590c; stroke-width: 2; vector-effect: non-scaling-stroke; }

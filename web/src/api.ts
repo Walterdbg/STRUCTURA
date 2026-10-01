@@ -1,3 +1,4 @@
+import type { FeatureProps } from "@structura/domain";
 import { uuidv7, type Capability } from "@structura/domain";
 
 // One place for talking to the server. Every change is sent as a command
@@ -79,6 +80,7 @@ export interface EventRecord {
   id: string;
   designation: string;
   designationStatus: "provisional" | "final";
+  eventType: "rental" | "race";
   responsibleUserId: string;
   responsibleName: string;
   timezone: string;
@@ -91,6 +93,8 @@ export interface EventRecord {
   closureDate: string | null;
   notes: string | null;
   fulfillmentState: "draft" | "confirmed" | "delivered" | "partial_return" | "closed" | "cancelled";
+  equipmentOut: boolean;
+  returnAlert: "ended_out" | "overdue" | null;
   version: number;
 }
 
@@ -103,7 +107,7 @@ export interface MapFeature {
   geometry: { type: "Point" | "Polygon" | "LineString"; coordinates: any };
   preferred: boolean;
   source: string | null;
-  props: { laps?: number; outAndBack?: boolean; snapped?: boolean; courseId?: string; distanceM?: number };
+  props: FeatureProps;
   lengthMeters: number | null;
   totalMeters: number | null;
   version: number;

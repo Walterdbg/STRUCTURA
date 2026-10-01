@@ -1,23 +1,23 @@
 import type { FastifyInstance } from "fastify";
-import { eventActionFields, eventFields, eventLinesFields } from "@structura/domain";
+import { dateRulesFields, eventActionFields, eventFields, eventLinesFields } from "@structura/domain";
 import { requireAuth } from "../auth.js";
 import type { Config } from "../config.js";
 import type { Db } from "../db.js";
 import { commandRequest, idParam, paging } from "../http.js";
 import { cancelEvent, confirmEvent, getEventLines, setEventLines } from "./reservations.js";
-import { createEvent, getEvent, listEvents, updateEvent } from "./service.js";
+import { createEvent, getDateRules, getEvent, listEvents, setDateRules, updateEvent } from "./service.js";
 
 export function eventRoutes(app: FastifyInstance, db: Db, config: Config): void {
   // Any active member can see the tenant's Events; changing them needs event.manage.
   app.get("/api/events", async (req) => {
     const auth = requireAuth(req);
     const q = req.query as Record<string, string | undefined>;
-    return listEvents(db, auth.tenantId, { search: q.search, state: q.state, ...paging(req) });
+    return listEvents(db, auth.tenantId, { search: q.search, state: q.state, ...paging(req) }, config.now());
   });
 
   app.get("/api/events/:id", async (req) => {
     const auth = requireAuth(req);
-    return getEvent(db, auth.tenantId, idParam(req));
+    return getEvent(db, auth.tenantId, idParam(req), config.now());
   });
 
   app.post("/api/events", async (req, reply) => {
@@ -30,6 +30,18 @@ export function eventRoutes(app: FastifyInstance, db: Db, config: Config): void 
     const id = idParam(req);
     const { ctx, cmd } = commandRequest(req, "event.manage", eventFields, config.deploymentId, config.now());
     return updateEvent(db, ctx, id, cmd);
+  });
+
+  // The organization's date rules (DEC-028): everyone sees them, the
+  // administrator changes them.
+  app.get("/api/settings/date-rules", async (req) => {
+    const auth = requireAuth(req);
+    return getDateRules(db, auth.tenantId);
+  });
+
+  app.put("/api/settings/date-rules", async (req) => {
+    const { ctx, cmd } = commandRequest(req, "tenant.admin", dateRulesFields, config.deploymentId, config.now());
+    return setDateRules(db, ctx, cmd);
   });
 
   // Products the Event asks for, each with its availability check.

@@ -1,6 +1,17 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { DATE_FIELDS, eventFields, pastDateIssues, todayIn, type DateField as DateFieldName } from "@structura/domain";
-import { ApiError, api, newCommand, send, type Command, type EventRecord, type Me, type Member } from "../api.js";
+import {
+  DATE_FIELDS,
+  DEFAULT_DATE_RULES,
+  addBusinessDays,
+  addDays,
+  eventFields,
+  limitIssues,
+  pastDateIssues,
+  todayIn,
+  type DateField as DateFieldName,
+  type DateRules,
+} from "@structura/domain";
+import { ApiError, api, get, newCommand, send, type Command, type EventRecord, type Me, type Member } from "../api.js";
 import { LocaleContext, errorKey, hasKey, useT, type TextKey } from "../i18n.js";
 import { DateField } from "../components/DateField.js";
 import { LocationPicker, type MapPoint } from "../components/LocationPicker.js";
@@ -13,6 +24,7 @@ import { EventMap } from "./EventMap.js";
 interface FormState {
   designation: string;
   designationStatus: "provisional" | "final";
+  eventType: "rental" | "race";
   responsibleUserId: string;
   timezone: string;
   location: string;
@@ -27,6 +39,7 @@ interface FormState {
 const blank = (me: Me): FormState => ({
   designation: "",
   designationStatus: "provisional",
+  eventType: "rental",
   responsibleUserId: me.user.id,
   timezone: me.tenant.defaultTimezone,
   location: "",
@@ -41,6 +54,7 @@ const blank = (me: Me): FormState => ({
 const fromRecord = (e: EventRecord): FormState => ({
   designation: e.designation,
   designationStatus: e.designationStatus,
+  eventType: e.eventType,
   responsibleUserId: e.responsibleUserId,
   timezone: e.timezone,
   location: e.location ?? "",
@@ -65,13 +79,24 @@ const REASON_KEYS: Record<string, TextKey> = {
   return_before_departure: "err.field.expectedReturnDate",
   event_outside_rental: "err.field.eventOutside",
   past: "err.field.past",
+  departure_too_early: "err.field.departureTooEarly",
+  return_too_late: "err.field.returnTooLate",
+  type_fixed: "err.field.typeFixed",
+};
+
+// A field message, with the date it refers to for the DEC-028 limits.
+type FieldErr = { key: TextKey; limit?: string };
+
+const showDate = (iso: string, locale: string) => {
+  const [y, m, d] = iso.split("-");
+  return locale === "es" ? `${d}/${m}/${y}` : `${m}/${d}/${y}`;
 };
 
 // One localized message per field, from the same rules the server applies
 // (timeline order, and DEC-019/020: event date and return not in the past;
 // only dates being entered or changed are checked).
-function fieldErrors(f: FormState, before: EventRecord | null): Record<string, TextKey> {
-  const out: Record<string, TextKey> = {};
+function fieldErrors(f: FormState, before: EventRecord | null, rules: DateRules): Record<string, FieldErr> {
+  const out: Record<string, FieldErr> = {};
   const payload = toPayload(f);
   // Past dates first: every problem shows at once, not one per save.
   const isDate = (v: string | null) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
@@ -79,7 +104,7 @@ function fieldErrors(f: FormState, before: EventRecord | null): Record<string, T
   const changed: DateFieldName[] =
     before && before.timezone === f.timezone ? DATE_FIELDS.filter((d) => dates[d] !== before[d]) : [...DATE_FIELDS];
   try {
-    for (const issue of pastDateIssues(dates, todayIn(f.timezone), changed)) out[issue.field] = "err.field.past";
+    for (const issue of pastDateIssues(dates, todayIn(f.timezone), changed)) out[issue.field] = { key: "err.field.past" };
   } catch {
     /* unknown timezone: reported below */
   }
@@ -89,11 +114,15 @@ function fieldErrors(f: FormState, before: EventRecord | null): Record<string, T
       const field = String(issue.path[0] ?? "");
       if (out[field]) continue;
       const reason = issue.code === "custom" ? (issue.params as { reason?: string } | undefined)?.reason : undefined;
-      if (reason && REASON_KEYS[reason]) out[field] = REASON_KEYS[reason];
-      else if ((DATE_FIELDS as readonly string[]).includes(field)) out[field] = "err.field.date";
-      else if (hasKey(`err.field.${field}`)) out[field] = `err.field.${field}` as TextKey;
-      else out[field] = "err.validation";
+      if (reason && REASON_KEYS[reason]) out[field] = { key: REASON_KEYS[reason] };
+      else if ((DATE_FIELDS as readonly string[]).includes(field)) out[field] = { key: "err.field.date" };
+      else if (hasKey(`err.field.${field}`)) out[field] = { key: `err.field.${field}` as TextKey };
+      else out[field] = { key: "err.validation" };
     }
+  }
+  // DEC-028: the organization's departure and return limits.
+  for (const issue of limitIssues(dates, rules, changed)) {
+    if (!out[issue.field]) out[issue.field] = { key: REASON_KEYS[issue.reason]!, limit: issue.limit };
   }
   return out;
 }
@@ -109,7 +138,8 @@ export function EventForm({ me, eventId }: { me: Me; eventId?: string }) {
   const [touched, setTouched] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // A field the server refused (e.g. a date that became past meanwhile).
-  const [serverField, setServerField] = useState<{ field: string; key: TextKey } | null>(null);
+  const [serverField, setServerField] = useState<{ field: string; err: FieldErr } | null>(null);
+  const [rules, setRules] = useState<DateRules>(DEFAULT_DATE_RULES);
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
   // The same attempt keeps its command ID across retries (spec 11.2).
@@ -117,6 +147,7 @@ export function EventForm({ me, eventId }: { me: Me; eventId?: string }) {
 
   useEffect(() => {
     api.members().then((r) => setMembers(r.items.filter((m) => m.active)), () => {});
+    get<DateRules>("/api/settings/date-rules").then(setRules, () => {});
   }, []);
 
   const load = async () => {
@@ -137,9 +168,9 @@ export function EventForm({ me, eventId }: { me: Me; eventId?: string }) {
   }, [eventId]);
 
   const errors = useMemo(() => {
-    const local = touched ? fieldErrors(form, record) : {};
-    return serverField && !local[serverField.field] ? { ...local, [serverField.field]: serverField.key } : local;
-  }, [form, touched, record, serverField]);
+    const local = touched ? fieldErrors(form, record, rules) : {};
+    return serverField && !local[serverField.field] ? { ...local, [serverField.field]: serverField.err } : local;
+  }, [form, touched, record, serverField, rules]);
   // Any change clears the old messages; the field checks run again live (D-004).
   const setValue = (k: keyof FormState, v: string) => {
     setSaved(false);
@@ -157,7 +188,7 @@ export function EventForm({ me, eventId }: { me: Me; eventId?: string }) {
   async function submit(e: FormEvent) {
     e.preventDefault();
     setTouched(true);
-    if (Object.keys(fieldErrors(form, record)).length) {
+    if (Object.keys(fieldErrors(form, record, rules)).length) {
       setError(t("err.validation"));
       return;
     }
@@ -187,7 +218,8 @@ export function EventForm({ me, eventId }: { me: Me; eventId?: string }) {
       if (kind !== "unreachable") pending.current = null;
       const field = err instanceof ApiError && typeof err.details?.field === "string" ? err.details.field : null;
       const reason = err instanceof ApiError ? (err.details?.reason as string | undefined) : undefined;
-      if (field && reason && REASON_KEYS[reason]) setServerField({ field, key: REASON_KEYS[reason] });
+      const limit = err instanceof ApiError && typeof err.details?.limit === "string" ? err.details.limit : undefined;
+      if (field && reason && REASON_KEYS[reason]) setServerField({ field, err: { key: REASON_KEYS[reason], limit } });
       setError(t(kind === "validation" ? "err.validation" : errorKey(kind)));
     } finally {
       setBusy(false);
@@ -197,12 +229,13 @@ export function EventForm({ me, eventId }: { me: Me; eventId?: string }) {
   if (eventId && !record && !error) return <p>{t("common.loading")}</p>;
 
   const readOnly = !editing;
-  const field = (name: keyof FormState, label: TextKey, input: JSX.Element, hint?: TextKey) => (
+  const field = (name: keyof FormState, label: TextKey, input: JSX.Element, hint?: TextKey, hintText?: string) => (
     <label className={errors[name] ? "invalid" : ""}>
       <span>{t(label)}</span>
       {input}
       {hint && <small className="muted">{t(hint)}</small>}
-      {errors[name] && <small className="bad">{t(errors[name]!)}</small>}
+      {hintText && !errors[name] && <small className="muted">{hintText}</small>}
+      {errors[name] && <small className="bad">{t(errors[name]!.key).replace("{date}", errors[name]!.limit ? showDate(errors[name]!.limit!, locale) : "")}</small>}
     </label>
   );
 
@@ -228,10 +261,37 @@ export function EventForm({ me, eventId }: { me: Me; eventId?: string }) {
           {t("event.state")}: <strong>{t(`state.${record.fulfillmentState}` as TextKey)}</strong> · {t("event.version")}{" "}
           {record.version}
           {record.designationStatus === "provisional" && <span className="tag">{t("event.provisional")}</span>}
+          <span className="tag">{record.eventType === "race" ? `🏁 ${t("event.type.race")}` : `📦 ${t("event.type.rental")}`}</span>
+        </p>
+      )}
+      {/* DEC-028: equipment still out after the event. */}
+      {record?.returnAlert && (
+        <p className={record.returnAlert === "overdue" ? "alert bad" : "alert warn"} role="alert">
+          {record.returnAlert === "overdue" ? `⛔ ${t("event.alert.overdue")}` : `⚠️ ${t("event.alert.endedOut")}`}
         </p>
       )}
 
       <form className="form grid" onSubmit={submit}>
+        {/* DEC-031: the type is chosen once, when the Event is created. */}
+        {!record && (
+          <div className="wide type-choice" role="radiogroup" aria-label={t("event.type")}>
+            <span className="label">{t("event.type")}</span>
+            {(["rental", "race"] as const).map((ty) => (
+              <button
+                key={ty}
+                type="button"
+                role="radio"
+                aria-checked={form.eventType === ty}
+                className={form.eventType === ty ? "primary" : ""}
+                onClick={() => setValue("eventType", ty)}
+              >
+                {ty === "race" ? "🏁" : "📦"} <strong>{t(`event.type.${ty}`)}</strong>
+                <small>{t(`event.type.${ty}Hint`)}</small>
+              </button>
+            ))}
+            <small className="muted">{t("event.typeFixedHint")}</small>
+          </div>
+        )}
         {field(
           "designation",
           "event.designation",
@@ -282,7 +342,9 @@ export function EventForm({ me, eventId }: { me: Me; eventId?: string }) {
         {field(
           "departureDate",
           "event.departureDate",
-          <DateField label={t("event.departureDate")} value={form.departureDate} onChange={(v) => setValue("departureDate", v)} disabled={readOnly} />
+          <DateField label={t("event.departureDate")} value={form.departureDate} onChange={(v) => setValue("departureDate", v)} disabled={readOnly} />,
+          undefined,
+          editing && form.eventDate ? t("event.departureLimit").replace("{n}", String(rules.departureMaxDays)).replace("{date}", showDate(addDays(form.eventDate, -rules.departureMaxDays), locale)) : undefined
         )}
         {field(
           "eventDate",
@@ -292,7 +354,9 @@ export function EventForm({ me, eventId }: { me: Me; eventId?: string }) {
         {field(
           "expectedReturnDate",
           "event.expectedReturnDate",
-          <DateField label={t("event.expectedReturnDate")} value={form.expectedReturnDate} onChange={(v) => setValue("expectedReturnDate", v)} disabled={readOnly} />
+          <DateField label={t("event.expectedReturnDate")} value={form.expectedReturnDate} onChange={(v) => setValue("expectedReturnDate", v)} disabled={readOnly} />,
+          undefined,
+          editing && form.eventDate ? t("event.returnLimit").replace("{n}", String(rules.returnMaxBusinessDays)).replace("{date}", showDate(addBusinessDays(form.eventDate, rules.returnMaxBusinessDays), locale)) : undefined
         )}
         <label className="wide">
           <span>{t("event.notes")}</span>

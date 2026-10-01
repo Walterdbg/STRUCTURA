@@ -150,6 +150,57 @@ describe("timeline rules (DEC-019, DEC-020; today = 2026-09-30)", () => {
   });
 });
 
+describe("event types (DEC-031)", () => {
+  it("a new Event is a rental unless created as a race; the type never changes", async () => {
+    expect((await create({ ...base(), designation: "Alquiler" })).json().result.eventType).toBe("rental");
+    const race = (await create({ ...base(), designation: "10K", eventType: "race" })).json().result;
+    expect(race.eventType).toBe("race");
+    const change = await w.app.inject({
+      method: "PUT",
+      url: `/api/events/${race.id}`,
+      headers: { cookie: t.cookie },
+      payload: command({ ...base(), designation: "10K", eventType: "rental" }, { expectedVersion: 1 }),
+    });
+    expect(change.statusCode).toBe(400);
+    expect(change.json().details).toMatchObject({ field: "eventType", reason: "type_fixed" });
+  });
+});
+
+describe("departure and return limits (DEC-028; today = Wed 2026-09-30)", () => {
+  // Event on Tuesday 20 October: departure from 5 October, return until
+  // Thursday 29 October (7 business days).
+  const dates = (departureDate: string, expectedReturnDate: string) => ({ ...base(), designation: "X", eventDate: "2026-10-20", departureDate, expectedReturnDate });
+
+  it("departure at most 15 days before the event", async () => {
+    expect((await create(dates("2026-10-05", "2026-10-21"))).statusCode).toBe(201);
+    const early = await create(dates("2026-10-04", "2026-10-21"));
+    expect(early.statusCode).toBe(400);
+    expect(early.json().details).toMatchObject({ field: "departureDate", reason: "departure_too_early", limit: "2026-10-05" });
+  });
+
+  it("expected return at most 7 business days after the event (weekends don't count)", async () => {
+    expect((await create(dates("2026-10-19", "2026-10-29"))).statusCode).toBe(201);
+    const late = await create(dates("2026-10-19", "2026-10-30"));
+    expect(late.statusCode).toBe(400);
+    expect(late.json().details).toMatchObject({ field: "expectedReturnDate", reason: "return_too_late", limit: "2026-10-29" });
+  });
+
+  it("the administrator changes the limits for the organization; the change is recorded", async () => {
+    const set = await w.app.inject({
+      method: "PUT",
+      url: "/api/settings/date-rules",
+      headers: { cookie: t.cookie },
+      payload: command({ departureMaxDays: 30, returnMaxBusinessDays: 10, returnWarningDays: 2 }),
+    });
+    expect(set.statusCode, set.body).toBe(200);
+    expect((await create(dates("2026-10-04", "2026-10-30"))).statusCode).toBe(201);
+    const rules = await w.app.inject({ method: "GET", url: "/api/settings/date-rules", headers: { cookie: t.cookie } });
+    expect(rules.json()).toEqual({ departureMaxDays: 30, returnMaxBusinessDays: 10, returnWarningDays: 2 });
+    const { rows } = await w.db.query("SELECT 1 FROM audit_entries WHERE action = 'tenant.date_rules_changed'");
+    expect(rows).toHaveLength(1);
+  });
+});
+
 describe("location as a map point", () => {
   it("saves the place name and its coordinates", async () => {
     const res = await create({ ...base(), designation: "Triatlón", location: "Playa Coronado", locationLat: 8.528194, locationLng: -79.889631 });
