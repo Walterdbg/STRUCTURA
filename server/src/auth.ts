@@ -48,6 +48,10 @@ export const SESSION_HOURS = 12;
 
 const sha256 = (s: string) => crypto.createHash("sha256").update(s).digest("hex");
 
+// The stored form of a session token (used to keep the current session
+// when signing out the others).
+export const sessionHash = (token: string | undefined) => (token ? sha256(token) : null);
+
 export async function createSession(db: Db, userId: string, tenantId: string): Promise<{ token: string; expiresAt: Date }> {
   const token = crypto.randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + SESSION_HOURS * 3600_000);

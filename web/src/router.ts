@@ -12,7 +12,8 @@ export type Route =
   | { name: "locations" }
   | { name: "movements" }
   | { name: "movementNew"; itemId?: string }
-  | { name: "members" };
+  | { name: "members" }
+  | { name: "account" };
 
 export function parseRoute(hash: string): Route {
   const [path = "", query = ""] = hash.replace(/^#\/?/, "").split("?");
@@ -34,6 +35,8 @@ export function parseRoute(hash: string): Route {
       return { name: "movements" };
     case "members":
       return { name: "members" };
+    case "account":
+      return { name: "account" };
     default:
       return { name: "events" };
   }

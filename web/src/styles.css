@@ -128,3 +128,18 @@ dl.stock { grid-template-columns: max-content max-content; font-size: 1rem; }
 
 button.link { border: none; background: none; padding: 0; min-height: 0; color: var(--accent); font-weight: 600; }
 pre.change { margin: 6px 0 0; font-size: 0.75rem; white-space: pre-wrap; word-break: break-word; max-width: 420px; }
+
+/* ---- 0.1.0-dev.7 ---- */
+.date-field { display: flex; gap: 6px; align-items: center; position: relative; }
+.date-field input { flex: 1; }
+button.icon { padding: 4px 8px; min-width: 36px; }
+.hidden-picker { position: absolute; right: 0; bottom: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: 0; padding: 0; min-height: 0; }
+.nav a.who { color: var(--muted); font-size: 0.9rem; }
+.nav a.who.active { color: var(--text); }
+.lang span { font-weight: 600; color: var(--text); }
+.lang select { border-color: var(--accent); }.location-picker { display: flex; flex-direction: column; gap: 8px; }
+.location-picker .search-row input { flex: 1 1 220px; width: auto; }
+.map-box { height: 300px; border-radius: 8px; border: 1px solid var(--border); z-index: 0; }
+.map-pin { background: var(--accent); border: 3px solid #fff; border-radius: 50%; box-shadow: 0 0 0 2px var(--accent), 0 2px 6px rgba(0,0,0,0.4); }
+.location-picker .results { list-style: none; margin: 0; padding: 4px 0; border: 1px solid var(--border); border-radius: 6px; max-height: 200px; overflow-y: auto; background: var(--surface); }
+.location-picker .results li button { display: block; width: 100%; text-align: left; padding: 6px 10px; font-weight: 400; white-space: normal; }

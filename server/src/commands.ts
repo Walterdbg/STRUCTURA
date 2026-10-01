@@ -8,6 +8,8 @@ export interface CommandContext {
   tenantId: string;
   actorId: string | null;
   deploymentId: string;
+  // The server's current time; "today" for date rules comes from it.
+  now?: Date;
 }
 
 export interface CommandInput {

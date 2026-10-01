@@ -17,6 +17,11 @@ export function Login({ onSignedIn }: { onSignedIn: () => void }) {
 
   async function submit(e: FormEvent, tenantId?: string) {
     e.preventDefault();
+    // Own message instead of the browser's (D-002).
+    if (!email.trim() || !password) {
+      setError(t("login.missing"));
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -40,17 +45,16 @@ export function Login({ onSignedIn }: { onSignedIn: () => void }) {
   return (
     <section className="card narrow">
       <h2>{t("login.title")}</h2>
-      <form onSubmit={(e) => submit(e)} className="form">
+      <form onSubmit={(e) => submit(e)} className="form" noValidate>
         <label>
           <span>{t("login.email")}</span>
-          <input type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} />
         </label>
         <label>
           <span>{t("login.password")}</span>
           <input
             type="password"
             autoComplete="current-password"
-            required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />

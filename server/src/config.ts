@@ -19,6 +19,10 @@ export interface Config {
   cookieSecure: boolean;
   // Managed files (product photos). A Docker volume in production.
   filesDir: string;
+  // The server's clock. Tests replace it so "today" is fixed (DEC-019).
+  now: () => Date;
+  // Place search provider for the Event map (P-016). "none" = off.
+  geocoder: "none" | "nominatim";
 }
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -52,5 +56,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     migrationsDir: path.join(here, "..", "migrations"),
     cookieSecure: env.COOKIE_SECURE === "true",
     filesDir: env.FILES_DIR || path.resolve("data", "files"),
+    now: () => new Date(),
+    geocoder: env.GEOCODER === "nominatim" ? "nominatim" : "none",
   };
 }

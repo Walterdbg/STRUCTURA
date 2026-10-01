@@ -27,6 +27,7 @@ services:
       DATABASE_URL: postgres://structura:${DB_PASSWORD}@structura-db:5432/structura
       ENGINE_MODE: ${ENGINE_MODE:-cloud}
       DEPLOYMENT_ID: ${DEPLOYMENT_ID:?Set DEPLOYMENT_ID in .env}
+      GEOCODER: ${GEOCODER:-none}
     volumes:
       - structura-files:/data/files
     ports:

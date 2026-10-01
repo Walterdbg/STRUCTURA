@@ -139,6 +139,23 @@ Roadmap section: Approved Decisions; Pending Decisions; Known Defects
 
 ---
 
+[008]
+Time: 2026-09-30
+Area / feature: 0.1.0-dev.7 - fixes from Walter's testing, My account, map location
+Request or objective: Fix D-002..D-007. Walter: "if I really need to explain present, past and future, I won't work with you anymore" (saved as a feedback memory: apply common-sense logic without asking). Refinement DEC-020 (the rental may have started; event and return must not be past). New: timezone list shows only one (D-008); where is the language button and the user settings (D-009); the location must be a searchable map, not text (DEC-021).
+Action taken: Domain timeline rules (event date within departure..return; event date and return not before today in the Event's tz, checked only for dates being entered or changed); server clock (config.now) so tests use a fixed today; confirm refused after the rental period ends; availability uses the same clock. Web: DateField (dd/mm/aaaa / mm/dd/yyyy), TimezoneSelect (418 zones), all date problems shown at once, messages clear on change, own required-field messages, Confirm says what is missing. My account page + PUT /api/me, POST /api/me/password; admin PUT /api/members/:id (profile, switch off/on, last-admin guard) and POST /api/members/:id/password. Map: migration 005 (location_lat/lng), LocationPicker (Leaflet, click/drag, search via our server), /api/geo (GEOCODER=none by default; P-016 opened). Docs: CHANGELOG, ROADMAP v1.16.0, USER_GUIDE.
+Files created: domain changes in events.ts; server/src/identity/account.ts, server/src/geo.ts, server/migrations/005_event_location_point.sql, server/test/account.test.ts; web/src/components/{DateField,TimezoneSelect,LocationPicker}.tsx, web/src/pages/MyAccount.tsx
+Files modified: server config/commands/http/auth/app, events service/reservations/availability/routes, identity routes, tests (helpers, session, events, reservations, foundation); web App/router/api/i18n/styles, EventForm, EventLines, Login, Members, Locations; docker-compose.yml, .env.example; all package.json (0.1.0-dev.7); CHANGELOG, ROADMAP, USER_GUIDE
+Decision made: DEC-020 (Walter), DEC-021 (Walter). P-016 opened (place-search provider; search OFF until decided).
+Verification performed: 108/108 tests. Dev run in the browser, each defect: empty sign-in shows a Spanish message with no browser bubble; Walter's exact dates refused on the right fields (event outside the rental, then both past); the stale message clears; a week-into-the-rental Event with a map point saves and reloads; Confirm with no products explains; the account language switches everything and survives a fresh sign-in; the last admin can't be switched off. Docker dev.7: migration 005 applied, past rental refused on PostgreSQL 17.
+Result: PASS (Claude); Walter to retest T-002 and run T-007, T-008
+Observed issue: During the check, a past return date wasn't flagged while another date error was present (checks stopped early). Fixed before the build: every date problem now shows at once.
+Follow-up required: Walter retests; answers P-016
+Roadmap update required: YES (done: v1.16.0)
+Roadmap section: Known Defects (D-002..D-009 fixed), Approved Decisions (DEC-020, DEC-021), Pending (P-016), Ready for test, Build status
+
+---
+
 
 DEFECTS DISCOVERED TODAY
 ========================
@@ -149,6 +166,8 @@ Open from yesterday: DEFECT-002 (for dev.7).
 [DEFECT-004] General error message stays after the field is fixed. Low. OPEN.
 [DEFECT-005] Past dates accepted with no warning. Medium. OPEN, rule pending P-015.
 [DEFECT-006] Date boxes show mm/dd/yyyy (browser English) on a Spanish screen. Low. OPEN.
+[DEFECT-008] Timezone box showed only the current timezone. Low. FIXED-NOT-TESTED (dev.7).
+[DEFECT-009] No user settings / password change / admin reset. Medium. FIXED-NOT-TESTED (dev.7).
 [DEFECT-007] Confirmar (reservar) is disabled with no products and gives no reason; Walter pressed it, nothing happened, also after signing out and in. Medium. OPEN. Fix: keep it pressable and say what is missing.
 
 
@@ -197,6 +216,16 @@ Approved by: Walter
 Affected area: Events, reservations
 Roadmap update required: YES (done)
 
+[DECISION-007]
+Decision: DEC-020 - the rental may already have started; event date and expected return must be today or later
+Approved by: Walter
+Roadmap update required: YES (done)
+
+[DECISION-008]
+Decision: DEC-021 - Event location is a searchable map point, not only text
+Approved by: Walter
+Roadmap update required: YES (done)
+
 
 DOCUMENT REGISTER
 =================
@@ -207,7 +236,12 @@ docs/daily-logs/Working_Log_2026-09-30.txt | Daily working log | SUPPORTING | 00
 DEPLOYMENT / BUILD RECORD
 =========================
 
-Deployment performed: NO (0.1.0-dev.6 unchanged, still running)
+Deployment performed: YES (local development only)
+Build/version: 0.1.0-dev.7
+Environment: Development - Docker on Walter's PC, http://127.0.0.1:8095
+Deployment result: PASS (Claude's checks); NOT TESTED by Walter
+Verification performed: health 0.1.0-dev.7, migration 005 applied, past rental refused, place search off
+Rollback required: NO
 
 
 END-OF-DAY RECONCILIATION

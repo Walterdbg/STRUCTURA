@@ -61,7 +61,14 @@ export function EventLines({
 
   function fail(err: unknown) {
     const f = describeFailure(err);
-    setError(err instanceof ApiError && err.kind === "insufficient_availability" ? "ev.notReserved" : f.message);
+    const reason = err instanceof ApiError ? (err.details?.reason as string | undefined) : undefined;
+    setError(
+      err instanceof ApiError && err.kind === "insufficient_availability"
+        ? "ev.notReserved"
+        : reason === "past"
+          ? "ev.periodOver"
+          : f.message
+    );
     const details = err instanceof ApiError ? (err.details?.lines as typeof short | undefined) : undefined;
     setShort(details ?? []);
   }
@@ -84,6 +91,17 @@ export function EventLines({
   }
 
   async function action(kind: "confirm" | "cancel") {
+    // D-007: never a silent button. Say what is missing before trying.
+    if (kind === "confirm" && !hasDates) {
+      setShort([]);
+      setError("ev.needDatesToConfirm");
+      return;
+    }
+    if (kind === "confirm" && !lines?.length) {
+      setShort([]);
+      setError("ev.needProducts");
+      return;
+    }
     let note: string | null = null;
     if (kind === "cancel") {
       const answer = window.prompt(t("ev.cancelPrompt"));
@@ -117,7 +135,7 @@ export function EventLines({
             </button>
           )}
           {canCommit && event.fulfillmentState === "draft" && !editing && (
-            <button type="button" className="primary" disabled={busy || !lines?.length || !hasDates} onClick={() => void action("confirm")}>
+            <button type="button" className="primary" disabled={busy} onClick={() => void action("confirm")}>
               {t("ev.confirm")}
             </button>
           )}

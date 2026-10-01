@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { LOCALES, type Locale } from "@structura/domain";
-import { ApiError, api, type Me } from "./api.js";
+import { ApiError, api, newCommand, send, type Me } from "./api.js";
 import { LocaleContext, loadLocale, saveLocale, translate } from "./i18n.js";
 import { useRoute } from "./router.js";
 import { EventForm } from "./pages/EventForm.js";
@@ -12,6 +12,7 @@ import { MovementForm } from "./pages/MovementForm.js";
 import { MovementsList } from "./pages/MovementsList.js";
 import { Login } from "./pages/Login.js";
 import { Members } from "./pages/Members.js";
+import { MyAccount } from "./pages/MyAccount.js";
 import { SystemStatus } from "./pages/SystemStatus.js";
 
 type Session = { kind: "loading" } | { kind: "signedOut" } | { kind: "signedIn"; me: Me };
@@ -24,7 +25,10 @@ export function App() {
 
   const refresh = useCallback(async () => {
     try {
-      setSession({ kind: "signedIn", me: await api.me() });
+      const me = await api.me();
+      // The account's language wins once signed in (D-009).
+      if (me.user.locale === "es" || me.user.locale === "en") setLocale(me.user.locale);
+      setSession({ kind: "signedIn", me });
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) setSession({ kind: "signedOut" });
       else setSession({ kind: "signedOut" });
@@ -42,8 +46,18 @@ export function App() {
 
   const languagePicker = (
     <label className="lang">
-      <span>{t("language.label")}</span>
-      <select value={locale} onChange={(e) => setLocale(e.target.value as Locale)}>
+      <span>🌐 Idioma / Language</span>
+      <select
+        value={locale}
+        onChange={(e) => {
+          const next = e.target.value as Locale;
+          setLocale(next);
+          // Signed in: remember it on the account too, for every device.
+          if (session.kind === "signedIn") {
+            void send("PUT", "/api/me", newCommand({ displayName: session.me.user.displayName, locale: next })).catch(() => {});
+          }
+        }}
+      >
         {LOCALES.map((l) => (
           <option key={l} value={l}>
             {l === "es" ? "Español" : "English"}
@@ -70,6 +84,7 @@ export function App() {
     else if (route.name === "movements") body = <MovementsList canMove={can("movement.post")} canCorrect={can("movement.correct")} />;
     else if (route.name === "movementNew") body = <MovementForm key={route.itemId ?? "any"} presetItemId={route.itemId} />;
     else if (route.name === "members" && can("tenant.admin")) body = <Members />;
+    else if (route.name === "account") body = <MyAccount me={me} onSaved={refresh} onLocale={setLocale} />;
     else body = <EventsList canCreate={can("event.manage")} />;
   }
 
@@ -106,7 +121,9 @@ export function App() {
               </a>
             )}
             <span className="spacer" />
-            <span className="who">{session.me.user.displayName}</span>
+            <a href="#/account" className={`who ${route.name === "account" ? "active" : ""}`} title={t("account.title")}>
+              👤 {session.me.user.displayName}
+            </a>
             <button
               type="button"
               onClick={async () => {

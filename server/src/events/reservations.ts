@@ -4,6 +4,7 @@ import {
   EDITABLE_STATES,
   dec,
   decimalPlaces,
+  todayIn,
   uuidv7,
   type EventActionFields,
   type EventLinesFields,
@@ -33,7 +34,7 @@ const daysBetween = (from: string, to: string) =>
 
 // The workbook's VALIDAR: each line with what is still available for the
 // Event's dates, not counting the Event's own reservations.
-export async function getEventLines(db: Db, tenantId: string, eventId: string): Promise<EventLineRecord[]> {
+export async function getEventLines(db: Db, tenantId: string, eventId: string, now: Date = new Date()): Promise<EventLineRecord[]> {
   const ev = await getEvent(db, tenantId, eventId);
   const { rows } = await db.query<{
     id: string;
@@ -59,7 +60,7 @@ export async function getEventLines(db: Db, tenantId: string, eventId: string): 
   for (const r of rows) {
     let a: EventLineRecord["availability"] = null;
     if (withDates) {
-      const av = await availability(db, tenantId, r.item_id, ev.departureDate!, ev.expectedReturnDate!, eventId);
+      const av = await availability(db, tenantId, r.item_id, ev.departureDate!, ev.expectedReturnDate!, eventId, now);
       const { availableDec, ...rest } = av;
       a = { ...rest, ok: !availableDec.lessThan(dec(r.requested_qty)) };
     }
@@ -103,6 +104,13 @@ export async function commitReservations(t: Db, ctx: CommandContext, ev: EventRe
   if (!ev.departureDate || !ev.expectedReturnDate) {
     throw new DomainError("validation", "Set the departure and expected return dates first", { field: "departureDate" });
   }
+  // Stock can't be held for days that are already over (DEC-019).
+  if (ev.expectedReturnDate < todayIn(ev.timezone, ctx.now ?? new Date())) {
+    throw new DomainError("invalid_state", "The rental period is over; stock can't be reserved for past days", {
+      field: "expectedReturnDate",
+      reason: "past",
+    });
+  }
   if (daysBetween(ev.departureDate, ev.expectedReturnDate) > MAX_RESERVATION_DAYS) {
     throw new DomainError("validation", `A rental can't be longer than ${MAX_RESERVATION_DAYS} days`, { field: "expectedReturnDate" });
   }
@@ -123,7 +131,7 @@ export async function commitReservations(t: Db, ctx: CommandContext, ev: EventRe
 
   const short: { itemId: string; name: string; requested: string; available: string }[] = [];
   for (const l of lines.rows) {
-    const av = await availability(t, ctx.tenantId, l.item_id, ev.departureDate, ev.expectedReturnDate, ev.id);
+    const av = await availability(t, ctx.tenantId, l.item_id, ev.departureDate, ev.expectedReturnDate, ev.id, ctx.now);
     if (av.availableDec.lessThan(dec(l.requested_qty))) {
       short.push({ itemId: l.item_id, name: l.name, requested: trimQuantity(l.requested_qty), available: av.available });
     }
@@ -164,7 +172,7 @@ export async function setEventLines(db: Db, ctx: CommandContext, eventId: string
       if (!EDITABLE_STATES.includes(ev.fulfillmentState)) {
         throw new DomainError("invalid_state", `Products can't change once the Event is "${ev.fulfillmentState}"`);
       }
-      const before = await getEventLines(t, ctx.tenantId, eventId);
+      const before = await getEventLines(t, ctx.tenantId, eventId, ctx.now);
       for (const l of f.lines) {
         const { rows } = await t.query<{ unit: string; quantity_decimals: number; name: string; active: boolean }>(
           "SELECT unit, quantity_decimals, name, active FROM inventory_items WHERE tenant_id = $1 AND id = $2",
@@ -196,7 +204,7 @@ export async function setEventLines(db: Db, ctx: CommandContext, eventId: string
         reservations = await commitReservations(t, ctx, ev, cmd.commandId);
       }
       await bumpEvent(t, ctx.tenantId, eventId);
-      const after = await getEventLines(t, ctx.tenantId, eventId);
+      const after = await getEventLines(t, ctx.tenantId, eventId, ctx.now);
       return {
         result: { event: await getEvent(t, ctx.tenantId, eventId), lines: after },
         audit: [
@@ -233,7 +241,7 @@ export async function confirmEvent(db: Db, ctx: CommandContext, eventId: string,
       await bumpEvent(t, ctx.tenantId, eventId, "confirmed");
       const after = await getEvent(t, ctx.tenantId, eventId);
       return {
-        result: { event: after, lines: await getEventLines(t, ctx.tenantId, eventId) },
+        result: { event: after, lines: await getEventLines(t, ctx.tenantId, eventId, ctx.now) },
         audit: [{ action: "event.confirmed", recordType: "event", recordId: eventId, change: { reservations, note: cmd.payload.note } }],
         outbox: [{ aggregateType: "event", aggregateId: eventId, payload: { type: "event.confirmed", event: after, reservations } }],
       };
@@ -258,7 +266,7 @@ export async function cancelEvent(db: Db, ctx: CommandContext, eventId: string, 
       await bumpEvent(t, ctx.tenantId, eventId, "cancelled");
       const after = await getEvent(t, ctx.tenantId, eventId);
       return {
-        result: { event: after, lines: await getEventLines(t, ctx.tenantId, eventId) },
+        result: { event: after, lines: await getEventLines(t, ctx.tenantId, eventId, ctx.now) },
         audit: [{ action: "event.cancelled", recordType: "event", recordId: eventId, change: { released, note: cmd.payload.note } }],
         outbox: [{ aggregateType: "event", aggregateId: eventId, payload: { type: "event.cancelled", event: after, released } }],
       };

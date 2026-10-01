@@ -31,7 +31,8 @@ export async function availability(
   itemId: string,
   from: string,
   to: string,
-  excludeEventId: string | null
+  excludeEventId: string | null,
+  now: Date = new Date()
 ): Promise<Availability & { availableDec: Dec }> {
   const { rows } = await db.query<{
     usable: string;
@@ -63,7 +64,7 @@ export async function availability(
      attr AS (
        SELECT res.event_id,
               least(greatest(coalesce(moved.net, 0), 0), res.qty) AS q,
-              res.ends_on < (now() AT TIME ZONE e.timezone)::date AS overdue
+              res.ends_on < ($6::timestamptz AT TIME ZONE e.timezone)::date AS overdue
          FROM res
          LEFT JOIN moved ON moved.event_id = res.event_id
          JOIN events e ON e.id = res.event_id),
@@ -82,7 +83,7 @@ export async function availability(
             (SELECT coalesce(sum(q), 0) FROM attr WHERE overdue AND event_id IS DISTINCT FROM $5::uuid)::text AS overdue_out,
             (SELECT coalesce(max(committed), 0) FROM per_day)::text AS peak
        FROM pos`,
-    [tenantId, itemId, from, to, excludeEventId]
+    [tenantId, itemId, from, to, excludeEventId, now.toISOString()]
   );
   const r = rows[0]!;
   const usable = dec(r.usable);

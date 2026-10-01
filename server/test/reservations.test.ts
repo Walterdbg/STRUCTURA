@@ -141,7 +141,8 @@ describe("availability counts real stock (integration contract)", () => {
   });
 
   it("stock still out after its expected return keeps blocking new bookings", async () => {
-    const { ev } = await book("Pasado", "2020-01-01", "2020-01-05", "5");
+    // Booked and sent out back in October; then the clock moves past its return.
+    const { ev } = await book("Pasado", "2026-10-01", "2026-10-05", "5");
     await post("/api/movements", {
       reason: "transfer",
       sourceLocationId: warehouse,
@@ -149,7 +150,8 @@ describe("availability counts real stock (integration contract)", () => {
       eventId: ev.id,
       lines: [{ itemId: mic.id, quantity: "5" }],
     });
-    // The expected return (2020-01-05) is past and nothing came back.
+    w.setNow!(new Date("2026-11-15T17:00:00Z"));
+    // The expected return (5 Oct) is past and nothing came back.
     expect((await book("Futuro", "2026-12-01", "2026-12-02", "6")).res.statusCode).toBe(409);
     expect((await book("Futuro 2", "2026-12-01", "2026-12-02", "5")).res.statusCode).toBe(200);
   });
@@ -190,6 +192,24 @@ describe("changing a confirmed Event", () => {
     expect(again.json().error).toBe("invalid_state");
     // History is kept: the released reservation still exists.
     expect(await count(w.db, "reservations")).toBe(2);
+  });
+});
+
+describe("confirming after the rental period is over", () => {
+  it("is refused, since stock can't be held for past days", async () => {
+    const ev = await event("Tarde", "2026-10-01", "2026-10-05");
+    await lines(ev, [{ itemId: mic.id, quantity: "1" }]);
+    w.setNow!(new Date("2026-10-06T17:00:00Z"));
+    const res = await post(`/api/events/${ev.id}/confirm`, {}, (await current(ev)).version);
+    expect(res.statusCode).toBe(409);
+    expect(res.json()).toMatchObject({ error: "invalid_state", details: { reason: "past" } });
+  });
+
+  it("is allowed while the rental is under way", async () => {
+    const ev = await event("En curso", "2026-10-01", "2026-10-05");
+    await lines(ev, [{ itemId: mic.id, quantity: "1" }]);
+    w.setNow!(new Date("2026-10-03T17:00:00Z"));
+    expect((await post(`/api/events/${ev.id}/confirm`, {}, (await current(ev)).version)).statusCode).toBe(200);
   });
 });
 

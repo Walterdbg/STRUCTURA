@@ -5,8 +5,8 @@
 | Field | Value |
 | --- | --- |
 | Project | STRUCTURA (ChatGPT project name: "Inventario") |
-| Roadmap version | `1.15.0` |
-| Current application version/build | `0.1.0-dev.6`: 0.1.0 feature-complete, READY FOR TEST by Walter |
+| Roadmap version | `1.16.0` |
+| Current application version/build | `0.1.0-dev.7`: fixes from Walter's testing + My account + map location, READY FOR TEST |
 | Last updated | 2026-09-30 |
 | Document owner | Walter |
 | Current environment | Development (Docker on Walter's PC, port 8095) |
@@ -34,6 +34,8 @@
 | 1.14.0 | 2026-09-30 | Claude (for Walter) | Walter's T-002 testing found D-003..D-006 (date rules and form messages); P-015 opened (past dates) | D-003..D-006 |
 | 1.14.1 | 2026-09-30 | Claude (for Walter) | D-007: disabled Confirm button gives no reason | D-007 |
 | 1.15.0 | 2026-09-30 | Claude (for Walter) | Walter: an Event cannot be in the past (DEC-019, was P-015); D-005 fix defined | DEC-019 |
+| 1.15.1 | 2026-09-30 | Claude (for Walter) | Walter refined DEC-019: the rental may already have started; event date and expected return must be today or later (DEC-020) | DEC-020 |
+| 1.16.0 | 2026-09-30 | Claude (for Walter) | Build 0.1.0-dev.7: D-002..D-009 fixed; My account (D-009); Event location as a map point (DEC-021); place-search provider pending (P-016); tests T-007, T-008 added | D-002..D-009, DEC-021 |
 
 ## Project Objective
 
@@ -93,23 +95,27 @@ Walter tests the build running on his PC (see docs/USER_GUIDE.md; sign in with h
 
 | ID | Work item | Test required | Build | Status |
 | --- | --- | --- | --- | --- |
-| T-001 | Accounts (DEC-013) | Sign in; add a user with the *Operador de inventario* profile; sign in as that user and confirm they can record a movement but not create a product | 0.1.0-dev.6 | READY FOR TEST |
-| T-002 | Events (UC-13, AT-01) | Create an Event with only a provisional name, no customer; set event date, departure and expected return; reopen it and check the three dates stayed separate | 0.1.0-dev.6 | FAIL 2026-09-30 (Walter): saves, but D-003..D-006. Retest in dev.7 |
-| T-003 | Catalog and photos (UC-12, AT-05, AT-36) | Create two products, one with a barcode starting with 0; give each a photo; switch between them and check each keeps its own photo and the barcode keeps its 0 | 0.1.0-dev.6 | READY FOR TEST |
-| T-004 | Movements (UC-03, AT-02, AT-03) | Create a warehouse and an event location; move part of a product's stock with no trip; try to move more than is there (must be refused); correct a movement and check the original stays, marked *Corregido* | 0.1.0-dev.6 | READY FOR TEST |
-| T-005 | Reservations (UC-21, AT-04, AT-31) | Confirm Event A holding all of a product until day 14; an Event B starting day 14 must be refused; starting day 15 must confirm | 0.1.0-dev.6 | READY FOR TEST |
-| T-006 | Change history (AT-18) | Open *Historial de cambios* on an Event and a product; check who/what/when is shown | 0.1.0-dev.6 | READY FOR TEST |
+| T-001 | Accounts (DEC-013) | Sign in; add a user with the *Operador de inventario* profile; sign in as that user and confirm they can record a movement but not create a product | 0.1.0-dev.7 | READY FOR TEST |
+| T-002 | Events (UC-13, AT-01) | Create an Event with only a provisional name, no customer; set event date, departure and expected return; reopen it and check the three dates stayed separate | 0.1.0-dev.7 | RETEST: FAILED on dev.6 (D-003..D-006); fixed in dev.7 |
+| T-003 | Catalog and photos (UC-12, AT-05, AT-36) | Create two products, one with a barcode starting with 0; give each a photo; switch between them and check each keeps its own photo and the barcode keeps its 0 | 0.1.0-dev.7 | READY FOR TEST |
+| T-004 | Movements (UC-03, AT-02, AT-03) | Create a warehouse and an event location; move part of a product's stock with no trip; try to move more than is there (must be refused); correct a movement and check the original stays, marked *Corregido* | 0.1.0-dev.7 | READY FOR TEST |
+| T-005 | Reservations (UC-21, AT-04, AT-31) | Confirm Event A holding all of a product until day 14; an Event B starting day 14 must be refused; starting day 15 must confirm | 0.1.0-dev.7 | READY FOR TEST |
+| T-006 | Change history (AT-18) | Open *Historial de cambios* on an Event and a product; check who/what/when is shown | 0.1.0-dev.7 | READY FOR TEST |
+| T-007 | My account (D-009) | Click your name (👤) at the top: change the language and save (the whole screen changes, also after signing in again); change your password. Under Usuarios, switch a user off and give a user a new password | 0.1.0-dev.7 | READY FOR TEST |
+| T-008 | Map location (DEC-021) | On an Event, click the map to mark the place, drag the pin, save; reopen and check the point and name stayed | 0.1.0-dev.7 | READY FOR TEST |
 
 ## Known Defects
 
 | ID | Defect | Severity | Reproduction/evidence | Current status | Target |
 | --- | --- | --- | --- | --- | --- |
-| D-002 | Empty required field shows the browser's own English bubble ("Please fill out this field") even in Spanish | Low | Walter's screenshot; Working_Log_2026-09-29 DEFECT-002 | OPEN | 0.1.0-dev.7 |
-| D-003 | Event date not checked against the rental period: an event on 26 Jul saved with warehouse departure on 6 Aug (event before the stock leaves) | Medium | Walter's T-002 screenshots, 2026-09-30 | OPEN | 0.1.0-dev.7 |
-| D-004 | After fixing a refused date, the general message "Revise los campos marcados" stays on screen with no field marked, until the next save | Low | Walter's T-002 screenshots | OPEN | 0.1.0-dev.7 |
-| D-005 | Past dates are accepted with no warning (whole rental period 6 Aug–22 Sep already over on 30 Sep) | Medium | Walter's T-002 screenshots | OPEN, rule set by DEC-019 (refuse past dates) | 0.1.0-dev.7 |
-| D-006 | Date boxes show mm/dd/yyyy (browser's English) while the screen is in Spanish | Low | Walter's T-002 screenshots; same family as D-002 | OPEN | 0.1.0-dev.7 |
-| D-007 | **Confirmar (reservar)** is disabled when the Event has no products (or no dates) but says nothing: pressing it does nothing, with no explanation, also after signing out and in | Medium | Walter, 2026-09-30, on the Event from his T-002 test | OPEN | 0.1.0-dev.7: the button stays pressable and says what is missing ("Agregue al menos un producto" / "Indique salida y retorno"), plus a hint next to it |
+| D-002 | Empty required field shows the browser's own English bubble ("Please fill out this field") even in Spanish | Low | Walter's screenshot; Working_Log_2026-09-29 DEFECT-002 | FIXED in 0.1.0-dev.7 (Claude browser-checked); Walter to retest | dev.7 |
+| D-003 | Event date not checked against the rental period: an event on 26 Jul saved with warehouse departure on 6 Aug (event before the stock leaves) | Medium | Walter's T-002 screenshots, 2026-09-30 | FIXED in 0.1.0-dev.7 (Claude browser-checked); Walter to retest | dev.7 |
+| D-004 | After fixing a refused date, the general message "Revise los campos marcados" stays on screen with no field marked, until the next save | Low | Walter's T-002 screenshots | FIXED in 0.1.0-dev.7 (Claude browser-checked); Walter to retest | dev.7 |
+| D-005 | Past dates are accepted with no warning (whole rental period 6 Aug–22 Sep already over on 30 Sep) | Medium | Walter's T-002 screenshots | FIXED in 0.1.0-dev.7 (Claude browser-checked); Walter to retest | dev.7 |
+| D-006 | Date boxes show mm/dd/yyyy (browser's English) while the screen is in Spanish | Low | Walter's T-002 screenshots; same family as D-002 | FIXED in 0.1.0-dev.7 (Claude browser-checked); Walter to retest | dev.7 |
+| D-007 | **Confirmar (reservar)** is disabled when the Event has no products (or no dates) but says nothing: pressing it does nothing, with no explanation, also after signing out and in | Medium | Walter, 2026-09-30, on the Event from his T-002 test | FIXED in 0.1.0-dev.7 (Claude browser-checked); Walter to retest | dev.7 |
+| D-008 | Timezone box showed only the current timezone (type-to-search list filtered by the current value) | Low | Walter, 2026-09-30 | FIXED in 0.1.0-dev.7 (Claude browser-checked); Walter to retest | dev.7 |
+| D-009 | No user settings: nobody could change their own password, language or name; administrators couldn't reset a password or switch a user off | Medium | Walter, 2026-09-30 | FIXED in 0.1.0-dev.7 (Claude browser-checked); Walter to retest | dev.7 |
 | D-001 | Saved Event stayed in edit mode | Low | Working_Log_2026-09-29 DEFECT-001 | CLOSED (fixed in dev.3) | — |
 
 ### Known limitations (by design in 0.1.0, not defects)
@@ -147,11 +153,14 @@ Walter tests the build running on his PC (see docs/USER_GUIDE.md; sign in with h
 | DEC-017 | 2026-09-30 | Search box + read-only AI help assistant (DEC-014..DEC-016) is version `0.2.0`, the **last part of Phase 1**, started after 0.1.0 is approved and frozen. Same naming as before: test builds `0.2.0-dev.1`, `0.2.0-dev.2`, … | Walter's decision (was P-012) | Roadmap / versioning |
 | DEC-018 | 2026-09-30 | Encryption design (implements DEC-016). **Layer 1**, an encrypted storage area on every STRUCTURA machine (LUKS2 on the box, key sealed in its TPM chip; equivalent disk encryption in the cloud), holds the database, all managed files, backups and the AI index. **Layer 2**, per-tenant file encryption by the app (AES-256-GCM), applies only to core data: signatures, delivery photos and evidence, files attached to records, records and files captured offline and waiting to sync, backups and exports. **Product catalog photos get layer 1 only.** Users' own folders where they keep files before uploading (e.g. the 27TS `Imagenes` folder) are outside STRUCTURA and not encrypted by it. Exports only through STRUCTURA's tool; the box is locked down as an appliance | Walter approved the design (was P-014) and asked to limit per-file encryption to core data, photos only where simple. Layer 1 already encrypts photos at no extra effort | Storage, backups, exports, local engine |
 | DEC-019 | 2026-09-30 | **An Event cannot be in the past.** When dates are entered or changed (new Event, or editing its dates), the event date, warehouse departure and expected return can't be before today in the Event's timezone, and the event date must lie between departure and expected return (D-003). An Event created correctly stays usable after its dates pass (edit other fields, returns, closing). Past Events enter only as history through the future 27TS import tool (Phase 5, B-003), not through the screen | Walter's decision (was P-015) | Events, reservations |
+| DEC-021 | 2026-09-30 | The Event location is a **searchable map point**, not only text: search a place or click the map, drag the pin; the place name plus WGS84 coordinates are saved (migration 005). Map pictures from OpenStreetMap (normal viewing). Place search goes only through our server | Walter: "the location must be a searchable map button, not only text". First step towards the Phase 3 event maps (spec 12) | Events, maps |
+| DEC-020 | 2026-09-30 | Refines DEC-019: an Event can be created **after its rental period has started** (warehouse departure in the past is allowed, e.g. a week into the rental), but **the event date and the expected return must be today or later**. Confirming (reserving) is refused only when the expected return is already past. Event date must still lie between departure and expected return | Walter: "I can create the event a week into the rental period, but the rental period and the event must end after today". Read as today-or-later: a rental ending today is still current | Events, reservations |
 
 ## Pending Decisions
 
 | ID | Question | Options or constraint | Needed by | Owner |
 | --- | --- | --- | --- | --- |
+| P-016 | Place-search provider for the Event map (DEC-021) | A: OpenStreetMap public search (free, light use, only the typed words leave, via our server). B: our own copy inside our environment (e.g. Panama data; nothing leaves; more setup). C: Google/Mapbox (best, paid, words leave). Proposed: A while testing, B before real customers. Search is OFF until decided; the map works by clicking | Before relying on search | Walter |
 | P-011 | Cloud hosting provider and onsite mini-PC model | Not blocking 0.1.0. DEC-014 adds a need: the machine running the local AI model needs roughly 8 GB of memory or more | Phase 4 / first cloud deployment | Walter |
 | P-005 | Licensing policy values (gap G-07) | Pricing, plans, capacity limits, offline grace period. The spec says: configuration only, never invented | Phase 4 | Walter |
 | P-006 | Tax, rounding, currency and retention settings (gap G-10) | Must be explicit configurable policies | Phase 2 | Walter |
@@ -192,7 +201,7 @@ not an approved schedule.
 
 | Environment | Current build | Deployment date | Verification | Status |
 | --- | --- | --- | --- | --- |
-| Development | `0.1.0-dev.6` | 2026-09-29 | 89/89 tests; browser + Docker checks | Running on Walter's PC (http://127.0.0.1:8095), waiting for Walter's tests |
+| Development | `0.1.0-dev.7` | 2026-09-30 | 108/108 tests; browser check of every fix; Docker check | Running on Walter's PC (http://127.0.0.1:8095), waiting for Walter's tests |
 | Test | None | — | — | Not started |
 | Production | None | — | — | Not started |
 

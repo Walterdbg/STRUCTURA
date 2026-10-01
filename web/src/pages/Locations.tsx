@@ -23,6 +23,10 @@ export function Locations({ canManage }: { canManage: boolean }) {
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (!form.designation.trim()) {
+      setError("err.field.designation.loc");
+      return;
+    }
     setBusy(true);
     setError(null);
     const payload = { ...form, notes: form.notes || null };
@@ -89,10 +93,10 @@ export function Locations({ canManage }: { canManage: boolean }) {
       {canManage && (
         <>
           <h3>{editing ? `${t("common.edit")}: ${editing.designation}` : t("loc.add")}</h3>
-          <form className="form grid" onSubmit={submit}>
+          <form className="form grid" onSubmit={submit} noValidate>
             <label>
               <span>{t("loc.designation")}</span>
-              <input required value={form.designation} onChange={(e) => setForm({ ...form, designation: e.target.value })} />
+              <input value={form.designation} onChange={(e) => setForm({ ...form, designation: e.target.value })} />
             </label>
             <label>
               <span>{t("loc.kind")}</span>

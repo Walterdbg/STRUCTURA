@@ -83,6 +83,8 @@ export interface EventRecord {
   responsibleName: string;
   timezone: string;
   location: string | null;
+  locationLat: number | null;
+  locationLng: number | null;
   eventDate: string | null;
   departureDate: string | null;
   expectedReturnDate: string | null;

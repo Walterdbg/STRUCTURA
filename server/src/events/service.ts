@@ -1,4 +1,14 @@
-import { DomainError, EDITABLE_STATES, uuidv7, type EventFields, type FulfillmentState } from "@structura/domain";
+import {
+  DATE_FIELDS,
+  DomainError,
+  EDITABLE_STATES,
+  pastDateIssues,
+  todayIn,
+  uuidv7,
+  type DateField,
+  type EventFields,
+  type FulfillmentState,
+} from "@structura/domain";
 import { executeCommand, type CommandContext, type CommandResult } from "../commands.js";
 import type { Db } from "../db.js";
 import type { ParsedCommand } from "../http.js";
@@ -12,6 +22,8 @@ export interface EventRecord {
   responsibleName: string;
   timezone: string;
   location: string | null;
+  locationLat: number | null;
+  locationLng: number | null;
   eventDate: string | null;
   departureDate: string | null;
   expectedReturnDate: string | null;
@@ -31,6 +43,8 @@ interface EventRow {
   responsible_name: string;
   timezone: string;
   location_text: string | null;
+  location_lat: string | null;
+  location_lng: string | null;
   event_date: string | null;
   departure_date: string | null;
   expected_return_date: string | null;
@@ -53,6 +67,8 @@ function toRecord(r: EventRow): EventRecord {
     responsibleName: r.responsible_name,
     timezone: r.timezone,
     location: r.location_text,
+    locationLat: r.location_lat === null ? null : Number(r.location_lat),
+    locationLng: r.location_lng === null ? null : Number(r.location_lng),
     eventDate: r.event_date,
     departureDate: r.departure_date,
     expectedReturnDate: r.expected_return_date,
@@ -103,6 +119,19 @@ export async function listEvents(
   return { items: rows.map(toRecord), total: Number(total.rows[0]?.n ?? 0) };
 }
 
+// DEC-019: dates being entered or changed can't be before today in the
+// Event's timezone. Refuses with the first offending field.
+function assertNotPast(
+  f: EventFields,
+  now: Date | undefined,
+  changed: readonly DateField[] = DATE_FIELDS
+): void {
+  const issue = pastDateIssues(f, todayIn(f.timezone, now ?? new Date()), changed)[0];
+  if (issue) {
+    throw new DomainError("validation", "This date is in the past", { field: issue.field, reason: "past" });
+  }
+}
+
 async function assertMember(t: Db, tenantId: string, userId: string): Promise<void> {
   const { rows } = await t.query("SELECT 1 FROM memberships WHERE tenant_id = $1 AND user_id = $2 AND active", [
     tenantId,
@@ -128,12 +157,14 @@ export async function createEvent(
     ctx,
     { commandId: cmd.commandId, commandType: "event.create", occurredAt: cmd.occurredAt, payload: f },
     async (t) => {
+      assertNotPast(f, ctx.now);
       await assertMember(t, ctx.tenantId, f.responsibleUserId);
       const id = uuidv7();
       await t.query(
         `INSERT INTO events (id, tenant_id, designation, designation_status, responsible_user_id, timezone,
-                             location_text, event_date, departure_date, expected_return_date, notes, created_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+                             location_text, event_date, departure_date, expected_return_date, notes, created_by,
+                             location_lat, location_lng)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
         [
           id,
           ctx.tenantId,
@@ -147,6 +178,8 @@ export async function createEvent(
           f.expectedReturnDate,
           f.notes,
           ctx.actorId,
+          f.locationLat,
+          f.locationLng,
         ]
       );
       const record = await getEvent(t, ctx.tenantId, id);
@@ -185,12 +218,16 @@ export async function updateEvent(
       if (!EDITABLE_STATES.includes(before.fulfillmentState)) {
         throw new DomainError("invalid_state", `An Event in state "${before.fulfillmentState}" can no longer be edited`);
       }
+      // Only dates that change are checked, so an Event whose dates have
+      // gone by can still be edited (notes, responsible, ...).
+      const changed = DATE_FIELDS.filter((d) => f[d] !== before[d]);
+      assertNotPast(f, ctx.now, f.timezone !== before.timezone ? DATE_FIELDS : changed);
       await assertMember(t, ctx.tenantId, f.responsibleUserId);
       const { rows } = await t.query<{ id: string }>(
         `UPDATE events
             SET designation = $3, designation_status = $4, responsible_user_id = $5, timezone = $6,
                 location_text = $7, event_date = $8, departure_date = $9, expected_return_date = $10,
-                notes = $11, version = version + 1, updated_at = now()
+                notes = $11, location_lat = $13, location_lng = $14, version = version + 1, updated_at = now()
           WHERE tenant_id = $1 AND id = $2 AND version = $12
           RETURNING id`,
         [
@@ -206,6 +243,8 @@ export async function updateEvent(
           f.expectedReturnDate,
           f.notes,
           cmd.expectedVersion,
+          f.locationLat,
+          f.locationLng,
         ]
       );
       if (!rows[0]) throw new DomainError("stale_version", "Someone else changed this Event. Reload it and try again.");

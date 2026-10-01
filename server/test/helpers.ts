@@ -3,8 +3,11 @@ import { loadConfig, type Config } from "../src/config.js";
 import { openDb, type Db } from "../src/db.js";
 import { migrate } from "../src/migrate.js";
 
+// Tests run on a fixed "today" (30 Sep 2026, midday in Panama), so date rules never depend on the real date.
+export const TEST_NOW = new Date("2026-09-30T17:00:00Z");
+
 export function testConfig(overrides: Partial<Config> = {}): Config {
-  return { ...loadConfig({ ENGINE_MODE: "cloud", DEPLOYMENT_ID: "test" }), ...overrides };
+  return { ...loadConfig({ ENGINE_MODE: "cloud", DEPLOYMENT_ID: "test" }), now: () => TEST_NOW, ...overrides };
 }
 
 // A fresh in-memory database with all migrations applied.

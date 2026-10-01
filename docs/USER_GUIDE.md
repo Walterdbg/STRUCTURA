@@ -1,7 +1,8 @@
 # STRUCTURA — User guide (version 0.1.0)
 
-Every screen is in Spanish and English; choose the language at the top
-right (Idioma / Language). The choice is remembered on that browser.
+Every screen is in Spanish and English. Choose the language at the top
+right (**🌐 Idioma / Language**), or in **My account**, where it's saved to your account
+and applies every time you sign in.
 
 What 0.1.0 covers: users, Events, inventory, locations, movements and
 reservations. Quotes, invoices, deliveries, maps, the customer portal and
@@ -11,6 +12,12 @@ the onsite engine come in later phases (ROADMAP).
 
 Use the email and password your administrator gave you. After 5 wrong
 attempts, sign-in is blocked for 15 minutes. A session lasts 12 hours.
+
+## My account
+
+Click your name (👤) at the top: change your name, your language, or your
+password (type the current one first; your other open sessions are signed
+out).
 
 ## Users (administrators only)
 
@@ -23,6 +30,11 @@ attempts, sign-in is blocked for 15 minutes. A session lasts 12 hours.
 | Gerente de operaciones | Events, inventory, reservations, movements, corrections |
 | Operador de inventario | Record movements and photos; look at everything |
 | Consulta / auditoría | Look, and read the change history |
+
+In the list, the administrator can change a person's profile, **switch them off**
+(they can no longer sign in, but their name stays in the history; nobody is ever
+deleted) or give them a **new password** if they forgot theirs. The last active
+administrator can't be switched off.
 
 ## Locations
 
@@ -90,7 +102,17 @@ the right movement.
 "Evento interno — octubre"), the responsible person and the timezone are
 required. No customer is needed.
 
-Event date, warehouse departure and expected return are separate dates.
+Dates follow the timeline: **warehouse departure → event date → expected return**,
+written dd/mm/aaaa in Spanish (mm/dd/yyyy in English).
+
+- The event date must be between the departure and the expected return.
+- The event date and the expected return can't be in the past. The departure can be:
+  you can record an Event a week into its rental.
+- Once an Event is created, it stays editable after its dates pass (notes, responsible…).
+
+**Location:** type the place name, then mark it on the map: click the map, or search a
+place (when place search is switched on), and drag the pin to adjust it. The name and the
+exact point are saved.
 
 ### Products and reservations
 
@@ -101,7 +123,9 @@ quantities, then **Guardar**. The table shows for each product:
 - **Reservado**: what is currently held for it
 - **Disponible**: what could still be held for these dates
 
-**Confirmar (reservar)** holds the stock for the whole rental period. Both
+**Confirmar (reservar)** holds the stock for the whole rental period. If something is
+missing (products, dates) the button says what to do. A rental period that is already
+over can't be confirmed. Both
 the departure day and the expected return day are included: a return on
 the 14th keeps the 14th reserved, and the stock is free again from the
 15th. If anything doesn't fit, nothing is reserved and the screen lists

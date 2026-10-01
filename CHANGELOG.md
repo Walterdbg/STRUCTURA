@@ -3,6 +3,65 @@
 Every entry gets an **Intent** and a **Result**. A Result is only marked
 confirmed once actually verified, and can honestly say FAILED.
 
+## 0.1.0-dev.7 — 2026-09-30 (fixes from Walter's testing; My account; map location) — NOT YET TESTED BY WALTER
+
+**Intent:** fix everything Walter found while testing dev.6 (D-002 to
+D-009), apply his date rules (DEC-019, DEC-020), and make the Event
+location a searchable map point instead of text.
+
+**Result:**
+- **Date rules:**
+  - The event date must lie between the warehouse departure and the
+    expected return (D-003).
+  - The event date and the expected return can't be in the past; the
+    departure can be, so an Event can be recorded a week into its rental
+    (DEC-019/020, D-005).
+  - "Today" is the day in the Event's timezone, and the rules apply to
+    dates being entered or changed, so finished Events stay editable.
+  - Confirming is refused once the rental period is over.
+  - Every date problem shows on its field at once.
+- **Messages:**
+  - The general red message disappears as soon as something is changed
+    (D-004).
+  - The browser's English "Please fill out this field" bubble is replaced
+    by STRUCTURA's own messages in the chosen language (D-002).
+  - **Confirmar (reservar)** is never a silent button: it says what's
+    missing, products or dates (D-007).
+- **Dates** show as dd/mm/aaaa in Spanish and mm/dd/yyyy in English, with
+  a calendar button (D-006). Dates are now in timeline order: departure,
+  event, return.
+- **Timezone:** a full drop-down (418 timezones, the organization's own
+  first) instead of a type-to-search list that only showed the current
+  value (D-008).
+- **My account (D-009):**
+  - name, language (saved to the account, so it applies at every sign-in)
+    and password change (needs the current one; signs out other sessions)
+  - **Users:** administrators change a profile, switch a user off or on
+    (never deleted), and set a new password for someone who forgot theirs
+  - the last active administrator can't be removed
+  - the language box at the top reads "🌐 Idioma / Language"
+- **Map location** (migration `005_event_location_point.sql`):
+  - The Event location is a point on a map (Leaflet + OpenStreetMap map
+    pictures). Click the map or search for a place, then drag the pin to
+    adjust it; the place name and its coordinates are saved.
+  - Place search goes only through our server, and stays **off** until
+    Walter chooses the provider (P-016). Until then the map works by
+    clicking.
+- **Tests** run on a fixed "today" (30 Sep 2026), so they never depend on
+  the real date.
+- Tests: 108/108 (domain 10, server 98).
+- Checked in the browser (dev run) for each defect:
+  - Walter's exact entry (departure 06/08, event 26/07, return 02/12/2025,
+    then 22/09/2026) is refused, with the reason on each field.
+  - A rental started a week ago, with an event and return ahead, saves
+    with its map point.
+  - Confirm with no products explains what to do.
+  - The account language switches the whole screen and survives a fresh
+    sign-in.
+  - Switching off the last administrator is refused.
+- Checked in Docker dev.7: migration 005 applied, a past rental is refused
+  on PostgreSQL 17, and place search is off.
+
 ## 0.1.0-dev.6 — 2026-09-29 (change history, guides; 0.1.0 ready for testing) — NOT YET TESTED BY WALTER
 
 **Intent:** make the audit trail readable (AT-18), and give Walter what

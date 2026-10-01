@@ -1,7 +1,10 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { eventFields } from "@structura/domain";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { DATE_FIELDS, eventFields, pastDateIssues, todayIn, type DateField as DateFieldName } from "@structura/domain";
 import { ApiError, api, newCommand, send, type Command, type EventRecord, type Me, type Member } from "../api.js";
 import { errorKey, hasKey, useT, type TextKey } from "../i18n.js";
+import { DateField } from "../components/DateField.js";
+import { LocationPicker, type MapPoint } from "../components/LocationPicker.js";
+import { TimezoneSelect } from "../components/TimezoneSelect.js";
 import { go } from "../router.js";
 import { AuditPanel } from "./AuditPanel.js";
 import { EventLines } from "./EventLines.js";
@@ -12,6 +15,8 @@ interface FormState {
   responsibleUserId: string;
   timezone: string;
   location: string;
+  locationLat: number | null;
+  locationLng: number | null;
   eventDate: string;
   departureDate: string;
   expectedReturnDate: string;
@@ -24,6 +29,8 @@ const blank = (me: Me): FormState => ({
   responsibleUserId: me.user.id,
   timezone: me.tenant.defaultTimezone,
   location: "",
+  locationLat: null,
+  locationLng: null,
   eventDate: "",
   departureDate: "",
   expectedReturnDate: "",
@@ -36,6 +43,8 @@ const fromRecord = (e: EventRecord): FormState => ({
   responsibleUserId: e.responsibleUserId,
   timezone: e.timezone,
   location: e.location ?? "",
+  locationLat: e.locationLat,
+  locationLng: e.locationLng,
   eventDate: e.eventDate ?? "",
   departureDate: e.departureDate ?? "",
   expectedReturnDate: e.expectedReturnDate ?? "",
@@ -51,28 +60,41 @@ const toPayload = (f: FormState) => ({
   notes: f.notes || null,
 });
 
-const DATE_FIELDS = ["eventDate", "departureDate", "expectedReturnDate"];
+const REASON_KEYS: Record<string, TextKey> = {
+  return_before_departure: "err.field.expectedReturnDate",
+  event_outside_rental: "err.field.eventOutside",
+  past: "err.field.past",
+};
 
-// One localized message per field, from the same rules the server applies.
-function fieldErrors(f: FormState): Record<string, TextKey> {
-  const parsed = eventFields.safeParse(toPayload(f));
-  if (parsed.success) return {};
+// One localized message per field, from the same rules the server applies
+// (timeline order, and DEC-019/020: event date and return not in the past;
+// only dates being entered or changed are checked).
+function fieldErrors(f: FormState, before: EventRecord | null): Record<string, TextKey> {
   const out: Record<string, TextKey> = {};
-  for (const issue of parsed.error.issues) {
-    const field = String(issue.path[0] ?? "");
-    if (out[field]) continue;
-    if (field === "expectedReturnDate" && issue.code === "custom") out[field] = "err.field.expectedReturnDate";
-    else if (DATE_FIELDS.includes(field)) out[field] = "err.field.date";
-    else if (hasKey(`err.field.${field}`)) out[field] = `err.field.${field}` as TextKey;
+  const payload = toPayload(f);
+  // Past dates first: every problem shows at once, not one per save.
+  const isDate = (v: string | null) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
+  const dates = { eventDate: isDate(payload.eventDate), departureDate: isDate(payload.departureDate), expectedReturnDate: isDate(payload.expectedReturnDate) };
+  const changed: DateFieldName[] =
+    before && before.timezone === f.timezone ? DATE_FIELDS.filter((d) => dates[d] !== before[d]) : [...DATE_FIELDS];
+  try {
+    for (const issue of pastDateIssues(dates, todayIn(f.timezone), changed)) out[issue.field] = "err.field.past";
+  } catch {
+    /* unknown timezone: reported below */
+  }
+  const parsed = eventFields.safeParse(payload);
+  if (!parsed.success) {
+    for (const issue of parsed.error.issues) {
+      const field = String(issue.path[0] ?? "");
+      if (out[field]) continue;
+      const reason = issue.code === "custom" ? (issue.params as { reason?: string } | undefined)?.reason : undefined;
+      if (reason && REASON_KEYS[reason]) out[field] = REASON_KEYS[reason];
+      else if ((DATE_FIELDS as readonly string[]).includes(field)) out[field] = "err.field.date";
+      else if (hasKey(`err.field.${field}`)) out[field] = `err.field.${field}` as TextKey;
+      else out[field] = "err.validation";
+    }
   }
   return out;
-}
-
-let timezones: string[] = [];
-try {
-  timezones = (Intl as unknown as { supportedValuesOf(k: string): string[] }).supportedValuesOf("timeZone");
-} catch {
-  /* older browser: free text still works */
 }
 
 export function EventForm({ me, eventId }: { me: Me; eventId?: string }) {
@@ -84,6 +106,8 @@ export function EventForm({ me, eventId }: { me: Me; eventId?: string }) {
   const [members, setMembers] = useState<Member[]>([]);
   const [touched, setTouched] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // A field the server refused (e.g. a date that became past meanwhile).
+  const [serverField, setServerField] = useState<{ field: string; key: TextKey } | null>(null);
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
   // The same attempt keeps its command ID across retries (spec 11.2).
@@ -110,16 +134,28 @@ export function EventForm({ me, eventId }: { me: Me; eventId?: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId]);
 
-  const errors = useMemo(() => (touched ? fieldErrors(form) : {}), [form, touched]);
-  const set = (k: keyof FormState) => (e: { target: { value: string } }) => {
+  const errors = useMemo(() => {
+    const local = touched ? fieldErrors(form, record) : {};
+    return serverField && !local[serverField.field] ? { ...local, [serverField.field]: serverField.key } : local;
+  }, [form, touched, record, serverField]);
+  // Any change clears the old messages; the field checks run again live (D-004).
+  const setValue = (k: keyof FormState, v: string) => {
     setSaved(false);
-    setForm((f) => ({ ...f, [k]: e.target.value }));
+    setError(null);
+    setServerField(null);
+    setForm((f) => ({ ...f, [k]: v }));
   };
+  const set = (k: keyof FormState) => (e: { target: { value: string } }) => setValue(k, e.target.value);
+  const onPoint = useCallback((p: MapPoint) => {
+    setSaved(false);
+    setError(null);
+    setForm((f) => ({ ...f, location: p.name, locationLat: p.lat, locationLng: p.lng }));
+  }, []);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     setTouched(true);
-    if (Object.keys(fieldErrors(form)).length) {
+    if (Object.keys(fieldErrors(form, record)).length) {
       setError(t("err.validation"));
       return;
     }
@@ -147,7 +183,10 @@ export function EventForm({ me, eventId }: { me: Me; eventId?: string }) {
       // Input stays on screen for every failure (spec 2.3).
       const kind = err instanceof ApiError ? err.kind : "internal";
       if (kind !== "unreachable") pending.current = null;
-      setError(t(errorKey(kind)));
+      const field = err instanceof ApiError && typeof err.details?.field === "string" ? err.details.field : null;
+      const reason = err instanceof ApiError ? (err.details?.reason as string | undefined) : undefined;
+      if (field && reason && REASON_KEYS[reason]) setServerField({ field, key: REASON_KEYS[reason] });
+      setError(t(kind === "validation" ? "err.validation" : errorKey(kind)));
     } finally {
       setBusy(false);
     }
@@ -220,26 +259,37 @@ export function EventForm({ me, eventId }: { me: Me; eventId?: string }) {
         {field(
           "timezone",
           "event.timezone",
-          <>
-            <input list="tz-list" value={form.timezone} onChange={set("timezone")} disabled={readOnly} />
-            <datalist id="tz-list">
-              {timezones.map((z) => (
-                <option key={z} value={z} />
-              ))}
-            </datalist>
-          </>
+          <TimezoneSelect
+            label={t("event.timezone")}
+            value={form.timezone}
+            onChange={(v) => setValue("timezone", v)}
+            disabled={readOnly}
+            preferred={[me.tenant.defaultTimezone]}
+          />
         )}
-        {field("location", "event.location", <input value={form.location} onChange={set("location")} disabled={readOnly} />)}
-        {field("eventDate", "event.eventDate", <input type="date" value={form.eventDate} onChange={set("eventDate")} disabled={readOnly} />)}
+        <div className="wide">
+          <span className="label">{t("event.location")}</span>
+          <LocationPicker
+            value={{ name: form.location, lat: form.locationLat, lng: form.locationLng }}
+            onChange={onPoint}
+            disabled={readOnly}
+          />
+        </div>
+        {/* Timeline order: stock leaves, the event happens, stock comes back. */}
         {field(
           "departureDate",
           "event.departureDate",
-          <input type="date" value={form.departureDate} onChange={set("departureDate")} disabled={readOnly} />
+          <DateField label={t("event.departureDate")} value={form.departureDate} onChange={(v) => setValue("departureDate", v)} disabled={readOnly} />
+        )}
+        {field(
+          "eventDate",
+          "event.eventDate",
+          <DateField label={t("event.eventDate")} value={form.eventDate} onChange={(v) => setValue("eventDate", v)} disabled={readOnly} />
         )}
         {field(
           "expectedReturnDate",
           "event.expectedReturnDate",
-          <input type="date" value={form.expectedReturnDate} onChange={set("expectedReturnDate")} disabled={readOnly} />
+          <DateField label={t("event.expectedReturnDate")} value={form.expectedReturnDate} onChange={(v) => setValue("expectedReturnDate", v)} disabled={readOnly} />
         )}
         <label className="wide">
           <span>{t("event.notes")}</span>

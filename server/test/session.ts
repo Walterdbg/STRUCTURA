@@ -3,7 +3,7 @@ import { uuidv7 } from "@structura/domain";
 import { buildApp } from "../src/app.js";
 import type { Db } from "../src/db.js";
 import { bootstrapTenant } from "../src/identity/service.js";
-import { freshDb, testConfig } from "./helpers.js";
+import { TEST_NOW, freshDb, testConfig } from "./helpers.js";
 
 // Synthetic test accounts only (spec 19.2 fixtures).
 export const TEST_PASSWORD = "test-password-123";
@@ -18,15 +18,21 @@ export interface TestTenant {
 export interface TestWorld {
   db: Db;
   app: FastifyInstance;
+  // Moves the server's clock (default TEST_NOW).
+  setNow?(d: Date): void;
   close(): Promise<void>;
 }
 
 export async function world(): Promise<TestWorld> {
   const db = await freshDb();
-  const app = await buildApp({ db, config: testConfig(), logger: false });
+  let clock = TEST_NOW;
+  const app = await buildApp({ db, config: testConfig({ now: () => clock }), logger: false });
   return {
     db,
     app,
+    setNow: (d: Date) => {
+      clock = d;
+    },
     close: async () => {
       await app.close();
       await db.close();

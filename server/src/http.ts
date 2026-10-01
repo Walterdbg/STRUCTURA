@@ -14,11 +14,12 @@ export function commandRequest<S extends z.ZodTypeAny>(
   req: FastifyRequest,
   capability: Capability,
   payloadSchema: S,
-  deploymentId: string
+  deploymentId: string,
+  now: Date = new Date()
 ): { ctx: CommandContext; cmd: ParsedCommand<z.infer<S>> } {
   const auth = requireCapability(req, capability);
   const cmd = parseCommand(payloadSchema, req.body);
-  return { ctx: { tenantId: auth.tenantId, actorId: auth.userId, deploymentId }, cmd };
+  return { ctx: { tenantId: auth.tenantId, actorId: auth.userId, deploymentId, now }, cmd };
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

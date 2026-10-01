@@ -9,6 +9,7 @@ import { SESSION_COOKIE, loadSession } from "./auth.js";
 import type { Config } from "./config.js";
 import type { Db } from "./db.js";
 import { eventRoutes } from "./events/routes.js";
+import { geoRoutes } from "./geo.js";
 import { identityRoutes } from "./identity/routes.js";
 import { inventoryRoutes } from "./inventory/routes.js";
 import { filesystemStore, type FileStore } from "./storage.js";
@@ -66,6 +67,7 @@ export async function buildApp({ db, config, logger = true, store }: AppOptions)
   eventRoutes(app, db, config);
   inventoryRoutes(app, db, config, files);
   auditRoutes(app, db);
+  geoRoutes(app, config);
 
   app.get("/api/health", async (_req, reply) => {
     let database: "ok" | "unavailable" = "ok";

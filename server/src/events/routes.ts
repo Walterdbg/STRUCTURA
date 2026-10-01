@@ -21,38 +21,38 @@ export function eventRoutes(app: FastifyInstance, db: Db, config: Config): void 
   });
 
   app.post("/api/events", async (req, reply) => {
-    const { ctx, cmd } = commandRequest(req, "event.manage", eventFields, config.deploymentId);
+    const { ctx, cmd } = commandRequest(req, "event.manage", eventFields, config.deploymentId, config.now());
     const res = await createEvent(db, ctx, cmd);
     return reply.status(res.replayed ? 200 : 201).send(res);
   });
 
   app.put("/api/events/:id", async (req) => {
     const id = idParam(req);
-    const { ctx, cmd } = commandRequest(req, "event.manage", eventFields, config.deploymentId);
+    const { ctx, cmd } = commandRequest(req, "event.manage", eventFields, config.deploymentId, config.now());
     return updateEvent(db, ctx, id, cmd);
   });
 
   // Products the Event asks for, each with its availability check.
   app.get("/api/events/:id/lines", async (req) => {
     const auth = requireAuth(req);
-    return { items: await getEventLines(db, auth.tenantId, idParam(req)) };
+    return { items: await getEventLines(db, auth.tenantId, idParam(req), config.now()) };
   });
 
   app.put("/api/events/:id/lines", async (req) => {
     const id = idParam(req);
-    const { ctx, cmd } = commandRequest(req, "event.manage", eventLinesFields, config.deploymentId);
+    const { ctx, cmd } = commandRequest(req, "event.manage", eventLinesFields, config.deploymentId, config.now());
     return setEventLines(db, ctx, id, cmd);
   });
 
   app.post("/api/events/:id/confirm", async (req) => {
     const id = idParam(req);
-    const { ctx, cmd } = commandRequest(req, "reservation.commit", eventActionFields, config.deploymentId);
+    const { ctx, cmd } = commandRequest(req, "reservation.commit", eventActionFields, config.deploymentId, config.now());
     return confirmEvent(db, ctx, id, cmd);
   });
 
   app.post("/api/events/:id/cancel", async (req) => {
     const id = idParam(req);
-    const { ctx, cmd } = commandRequest(req, "event.manage", eventActionFields, config.deploymentId);
+    const { ctx, cmd } = commandRequest(req, "event.manage", eventActionFields, config.deploymentId, config.now());
     return cancelEvent(db, ctx, id, cmd);
   });
 }

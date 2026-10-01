@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { DomainError } from "@structura/domain";
+import { DomainError, parseCommand } from "@structura/domain";
 import {
   SESSION_COOKIE,
   SESSION_HOURS,
@@ -10,12 +10,23 @@ import {
   recordFailure,
   requireAuth,
   revokeSession,
+  sessionHash,
   tooManyFailures,
   verifyPassword,
 } from "../auth.js";
 import type { Config } from "../config.js";
 import type { Db } from "../db.js";
-import { commandRequest } from "../http.js";
+import { commandRequest, idParam } from "../http.js";
+import {
+  changeMyPassword,
+  memberPasswordFields,
+  memberUpdateFields,
+  myAccountFields,
+  myPasswordFields,
+  resetMemberPassword,
+  updateMember,
+  updateMyAccount,
+} from "./account.js";
 import { addMember, listMembers, newMemberFields } from "./service.js";
 
 const loginBody = z.object({
@@ -117,5 +128,37 @@ export function identityRoutes(app: FastifyInstance, db: Db, config: Config): vo
     const { ctx, cmd } = commandRequest(req, "tenant.admin", newMemberFields, config.deploymentId);
     const res = await addMember(db, ctx, cmd);
     return reply.status(res.replayed ? 200 : 201).send(res);
+  });
+
+  // ---------------------------------------------------------------- my account (D-009)
+  // Any signed-in person may change their own name, language and password.
+  app.put("/api/me", async (req) => {
+    const auth = requireAuth(req);
+    const cmd = parseCommand(myAccountFields, req.body);
+    return updateMyAccount(db, { tenantId: auth.tenantId, actorId: auth.userId, deploymentId: config.deploymentId }, cmd);
+  });
+
+  app.post("/api/me/password", async (req) => {
+    const auth = requireAuth(req);
+    const cmd = parseCommand(myPasswordFields, req.body);
+    return changeMyPassword(
+      db,
+      { tenantId: auth.tenantId, actorId: auth.userId, deploymentId: config.deploymentId },
+      sessionHash(req.cookies[SESSION_COOKIE]),
+      cmd
+    );
+  });
+
+  // ---------------------------------------------------------------- administrator (D-009)
+  app.put("/api/members/:id", async (req) => {
+    const id = idParam(req);
+    const { ctx, cmd } = commandRequest(req, "tenant.admin", memberUpdateFields, config.deploymentId);
+    return updateMember(db, ctx, id, cmd);
+  });
+
+  app.post("/api/members/:id/password", async (req) => {
+    const id = idParam(req);
+    const { ctx, cmd } = commandRequest(req, "tenant.admin", memberPasswordFields, config.deploymentId);
+    return resetMemberPassword(db, ctx, id, cmd);
   });
 }

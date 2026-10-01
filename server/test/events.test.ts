@@ -93,6 +93,84 @@ describe("create Event (UC-13, AT-01)", () => {
   });
 });
 
+describe("timeline rules (DEC-019, DEC-020; today = 2026-09-30)", () => {
+  const issue = async (payload: Record<string, unknown>) => {
+    const res = await create({ ...base(), designation: "X", ...payload });
+    return { status: res.statusCode, details: res.json().details };
+  };
+
+  it("refuses an expected return in the past", async () => {
+    expect(await issue({ departureDate: "2026-08-06", expectedReturnDate: "2026-09-22" })).toMatchObject({
+      status: 400,
+      details: { field: "expectedReturnDate", reason: "past" },
+    });
+  });
+
+  it("refuses an event date in the past", async () => {
+    expect(await issue({ eventDate: "2026-09-29" })).toMatchObject({ status: 400, details: { field: "eventDate", reason: "past" } });
+  });
+
+  it("allows creating an Event a week into its rental period, if the event and the return are today or later", async () => {
+    const res = await create({ ...base(), designation: "Ya en curso", departureDate: "2026-09-23", eventDate: "2026-10-03", expectedReturnDate: "2026-10-05" });
+    expect(res.statusCode).toBe(201);
+  });
+
+  it("today itself is allowed", async () => {
+    const res = await create({ ...base(), designation: "Hoy", departureDate: "2026-09-30", eventDate: "2026-09-30", expectedReturnDate: "2026-09-30" });
+    expect(res.statusCode).toBe(201);
+  });
+
+  it("the event date must fall between departure and expected return", async () => {
+    const before = await create({ ...base(), designation: "X", eventDate: "2026-10-10", departureDate: "2026-10-12", expectedReturnDate: "2026-10-15" });
+    expect(before.statusCode).toBe(400);
+    expect(before.json().details.issues[0].path).toBe("payload.eventDate");
+    const after = await create({ ...base(), designation: "X", eventDate: "2026-10-20", departureDate: "2026-10-12", expectedReturnDate: "2026-10-15" });
+    expect(after.statusCode).toBe(400);
+    expect(after.json().details.issues[0].path).toBe("payload.eventDate");
+  });
+
+  it("an Event whose dates have passed can still be edited without touching its dates", async () => {
+    const ev = (await create({ ...base(), designation: "Octubre", departureDate: "2026-10-01", eventDate: "2026-10-02", expectedReturnDate: "2026-10-03" })).json().result;
+    w.setNow!(new Date("2026-11-15T17:00:00Z"));
+    const edit = (patch: Record<string, unknown>, expectedVersion: number) =>
+      w.app.inject({
+        method: "PUT",
+        url: `/api/events/${ev.id}`,
+        headers: { cookie: t.cookie },
+        payload: command(
+          { ...base(), designation: "Octubre", departureDate: "2026-10-01", eventDate: "2026-10-02", expectedReturnDate: "2026-10-03", ...patch },
+          { expectedVersion }
+        ),
+      });
+    expect((await edit({ notes: "Factura pendiente" }, 1)).statusCode).toBe(200);
+    // Moving the return to another past day is refused.
+    const moved = await edit({ expectedReturnDate: "2026-10-04" }, 2);
+    expect(moved.statusCode).toBe(400);
+    expect(moved.json().details).toMatchObject({ field: "expectedReturnDate", reason: "past" });
+  });
+});
+
+describe("location as a map point", () => {
+  it("saves the place name and its coordinates", async () => {
+    const res = await create({ ...base(), designation: "Triatlón", location: "Playa Coronado", locationLat: 8.528194, locationLng: -79.889631 });
+    expect(res.statusCode).toBe(201);
+    expect(res.json().result).toMatchObject({ location: "Playa Coronado", locationLat: 8.528194, locationLng: -79.889631 });
+  });
+
+  it("refuses half a point or coordinates off the globe", async () => {
+    expect((await create({ ...base(), designation: "X", locationLat: 8.5 })).statusCode).toBe(400);
+    expect((await create({ ...base(), designation: "X", locationLat: 95, locationLng: 10 })).statusCode).toBe(400);
+  });
+
+  it("place search is off by default and says so; the map point still works", async () => {
+    const status = await w.app.inject({ method: "GET", url: "/api/geo/status", headers: { cookie: t.cookie } });
+    expect(status.json()).toEqual({ search: false, provider: "none" });
+    const search = await w.app.inject({ method: "GET", url: "/api/geo/search?q=Coronado", headers: { cookie: t.cookie } });
+    expect(search.statusCode).toBe(502);
+    expect(search.json().details.reason).toBe("not_configured");
+  });
+});
+
 describe("edit Event", () => {
   it("updates with the current version and refuses a stale one", async () => {
     const ev = (await create({ ...base(), designation: "Provisional" })).json().result;
