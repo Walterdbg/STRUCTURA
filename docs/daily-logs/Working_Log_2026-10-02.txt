@@ -197,7 +197,7 @@ Roadmap update required: YES (done)
 DOCUMENT REGISTER
 =================
 
-docs/daily-logs/Working_Log_2026-10-02.txt | Daily working log | SUPPORTING | 001-007 | RETAIN
+docs/daily-logs/Working_Log_2026-10-02.txt | Daily working log | SUPPORTING | 001-007 | RETAIN (closed)
 
 
 DEPLOYMENT / BUILD RECORD
@@ -214,4 +214,9 @@ Rollback required: NO
 END-OF-DAY RECONCILIATION
 =========================
 
-Ended at: (open)
+Ended at: 2026-10-02 (Walter: "thank you. close the day")
+End build: 0.1.0-dev.36 running on Walter's PC (http://127.0.0.1:8095); roadmap v1.40.0; all work committed and pushed.
+Built today: dev.31 My location button (DEC-042); dev.32 Reset view, maps open on current location, full-screen controls (DEC-043, D-022); dev.33 Clear session, course player, pictures on Event points (DEC-044), inventory requirements recorded (P-026); dev.34 3D replay (DEC-045), player/Event map in full screen (D-023); dev.35 runner km/mi label, blank 3D map (D-024, D-025); dev.36 3D replay froze at Play (D-026).
+Walter's test results today: player tested (found D-023, D-024); 3D replay tested (found D-025, D-026). The 3D map now draws (seen in Walter's screenshot on dev.35); the dev.36 fix for Play not yet tested.
+Process note: one Docker rebuild ran still labelled 0.1.0-dev.34 (bump script blocked in the bash shell), replaced by dev.35 within minutes - bump.ps1 is run from PowerShell only.
+Open for next session: Walter's tests T-016..T-025 (first T-025: does the 3D replay move on dev.36; if not, a Console screenshot); P-026 waits for inventory phase 1 and Walter's inventory information (review the spec v1.3 reservations with him); P-024 support user (proposal waiting); P-023 remainder (Google delivery paths, 30 days); P-025 Terms clause + disclaimer for a lawyer; P-018 Google trial upgrade before 2026-12-31; P-011 server when we move (production OpenTopoData; OpenFreeMap self-hosted for the 3D replay).

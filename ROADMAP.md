@@ -295,7 +295,7 @@ not an approved schedule.
 
 | Environment | Current build | Deployment date | Verification | Status |
 | --- | --- | --- | --- | --- |
-| Development | `0.1.0-dev.36` | 2026-10-01 | 136/136 server tests; ArcGIS live check (all three layers; key not in logs); browser check | Running on Walter's PC (http://127.0.0.1:8095), waiting for Walter's tests | Running on Walter's PC (http://127.0.0.1:8095), waiting for Walter's tests |
+| Development | `0.1.0-dev.36` | 2026-10-02 | 142/142 server tests (dev.33); type check and build; Docker health; browser checks limited (pane hidden) | Running on Walter's PC (http://127.0.0.1:8095), waiting for Walter's tests (T-016..T-025) |
 | Test | None | — | — | Not started |
 | Production | None | — | — | Not started |
 
@@ -303,7 +303,7 @@ not an approved schedule.
 
 | Document | Purpose | Classification | Related item | Status |
 | --- | --- | --- | --- | --- |
-| `docs/daily-logs/Working_Log_2026-10-02.txt` | Daily working log | SUPPORTING | 2026-10-02 | CURRENT |
+| `docs/daily-logs/Working_Log_2026-10-02.txt` | Daily working log | SUPPORTING | 2026-10-02 | CLOSED |
 | `docs/daily-logs/Working_Log_2026-10-01.txt` | Daily working log | SUPPORTING | 2026-10-01 | CLOSED |
 | `docs/STRUCTURA_Documentation_Package/STRUCTURA_Implementation_Specification.md` | Specification v1.3 | AUTHORITATIVE | DEC-001 | CURRENT |
 | `docs/STRUCTURA_Documentation_Package/STRUCTURA_Use_Cases/` (README, INTEGRATION_CONTRACT, UC-01–25) | Use cases and shared contract | AUTHORITATIVE | DEC-001 | CURRENT |
@@ -325,6 +325,14 @@ not an approved schedule.
 | July 2026 WordPress proposal; older Odoo/Excel platform approaches | Excluded by the spec (section 1.2, 23) as superseded platform choices | 2026-09-29 | REJECTED |
 
 ## Daily Update Summary
+
+### 2026-10-02
+
+- Built (Claude's checks passed; NOT yet tested by Walter unless stated): dev.31 My location (DEC-042); dev.32 Reset view and current location by default (DEC-043, D-022); dev.33 Clear session, course player, pictures on Event points of interest (DEC-044); dev.34 3D replay (DEC-045, D-023); dev.35-36 fixes from Walter's tests (D-024, D-025, D-026).
+- Walter tested: the player (D-023, D-024 found) and the 3D replay (D-025, D-026 found; the map draws on dev.35).
+- Recorded, not built: P-026 map-driven inventory requirements (waits for inventory phase 1).
+- Next: T-025 on dev.36 first; then T-016..T-024.
+- (2026-09-30 and 2026-10-01 are summarized in their working logs.)
 
 ### 2026-09-29
 
