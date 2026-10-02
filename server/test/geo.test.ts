@@ -34,6 +34,10 @@ function fakeGoogle() {
     if (url.includes("/tile/v1/viewport")) return json({ copyright: "Map data ©2026 Google" });
     if (url.includes("computeRoutes") && String(init?.body).includes("TWO_WHEELER") && String(init?.body).includes("-79.9")) return json({});
     if (url.includes("computeRoutes")) return json({ routes: [{ distanceMeters: 1234, polyline: { encodedPolyline: encodePolyline([[-79.5, 9.0], [-79.505, 9.002], [-79.51, 9.004]]) } }] });
+    if (url.includes("opentopodata")) {
+      const locs = decodeURIComponent(url.split("locations=")[1]!).split("|");
+      return json({ status: "OK", results: locs.map((_, i) => ({ elevation: 100 + i, dataset: "ned10m" })) });
+    }
     if (url.includes("elevation/json")) {
       const enc = decodeURIComponent(url.split("locations=enc:")[1]!.split("&")[0]!);
       return json({ status: "OK", results: decodePolyline(enc).map((_, i) => ({ elevation: 10 + i })) });
@@ -52,7 +56,7 @@ afterEach(async () => {
 
 async function setup(googleMapsKey: string | null, features: string[] = ["courses"], arcgisKey: string | null = null) {
   const db = await freshDb();
-  const app = await buildApp({ db, config: testConfig({ googleMapsKey, arcgisKey }), logger: false });
+  const app = await buildApp({ db, config: testConfig({ googleMapsKey, arcgisKey, elevationDelayMs: 0 }), logger: false });
   w = { db, app, close: async () => (await app.close(), await db.close()) };
   const { tenantId } = await bootstrapTenant(db, { tenantName: "Geo", timezone: "America/Panama", adminEmail: "geo@example.test", adminName: "Geo", adminPassword: TEST_PASSWORD });
   await db.query("UPDATE tenants SET features = $2 WHERE id = $1", [tenantId, features]);
@@ -150,17 +154,24 @@ describe("map services through our server, with Google (DEC-026)", () => {
     }
   });
 
-  it("adds heights to a drawn course in batches; needs the courses add-on", async () => {
-    const { fake } = fakeGoogle();
+  it("adds native heights (open public data) that may be stored; long lines are sampled and filled in (DEC-040)", async () => {
+    const { fake, calls } = fakeGoogle();
     vi.stubGlobal("fetch", fake);
     const { app, cookie } = await setup("test-key");
-    const coords = Array.from({ length: 300 }, (_, i) => [-79.5 + i * 0.0001, 9.0]);
+    const coords = Array.from({ length: 900 }, (_, i) => [-79.5 + i * 0.0001, 9.0]);
     const res = await app.inject({ method: "POST", url: "/api/geo/elevation", headers: { cookie }, payload: { coordinates: coords } });
     expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ source: "native", storable: true });
     const out = res.json().coordinates as number[][];
-    expect(out).toHaveLength(300);
-    expect(out[0]![2]).toBe(10);
-    expect(out[256]![2]).toBe(10); // second batch starts again
+    expect(out).toHaveLength(900);
+    expect(out.every((c) => c.length === 3)).toBe(true);
+    const asked = calls.filter((c) => c.url.includes("opentopodata"));
+    expect(asked).toHaveLength(3); // 300 samples, 100 per request
+    expect(asked[0]!.url).toContain("/v1/ned10m,srtm30m?locations=");
+    expect(calls.some((c) => c.url.includes("elevation/json"))).toBe(false); // Google not used
+    expect(out[0]![2]).toBe(100);
+    expect(out[1]![2]).toBeGreaterThan(100); // between two samples
+    expect(out[1]![2]).toBeLessThan(101);
   });
 
   it("refuses elevation without the add-on", async () => {
@@ -175,7 +186,7 @@ describe("without a Google key: OpenStreetMap fallback", () => {
   it("reports OpenStreetMap pictures and no routing; routing says it needs the key", async () => {
     const { app, cookie } = await setup(null);
     const st = await app.inject({ method: "GET", url: "/api/geo/status", headers: { cookie } });
-    expect(st.json()).toMatchObject({ tiles: "osm", satellite: false, routing: false, elevation: false });
+    expect(st.json()).toMatchObject({ tiles: "osm", satellite: false, routing: false, elevation: true }); // native heights need no Google key
     const r = await app.inject({ method: "POST", url: "/api/geo/route", headers: { cookie }, payload: { mode: "walk", waypoints: [[-79.5, 9], [-79.51, 9]] } });
     expect(r.statusCode).toBe(502);
     expect(r.json().details.reason).toBe("not_configured");

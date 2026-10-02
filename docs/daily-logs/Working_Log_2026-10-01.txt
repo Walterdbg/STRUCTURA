@@ -275,6 +275,23 @@ Roadmap section: Approved Decisions (DEC-039), Pending (P-023..P-025), Build sta
 
 ---
 
+[016]
+Time: 2026-10-01, night
+Area / feature: 0.1.0-dev.27 to dev.30 - native heights (DEC-040), compact lists (DEC-041), P-025 corrected
+Request or objective: Walter pushed back on over-caution ("fix what GPX with the data exist, be careful not to be overly cautious"); "NO!! I didn't say that" to copying courses between organizations (P-025); "we will store our created courses with the data in the GPX, ok?"; stopped my plan to strip the 6 courses' Google heights; "transform google fetched elevation to native"; "you know of compact views?"; "YES" to open public elevation data.
+Action taken: Corrected P-025 (copies stay in our database; never shown to other organizations). dev.27: Google heights shown, not stored. dev.28: compact foldable lists. dev.29: native heights via OpenTopoData (ned10m US, srtm30m elsewhere; 300 samples max, interpolation), storable flag; screens store native heights; the 6 courses re-saved with native heights. dev.30: global queue spacing elevation requests (public limit 1/s). Explained to Walter that relabelling Google heights as our own isn't allowed by Google's terms; open data is the legitimate way.
+Files created: None
+Files modified: server/src/config.ts, server/src/geo.ts, server/test/geo.test.ts, docker-compose.yml, .env.example, web/src/pages/RepositoryPage.tsx, EventMap.tsx, CourseSheet.tsx, web/src/i18n.ts, web/src/styles.css, package files (0.1.0-dev.27..30), CHANGELOG.md, ROADMAP.md (v1.34.0), docs/INSTALL.md
+Decision made: DEC-040, DEC-041 (Walter)
+Verification performed: 138/138 server tests; live OpenTopoData: Newark 4.4 m, Panama City 13 m; 6/6 courses with native heights (one retried after the public rate limit); compact list rows 26 px, fold/unfold works. Docker dev.30 health OK.
+Result: PASS for Claude's checks; NOT TESTED by Walter
+Observed issue: the public elevation service refuses more than one request a second (fixed with the queue in dev.30)
+Follow-up required: production OpenTopoData on our server when we move (P-011); delivery paths from Google 30-day rule (P-023 remainder)
+Roadmap update required: YES (done: v1.34.0)
+Roadmap section: Approved Decisions (DEC-040, DEC-041), Pending (P-023 part resolved, P-025 corrected), Build status
+
+---
+
 
 DEFECTS DISCOVERED TODAY
 ========================

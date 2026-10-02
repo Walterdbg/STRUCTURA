@@ -41,6 +41,16 @@ export function CourseSheet({ eventId, courseId }: { eventId: string; courseId: 
 
   const course = items?.find((f) => f.id === courseId && f.category === "course");
   const coords = (course?.geometry.coordinates as number[][] | undefined) ?? [];
+  // Heights for the chart only, when the line has none of its own (P-023).
+  const [liveCoords, setLiveCoords] = useState<number[][] | null>(null);
+  useEffect(() => {
+    if (coords.length < 2 || coords.every((x) => x.length > 2)) return;
+    void fetch("/api/geo/elevation", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ coordinates: coords.map((x) => [x[0], x[1]]) }) })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body) => body && setLiveCoords(body.coordinates as number[][]))
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [course?.id, items]);
 
   // Stations: points placed on this course, plus points right next to it.
   const stations = (items ?? [])
@@ -90,7 +100,7 @@ export function CourseSheet({ eventId, courseId }: { eventId: string; courseId: 
 
   const onePass = course.lengthMeters ?? 0;
   const total = courseTotal(onePass, course.props ?? {});
-  const profile = elevationProfile(coords);
+  const profile = elevationProfile(coords.every((x) => x.length > 2) ? coords : (liveCoords ?? coords));
   const dateText = event.eventDate ? new Date(`${event.eventDate}T12:00:00`).toLocaleDateString(locale === "es" ? "es-PA" : "en-US", { dateStyle: "long" }) : "";
 
   return (

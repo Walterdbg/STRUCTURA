@@ -43,6 +43,8 @@ type Draft = {
   geometry: MapFeature["geometry"];
   source: string | null;
   props: FeatureProps;
+  // Heights fetched from Google for the chart only: shown, never saved (P-023).
+  liveHeights?: boolean;
 };
 
 export const ICON: Record<string, string> = {
@@ -217,6 +219,7 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
       if (d.geometry.type !== "LineString") return d;
       let coords = d.geometry.coordinates as number[][];
       const props = d.props;
+      let storable = false;
       const st = statusRef.current;
       if (coords.length >= 2 && d.category === "course" && hasCourses && st?.elevation && !coords.every((c) => c.length > 2)) {
         setBusy("map.gettingElevation");
@@ -230,12 +233,15 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
           const body = await res.json();
           if (!res.ok) throw new Error(body?.message);
           coords = body.coordinates as number[][];
+          // Native heights (DEC-040) are saved with the course; Google's only shown.
+          storable = Boolean(body.storable);
         } catch {
           setError("map.elevationFailed");
         }
       }
       setBusy(null);
-      return { ...d, props, geometry: { type: "LineString" as const, coordinates: coords } };
+      const fetched = coords.every((c) => c.length > 2) && !(d.geometry.coordinates as number[][]).every((c) => c.length > 2);
+      return { ...d, props, geometry: { type: "LineString" as const, coordinates: coords }, liveHeights: fetched ? !storable : d.liveHeights };
     },
     [hasCourses]
   );
@@ -288,6 +294,18 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
     if (active) m.scrollWheelZoom.enable();
     else if (!document.fullscreenElement) m.scrollWheelZoom.disable();
   }, [drawing, editingShape]);
+
+  // A saved course without heights of its own shows its chart with heights
+  // fetched for display (never saved).
+  useEffect(() => {
+    const d = draftRef.current;
+    if (!d?.id || drawing || d.category !== "course" || d.geometry.type !== "LineString") return;
+    if ((d.geometry.coordinates as number[][]).every((c) => c.length > 2) || !statusRef.current?.elevation) return;
+    void snapAndElevate(d, { snap: false }).then((x) => {
+      setDraft((cur) => (cur && cur.id === d.id ? { ...cur, geometry: x.geometry, liveHeights: x.liveHeights } : cur));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft?.id, drawing]);
 
   // A route whose type changes keeps only the tools that type offers.
   useEffect(() => {
@@ -490,7 +508,7 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
     if (coords.length >= 2) {
       showPreview(coords, next.category);
       const withHeights = await snapAndElevate(next, { snap: false });
-      setDraft((cur) => (cur && cur.id === next.id ? { ...cur, geometry: withHeights.geometry } : cur));
+      setDraft((cur) => (cur && cur.id === next.id ? { ...cur, geometry: withHeights.geometry, liveHeights: withHeights.liveHeights } : cur));
       showPreview(withHeights.geometry.coordinates as number[][], next.category);
     }
   }
@@ -577,9 +595,10 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
       setError("map.needTwoPoints");
       return;
     }
-    // A course keeps its heights: pieces changed since the last fetch get them now.
-    if (geometry.type === "LineString" && draft.category === "course" && !(geometry.coordinates as number[][]).every((c) => c.length > 2)) {
-      geometry = (await snapAndElevate({ ...draft, geometry }, { snap: false })).geometry;
+    // Heights fetched from Google are only for the chart; the saved line
+    // keeps only its own data (Google terms, P-023).
+    if (draft.liveHeights && geometry.type === "LineString") {
+      geometry = { type: "LineString", coordinates: (geometry.coordinates as number[][]).map((c) => [c[0]!, c[1]!]) };
     }
     if (!(draft.kind === "route" && draft.category === "course")) {
       delete props.laps;
@@ -977,7 +996,7 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
                   // (Walter, 2026-10-01: no Save + "Fit to streets" needed).
                   if (d.category === "course" && d.geometry.type === "LineString") {
                     void snapAndElevate(d, { snap: false }).then((x) => {
-                      setDraft((cur) => (cur && cur.category === "course" ? { ...cur, geometry: x.geometry } : cur));
+                      setDraft((cur) => (cur && cur.category === "course" ? { ...cur, geometry: x.geometry, liveHeights: x.liveHeights } : cur));
                       if (!editingShape) showPreview(x.geometry.coordinates as number[][], x.category);
                     });
                   }

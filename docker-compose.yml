@@ -30,6 +30,8 @@ services:
       GEOCODER: ${GEOCODER:-none}
       GOOGLE_MAPS_KEY: ${GOOGLE_MAPS_KEY:-}
       ARCGIS_KEY: ${ARCGIS_KEY:-}
+      ELEVATION: ${ELEVATION:-native}
+      ELEVATION_URL: ${ELEVATION_URL:-}
     volumes:
       - structura-files:/data/files
     ports:

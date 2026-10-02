@@ -87,6 +87,14 @@ Mapas and the course sheet also offer **ArcGIS Topo, Streets and Imagery**. The 
 Location Platform API key (free account at location.arcgis.com) with only the **Static basemap
 tiles** privilege and no referrers; it stays on the server. Without it, those layers are hidden.
 
+## Heights for courses (DEC-040)
+
+Courses without heights of their own get **native heights** from open public elevation data
+(USGS 3DEP in the US, SRTM elsewhere), stored in the course and its GPX. By default STRUCTURA asks
+the free public OpenTopoData service (fine for testing, one request a second). In production, run
+OpenTopoData on our own server with the elevation files for our regions and set
+`ELEVATION_URL=http://our-server:5000/v1` in `.env`. `ELEVATION=none` switches heights off.
+
 ## Platform administrator (DEC-039)
 
 The platform administrator sees the **🌐 Platform** section (every organization's course library,

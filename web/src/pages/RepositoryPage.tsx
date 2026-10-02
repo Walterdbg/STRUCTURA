@@ -8,7 +8,7 @@ import { guessPointCategory, parseGpx } from "../components/gpx.js";
 import { MapSearch } from "../components/MapSearch.js";
 import { addDirectionArrows } from "../components/arrows.js";
 import { RouteEditor, anchorIndexes, joinSegments, shapeFromLine, type RouteShape, type SegMode } from "../components/routeEditor.js";
-import { MARKER_STEPS, METERS, fmtDist, markerLabel, useMarkerStep, useShowMarkers, useUnit, type Unit } from "../components/units.js";
+import { MARKER_STEPS, METERS, fmtDist, markerLabel, useMarkerStep, useShowMarkers, usePref, useUnit, type Unit } from "../components/units.js";
 import { describeFailure } from "../forms.js";
 import { LocaleContext, useT, type TextKey } from "../i18n.js";
 import { go } from "../router.js";
@@ -69,6 +69,8 @@ export function RepositoryList({ canEdit, features, platform = false }: { canEdi
   const hasCourses = features.includes("courses");
   const [uploading, setUploading] = useState(false);
   const [typeFilter, setTypeFilter] = useState("");
+  // Compact list (Walter, 2026-10-01): groups fold and unfold; remembered.
+  const [folded, setFolded] = usePref<string[]>(platform ? "structura.platformFolded" : "structura.repoFolded", [], (v) => Array.isArray(v));
 
   // Upload a GPX straight into the repository (version 1) and open it. Only
   // the line and its place are loaded: it starts as a plain route and its
@@ -142,7 +144,20 @@ export function RepositoryList({ canEdit, features, platform = false }: { canEdi
       {items && items.length === 0 && <p className="muted">{search ? t("common.noResults") : t("repo.empty")}</p>}
       {items && items.length > 0 && (
         <div className="table-wrap">
-          <table>
+          {(() => {
+            const all = [...new Set(items.map(whereOf))];
+            return (
+              <div className="row compact-tools">
+                <button type="button" onClick={() => setFolded(all)}>
+                  ▸ {t("repo.foldAll")}
+                </button>
+                <button type="button" onClick={() => setFolded([])}>
+                  ▾ {t("repo.unfoldAll")}
+                </button>
+              </div>
+            );
+          })()}
+          <table className="compact">
             <thead>
               <tr>
                 <th>{t("map.label")}</th>
@@ -157,17 +172,23 @@ export function RepositoryList({ canEdit, features, platform = false }: { canEdi
               {items
                 .filter((r) => !typeFilter || r.category === typeFilter)
                 .flatMap((r, i, list) => {
-                  // A heading row when the general location changes (country > area > place).
-                  const where = [r.country, r.area, r.place].filter(Boolean).join(" › ") || t("repo.noLocation");
-                  const prev = i > 0 ? [list[i - 1]!.country, list[i - 1]!.area, list[i - 1]!.place].filter(Boolean).join(" › ") || t("repo.noLocation") : null;
+                  // A heading row when the general location changes (country > area > place);
+                  // a click folds or unfolds that group.
+                  const where = whereOf(r);
+                  const prev = i > 0 ? whereOf(list[i - 1]!) : null;
+                  const isFolded = folded.includes(where);
                   const rows = [];
-                  if (where !== prev)
+                  if (where !== prev) {
+                    const count = list.filter((x) => whereOf(x) === where).length;
                     rows.push(
-                      <tr key={`h-${r.id}`} className="group-row">
-                        <td colSpan={6}>📍 {where}</td>
+                      <tr key={`h-${r.id}`} className="group-row" onClick={() => setFolded(isFolded ? folded.filter((w) => w !== where) : [...folded, where])}>
+                        <td colSpan={6}>
+                          {isFolded ? "▸" : "▾"} 📍 {where} <span className="muted">({count})</span>
+                        </td>
                       </tr>
                     );
-                  rows.push(row(r));
+                  }
+                  if (!isFolded) rows.push(row(r));
                   return rows;
                 })}
             </tbody>
@@ -176,6 +197,10 @@ export function RepositoryList({ canEdit, features, platform = false }: { canEdi
       )}
     </section>
   );
+
+  function whereOf(r: RepoRoute) {
+    return [r.country, r.area, r.place].filter(Boolean).join(" › ") || t("repo.noLocation");
+  }
 
   function row(r: RepoRoute) {
     return (
@@ -192,8 +217,8 @@ export function RepositoryList({ canEdit, features, platform = false }: { canEdi
                   <td>v{r.currentVersion}</td>
                   <td className="small">{showDate(r.updatedAt, locale)}</td>
                   <td>
-                    <a className="button" href={`${apiBase}/${r.id}/gpx`} download>
-                      ⤓ GPX
+                    <a className="icon-link" href={`${apiBase}/${r.id}/gpx`} download title={t("repo.downloadGpx")} aria-label={t("repo.downloadGpx")}>
+                      ⤓
                     </a>
                   </td>
                 </tr>
@@ -425,24 +450,32 @@ export function RepositoryRouteEditor({
     return out;
   }
 
-  // Heights for a course whose line changed.
-  async function withHeights(c: number[][]): Promise<number[][]> {
-    if (!isCourse || c.length < 2 || c.every((x) => x.length > 2) || !status?.elevation) return c;
-    try {
-      const res = await fetch("/api/geo/elevation", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ coordinates: c.map((x) => [x[0], x[1]]) }) });
-      const body = await res.json();
-      return res.ok ? (body.coordinates as number[][]) : c;
-    } catch {
-      return c;
-    }
-  }
+  // Heights for a course whose line has none of its own. Native heights
+  // (open public data, DEC-040) become part of the course and its GPX;
+  // Google heights could only be shown (P-023).
+  const [liveCoords, setLiveCoords] = useState<number[][] | null>(null);
+  useEffect(() => {
+    setLiveCoords(null);
+    if (!isCourse || drawing || coords.length < 2 || coords.every((x) => x.length > 2) || !status?.elevation) return;
+    let live = true;
+    void fetch("/api/geo/elevation", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ coordinates: coords.map((x) => [x[0], x[1]]) }) })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body) => {
+        if (!live || !body) return;
+        if (body.storable) setCoords(body.coordinates as number[][]);
+        else setLiveCoords(body.coordinates as number[][]);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [coords, isCourse, drawing, status?.elevation]);
 
   async function done() {
     editor.current?.stop();
     editor.current = null;
     setDrawing(false);
     setNotice(null);
-    setCoords(await withHeights(coords));
   }
 
   async function importGpx(file: File | undefined) {
@@ -461,7 +494,7 @@ export function RepositoryRouteEditor({
         delete out.segModes;
         return out;
       });
-      setCoords(await withHeights(g.coordinates));
+      setCoords(g.coordinates);
     } catch {
       setMsg({ ok: false, text: t("map.gpxInvalid") });
     }
@@ -469,7 +502,17 @@ export function RepositoryRouteEditor({
 
   async function save(asNew = false) {
     if (coords.length < 2) return setMsg({ ok: false, text: t("map.needTwoPoints") });
-    const c = await withHeights(coords);
+    let c = coords;
+    // A course is saved with native heights when it has none of its own.
+    if (isCourse && c.length >= 2 && !c.every((x) => x.length > 2) && status?.elevation) {
+      try {
+        const res = await fetch("/api/geo/elevation", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ coordinates: c.map((x) => [x[0], x[1]]) }) });
+        const body = res.ok ? await res.json() : null;
+        if (body?.storable) c = body.coordinates as number[][];
+      } catch {
+        /* saved without heights; the chart fetches them when shown */
+      }
+    }
     const p: FeatureProps = { ...props };
     if (!isCourse) {
       delete p.laps;
@@ -564,7 +607,7 @@ export function RepositoryRouteEditor({
   }
 
   const length = lineLength(coords);
-  const profile = isCourse && !drawing ? elevationProfile(coords) : null;
+  const profile = isCourse && !drawing ? elevationProfile(coords.every((x) => x.length > 2) ? coords : (liveCoords ?? coords)) : null;
   const locked = Boolean(props.locked);
 
   return (

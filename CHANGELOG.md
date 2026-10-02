@@ -3,6 +3,26 @@
 Every entry gets an **Intent** and a **Result**. A Result is only marked
 confirmed once actually verified, and can honestly say FAILED.
 
+## 0.1.0-dev.27 to dev.30 — 2026-10-01 (native heights, compact lists) — NOT YET TESTED BY WALTER
+
+**Intent:** Google's terms don't allow storing its heights; Walter: make
+them native (open public data) and store them; compact lists.
+
+**Result:**
+- **dev.27** — Google heights shown on the chart but no longer stored.
+- **dev.28** — compact route lists: tight rows (26 px instead of 54),
+  foldable groups with counts, Fold all / Unfold all, small GPX icon
+  (DEC-041).
+- **dev.29** — **native heights** (DEC-040): open public elevation data
+  (USGS 3DEP in the US, SRTM elsewhere) through OpenTopoData, stored in the
+  course and its GPX; files' own heights kept as they are. The 6 preloaded
+  courses that had Google heights got native ones (new version v2; US within
+  0.5-4 m of Google, Panama within about 9-12 m).
+- **dev.30** — elevation requests queued and spaced across users (the free
+  service allows one a second).
+- Checked by Claude: 138/138 server tests (native heights sampled,
+  interpolated, Google not called); live: Newark 4.4 m (USGS), Panama City
+  13 m (SRTM); 6/6 courses updated; compact list measured in the browser.
 ## 0.1.0-dev.26 — 2026-10-01 (Platform course library) — NOT YET TESTED BY WALTER
 
 **Intent:** Walter: all organizations' courses are in our database and must

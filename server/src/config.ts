@@ -28,6 +28,13 @@ export interface Config {
   // ArcGIS Location Platform key (B-005): ArcGIS Topo / Streets / Imagery map
   // pictures, through our server. Server-side only.
   arcgisKey: string | null;
+  // Heights (DEC-040): "native" = open public elevation data (USGS 3DEP in
+  // the US, SRTM elsewhere) through an OpenTopoData service - storable;
+  // "google" = Google Elevation (may not be stored); "none".
+  elevation: "native" | "google" | "none";
+  elevationUrl: string;
+  elevationDatasets: string;
+  elevationDelayMs: number;
 }
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -65,5 +72,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     geocoder: env.GEOCODER === "nominatim" ? "nominatim" : "none",
     googleMapsKey: env.GOOGLE_MAPS_KEY?.trim() || null,
     arcgisKey: env.ARCGIS_KEY?.trim() || null,
+    elevation: env.ELEVATION === "google" ? "google" : env.ELEVATION === "none" ? "none" : "native",
+    // The public service is for testing; production runs the same software
+    // on our own server (set ELEVATION_URL to it).
+    elevationUrl: (env.ELEVATION_URL?.trim() || "https://api.opentopodata.org/v1").replace(/\/+$/, ""),
+    elevationDatasets: env.ELEVATION_DATASETS?.trim() || "ned10m,srtm30m",
+    elevationDelayMs: Number(env.ELEVATION_DELAY_MS ?? 1100),
   };
 }

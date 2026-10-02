@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { DomainError, haversine } from "@structura/domain";
+import { DomainError, haversine, lineLength } from "@structura/domain";
 import { requireAuth, requireCapability } from "./auth.js";
 import type { Config } from "./config.js";
 import type { Db } from "./db.js";
@@ -129,7 +129,7 @@ export function geoRoutes(app: FastifyInstance, db: Db, config: Config): void {
       tiles: key ? "google" : "osm",
       satellite: Boolean(key),
       routing: Boolean(key),
-      elevation: Boolean(key),
+      elevation: config.elevation === "native" || (config.elevation === "google" && Boolean(key)),
       arcgis: Boolean(config.arcgisKey),
     };
   });
@@ -306,10 +306,19 @@ export function geoRoutes(app: FastifyInstance, db: Db, config: Config): void {
     if (!(await tenantFeatures(db, auth.tenantId)).includes("courses")) {
       throw new DomainError("license_restricted", "Elevation is part of the running courses add-on", { feature: "courses" });
     }
-    if (!key) throw notConfigured("Elevation");
     const body = elevationBody.safeParse(req.body);
     if (!body.success) throw new DomainError("validation", "Between 2 and 5000 points are needed");
     const coords = body.data.coordinates;
+    // DEC-040: native heights from open public elevation data, which may be
+    // stored in the course and its GPX (Google's may not, P-023).
+    if (config.elevation === "native") {
+      try {
+        return { coordinates: await nativeHeights(coords, config), source: "native", storable: true };
+      } catch {
+        throw unavailable("Elevation");
+      }
+    }
+    if (config.elevation === "none" || !key) throw notConfigured("Elevation");
     try {
       const out: number[][] = [];
       for (let i = 0; i < coords.length; i += 256) {
@@ -321,11 +330,78 @@ export function geoRoutes(app: FastifyInstance, db: Db, config: Config): void {
         if (r.status !== "OK" || !r.results || r.results.length !== batch.length) throw new Error(`elevation ${r.status}`);
         batch.forEach((c, j) => out.push([c[0]!, c[1]!, Math.round(r.results![j]!.elevation * 10) / 10]));
       }
-      return { coordinates: out };
+      return { coordinates: out, source: "google", storable: false };
     } catch {
       throw unavailable("Elevation");
     }
   });
+}
+
+// Heights from open public elevation data (DEC-040): USGS 3DEP (about 10 m)
+// in the US, SRTM (about 30 m) elsewhere, through an OpenTopoData service.
+// At most 300 points are asked (100 per request, one request a second as the
+// public service allows); the heights of the points in between are
+// interpolated along the line.
+const MAX_SAMPLES = 300;
+
+// One elevation request at a time, at least `delayMs` apart, across all
+// users (the public service allows one request a second).
+let elevationQueue: Promise<unknown> = Promise.resolve();
+let lastElevationAt = 0;
+function spaced<T>(delayMs: number, run: () => Promise<T>): Promise<T> {
+  const next = elevationQueue.then(async () => {
+    const wait = lastElevationAt + delayMs - Date.now();
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    try {
+      return await run();
+    } finally {
+      lastElevationAt = Date.now();
+    }
+  });
+  elevationQueue = next.catch(() => undefined);
+  return next;
+}
+export async function nativeHeights(coords: number[][], config: Config): Promise<number[][]> {
+  const n = coords.length;
+  const count = Math.min(n, MAX_SAMPLES);
+  const idx = Array.from({ length: count }, (_, i) => (count === 1 ? 0 : Math.round((i * (n - 1)) / (count - 1))));
+  const heights = new Map<number, number>();
+  for (let b = 0; b < idx.length; b += 100) {
+    const batch = idx.slice(b, b + 100);
+    const locations = batch.map((i) => `${coords[i]![1]},${coords[i]![0]}`).join("|");
+    const res = await spaced(config.elevationDelayMs, () =>
+      fetch(`${config.elevationUrl}/${config.elevationDatasets}?locations=${encodeURIComponent(locations)}`, { signal: AbortSignal.timeout(15000) })
+    );
+    if (!res.ok) throw new Error(`elevation ${res.status}`);
+    const r = (await res.json()) as { status: string; results?: { elevation: number | null }[] };
+    if (r.status !== "OK" || !r.results || r.results.length !== batch.length) throw new Error(`elevation ${r.status}`);
+    batch.forEach((i, j) => {
+      const e = r.results![j]!.elevation;
+      if (typeof e === "number" && Number.isFinite(e)) heights.set(i, e);
+    });
+  }
+  if (heights.size === 0) throw new Error("no elevation for these points");
+  // Fill every point: known samples exactly, the rest by distance between them.
+  const dist = [0];
+  for (let i = 1; i < n; i++) dist.push(dist[i - 1]! + lineLength([coords[i - 1]!, coords[i]!]));
+  const known = [...heights.keys()].sort((a, b) => a - b);
+  const out: number[][] = [];
+  let k = 0;
+  for (let i = 0; i < n; i++) {
+    while (k < known.length - 1 && known[k + 1]! <= i) k++;
+    const a = known[k]!;
+    const b = known[Math.min(k + 1, known.length - 1)]!;
+    let h: number;
+    if (i <= a || a === b) h = heights.get(a)!;
+    else if (i >= b) h = heights.get(b)!;
+    else {
+      const span = dist[b]! - dist[a]!;
+      const f = span > 0 ? (dist[i]! - dist[a]!) / span : 0;
+      h = heights.get(a)! + (heights.get(b)! - heights.get(a)!) * f;
+    }
+    out.push([coords[i]![0]!, coords[i]![1]!, Math.round(h * 10) / 10]);
+  }
+  return out;
 }
 
 const round6 = (v: number) => Math.round(v * 1e6) / 1e6;
