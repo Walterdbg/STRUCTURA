@@ -3,6 +3,32 @@
 Every entry gets an **Intent** and a **Result**. A Result is only marked
 confirmed once actually verified, and can honestly say FAILED.
 
+## 0.1.0-dev.21 to dev.25 — 2026-10-01 (Walter's course files) — NOT YET TESTED BY WALTER
+
+**Intent:** Walter's GPX files work on Racemap but not here; keep the
+points Racemap shows; read the point texts in full; show the direction;
+version visible; group the library; preload all his courses.
+
+**Result:**
+- **dev.21** — Racemap files read (D-019): undeclared rmx: fields
+  declared before reading, plus a forgiving fallback reader. Waypoints kept
+  (DEC-037): only those Racemap shows (hidden timing points left out); full
+  labels instead of plotaroute's 10-letter cuts (D-020). Direction arrows
+  along courses. POIs become Event points when a route is used in an
+  Event or a GPX is loaded into an Event. Migration 010.
+- **dev.22** — the running version shown under the STRUCTURA name.
+- **dev.23 / dev.25** — a course opens on its own line (D-021).
+- **dev.24** — library grouped by type and Country > Area > Place
+  (DEC-038), type filter, location fields with suggestions, location change
+  without a new GPX version. Migration 011.
+- **Preload (data, not code):** 48 courses from 00-Walter_Main_Data (all
+  folders except 00-Legacy) and the 4 Panama courses found in 00-Legacy, as
+  courses with heights and 362 POIs, grouped: USA > New York / New Jersey >
+  folder; Panama > Panamá (> Parque Omar). Notes name the folder and the
+  STRUCTURA version that loaded them.
+- Checked by Claude: 137/137 server tests; all 95 GPX files in Walter's
+  folder read in the browser; preload 52/52; Bay Ridge 10K shows 13 POIs
+  with full labels and 40 direction arrows; grouped list with 17 groups.
 ## 0.1.0-dev.20 — 2026-10-01 (reusable routes) — NOT YET TESTED BY WALTER
 
 **Intent:** Walter: a loaded map is only a location that may be repurposed,

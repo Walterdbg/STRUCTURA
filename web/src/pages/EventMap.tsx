@@ -13,12 +13,14 @@ import {
   positionAt,
   projectOnLine,
   type FeatureProps,
+  type Waypoint,
 } from "@structura/domain";
 import { ApiError, get, newCommand, send, type EventRecord, type MapFeature } from "../api.js";
 import { addBaseLayers, addFullscreen, type GeoStatus } from "../components/basemap.js";
-import { parseGpx, toGpx } from "../components/gpx.js";
+import { guessPointCategory, parseGpx, toGpx } from "../components/gpx.js";
 import { RouteEditor, anchorIndexes, joinSegments, shapeFromLine, type RouteShape, type SegMode } from "../components/routeEditor.js";
 import { MapSearch } from "../components/MapSearch.js";
+import { addDirectionArrows } from "../components/arrows.js";
 import { MARKER_STEPS, METERS, fmtDist, markerLabel, useMarkerStep, useShowMarkers, useUnit, type Unit } from "../components/units.js";
 import { describeFailure } from "../forms.js";
 import { LocaleContext, useT, type TextKey } from "../i18n.js";
@@ -109,6 +111,7 @@ interface RepoItem {
   lengthMeters: number;
   props: FeatureProps;
   geometry?: { type: "LineString"; coordinates: number[][] };
+  waypoints?: Waypoint[];
 }
 
 // Laps, out-and-back and the lock belong to courses only.
@@ -167,6 +170,8 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
   // Maps repository (DEC-033): routes made ahead of time, taken as copies.
   const [repoList, setRepoList] = useState<RepoItem[] | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  // POIs of a GPX loaded into this Event, added as points once its route is saved.
+  const pendingPois = useRef<Waypoint[]>([]);
   const statusRef = useRef<GeoStatus | null>(null);
   statusRef.current = status;
   // DEC-031: running courses only on races (and with the courses add-on).
@@ -326,6 +331,7 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
         const line = coords.map((c) => [c[1]!, c[0]!] as L.LatLngTuple);
         layer = L.polyline(line, { color: ROUTE_COLOR[f.category] ?? "#1971c2", weight: f.preferred ? 6 : 4, dashArray: f.preferred ? undefined : "8 6" });
         if (f.category === "course") {
+          addDirectionArrows(g, coords, ROUTE_COLOR.course!);
           for (const mk of showMarkers ? markersAlong(coords, markerStep * METERS[unit]) : []) {
             L.marker([mk.position[1], mk.position[0]], {
               icon: L.divIcon({ className: "km-marker", html: markerLabel(mk.distance, unit), iconSize: [24, 24], iconAnchor: [12, 12] }),
@@ -349,7 +355,7 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
     }
     if (items.length && !draft) {
       const b = g.getBounds();
-      if (b.isValid()) m.fitBounds(b.pad(0.2), { maxZoom: 17 });
+      if (b.isValid()) m.fitBounds(b.pad(0.2), { maxZoom: 17, animate: false });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, editingShape, unit, markerStep, showMarkers]);
@@ -358,7 +364,7 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
   function centreOn(geom: MapFeature["geometry"]) {
     if (geom.type !== "LineString" || (geom.coordinates as number[][]).length < 2) return;
     const b = L.latLngBounds((geom.coordinates as number[][]).map((c) => [c[1]!, c[0]!] as L.LatLngTuple));
-    map.current?.fitBounds(b.pad(0.1));
+    map.current?.fitBounds(b.pad(0.1), { animate: false });
   }
 
   // DEC-032 item 8: the spot on the course under the mouse in the elevation chart.
@@ -589,6 +595,12 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
     try {
       if (draft.id) await send("PUT", `/api/events/${event.id}/map/${draft.id}`, newCommand(payload, draft.version));
       else await send("POST", `/api/events/${event.id}/map`, newCommand(payload));
+      // A GPX's points of interest arrive with its route.
+      if (!draft.id && pendingPois.current.length) {
+        const n = await addPois(pendingPois.current);
+        if (n) setInfo(t("repo.addedPois").replace("{n}", String(n)));
+      }
+      pendingPois.current = [];
       cancelDraft();
       await load();
     } catch (err) {
@@ -611,6 +623,31 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
     }
   }
 
+  // A route's points of interest become Event points (water stations,
+  // restrooms, start, finish...), typed from their names.
+  async function addPois(pois: Waypoint[]): Promise<number> {
+    let n = 0;
+    for (const w of pois) {
+      const payload = {
+        kind: "point",
+        category: guessPointCategory(w),
+        label: w.name,
+        notes: null,
+        preferred: false,
+        geometry: { type: "Point", coordinates: [w.coordinates[0], w.coordinates[1]] },
+        source: null,
+        props: {},
+      };
+      try {
+        await send("POST", `/api/events/${event.id}/map`, newCommand(payload));
+        n++;
+      } catch {
+        /* a point that can't be saved doesn't stop the others */
+      }
+    }
+    return n;
+  }
+
   // Take a repository route into this Event as its own copy.
   async function useFromRepository(item: RepoItem) {
     try {
@@ -627,7 +664,8 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
       };
       await send("POST", `/api/events/${event.id}/map`, newCommand(payload));
       setRepoList(null);
-      setInfo(t("repo.added"));
+      const n = full.waypoints?.length ? await addPois(full.waypoints) : 0;
+      setInfo(n ? t("repo.addedPois").replace("{n}", String(n)) : t("repo.added"));
       await load();
       if (full.geometry) centreOn(full.geometry);
     } catch (err) {
@@ -674,8 +712,9 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
     if (!file) return;
     setError(null);
     try {
-      const { name, coordinates } = parseGpx(await file.text());
+      const { name, coordinates, waypoints } = parseGpx(await file.text());
       cancelDraft();
+      pendingPois.current = waypoints;
       let d: Draft = {
         id: null,
         version: null,
@@ -689,7 +728,7 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
         props: {},
       };
       const b = L.latLngBounds(coordinates.map((c) => [c[1]!, c[0]!] as L.LatLngTuple));
-      map.current?.fitBounds(b.pad(0.1));
+      map.current?.fitBounds(b.pad(0.1), { animate: false });
       showPreview(coordinates, "course");
       setDraft(d);
       // A GPX without heights gets them from the elevation service.

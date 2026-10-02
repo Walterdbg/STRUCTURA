@@ -4,6 +4,7 @@ import "leaflet/dist/leaflet.css";
 import { courseTotal, elevationProfile, haversine, markersAlong, projectOnLine } from "@structura/domain";
 import { api, get, type EventRecord, type MapFeature } from "../api.js";
 import { addBaseLayers } from "../components/basemap.js";
+import { addDirectionArrows } from "../components/arrows.js";
 import { LocaleContext, useT, type TextKey } from "../i18n.js";
 import { ElevationChart, ICON, ROUTE_COLOR } from "./EventMap.js";
 import { METERS, fmtDist, markerLabel, useMarkerStep, useShowMarkers, useUnit } from "../components/units.js";
@@ -58,6 +59,8 @@ export function CourseSheet({ eventId, courseId }: { eventId: string; courseId: 
     const m = L.map(box.current, { zoomControl: false, attributionControl: true, dragging: true, scrollWheelZoom: false });
     void addBaseLayers(m, locale, { map: t("map.layerMap"), satellite: t("map.layerSatellite") }, { races: true });
     const line = L.polyline(coords.map((c) => [c[1]!, c[0]!] as L.LatLngTuple), { color: ROUTE_COLOR.course, weight: 5 }).addTo(m);
+    const arrows = L.layerGroup().addTo(m);
+    addDirectionArrows(arrows, coords, ROUTE_COLOR.course!);
     for (const mk of showMarkers ? markersAlong(coords, markerStep * METERS[unit]) : []) {
       L.marker([mk.position[1], mk.position[0]], {
         icon: L.divIcon({ className: "km-marker", html: markerLabel(mk.distance, unit), iconSize: [24, 24], iconAnchor: [12, 12] }),
@@ -74,7 +77,7 @@ export function CourseSheet({ eventId, courseId }: { eventId: string; courseId: 
         .bindTooltip(s.f.label, { permanent: true, direction: "right", className: "sheet-label" })
         .addTo(m);
     }
-    m.fitBounds(line.getBounds().pad(0.08));
+    m.fitBounds(line.getBounds().pad(0.08), { animate: false });
     return () => {
       m.remove();
     };

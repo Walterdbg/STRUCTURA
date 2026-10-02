@@ -21,6 +21,10 @@ const course = {
   geometry: { type: "LineString", coordinates: [[-79.53, 8.97, 3], [-79.52, 8.975, 5], [-79.51, 8.98, 4]] },
   props: { anchorIdx: [0, 2], segModes: ["l"] },
   source: "cinta.gpx",
+  waypoints: [
+    { name: "Start", coordinates: [-79.53, 8.97] },
+    { name: "WATER STATION 1", coordinates: [-79.52, 8.975, 5], symbol: "Flag, Blue" },
+  ],
 };
 
 describe("Maps repository (DEC-033)", () => {
@@ -43,10 +47,22 @@ describe("Maps repository (DEC-033)", () => {
     expect(v1.headers["content-type"]).toContain("application/gpx+xml");
     expect(v1.body).toContain("<name>10K Cinta Costera</name>");
     expect(v1.body).toContain('<trkpt lat="8.975" lon="-79.52"><ele>5</ele></trkpt>');
+    // The course's marked points stay with it, in the GPX too.
+    expect(v1.body).toContain('<wpt lat="8.975" lon="-79.52"><ele>5</ele><name>WATER STATION 1</name><sym>Flag, Blue</sym></wpt>');
+    expect(detail.waypoints).toHaveLength(2);
     const current = await req("GET", `/api/repository/routes/${r.id}/gpx`);
     expect(current.body).toContain("<name>10K Cinta Costera 2027</name>");
     // Versions can never be changed.
     await expect(w.db.query("UPDATE route_repository_versions SET gpx = 'x'")).rejects.toThrow(/append_only/);
+  });
+
+  it("keeps a general location for grouping; changing it is recorded but is no new GPX version", async () => {
+    const r = (await req("POST", "/api/repository/routes", { ...course, country: "USA", area: "New Jersey", place: "Liberty State Park" })).json().result;
+    expect(r).toMatchObject({ country: "USA", area: "New Jersey", place: "Liberty State Park", currentVersion: 1 });
+    const moved = await req("PUT", `/api/repository/routes/${r.id}/location`, { country: "USA", area: "New York", place: "Central Park" }, r.version);
+    expect(moved.statusCode, moved.body).toBe(200);
+    expect(moved.json().result).toMatchObject({ area: "New York", place: "Central Park", currentVersion: 1 });
+    expect((await req("GET", "/api/repository/routes?search=Central")).json().items).toHaveLength(1);
   });
 
   it("delivery routes need no add-on; courses do", async () => {

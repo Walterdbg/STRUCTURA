@@ -269,3 +269,10 @@ a.map-fullscreen { font-size: 16px; font-weight: 700; color: #222; text-decorati
   .map-full-target:fullscreen .map-tools { max-width: calc(100vw - 20px); bottom: auto; top: 110px; }
   .map-full-target:fullscreen .map-panel { left: 10px; right: 10px; width: auto; max-height: 45vh; }
 }
+/* Direction arrows along courses: a small triangle pointing the running way. */
+.dir-arrow { pointer-events: none; }
+.dir-arrow span { display: block; width: 0; height: 0; margin: 1px auto 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 12px solid #7048e8; filter: drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1px #fff); transform-origin: 50% 60%; }
+/* The running version, always visible under the name. */
+.version-tag { display: inline-block; margin: 2px 0 4px; padding: 1px 8px; border: 1px solid var(--border); border-radius: 10px; font-size: 0.78rem; opacity: 0.85; }
+/* Group headings in the route library (country > area > place). */
+tr.group-row td { padding-top: 14px; font-weight: 700; border-bottom: 2px solid var(--border); background: transparent; }

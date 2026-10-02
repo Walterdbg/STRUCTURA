@@ -8,6 +8,9 @@ import {
   type FeatureProps,
   type Geometry,
   type RepositoryRouteFields,
+  type RouteLocation,
+  routeLocationFields,
+  type Waypoint,
 } from "@structura/domain";
 import { requireAuth } from "../auth.js";
 import { executeCommand, type CommandContext } from "../commands.js";
@@ -32,6 +35,10 @@ export interface RepositoryRoute {
   lengthMeters: number;
   geometry: Geometry;
   props: FeatureProps;
+  waypoints: Waypoint[];
+  country: string | null;
+  area: string | null;
+  place: string | null;
   updatedAt: string;
 }
 
@@ -53,6 +60,10 @@ interface Row {
   length_m: string;
   geometry: Geometry;
   props: FeatureProps | null;
+  waypoints: Waypoint[] | null;
+  country: string | null;
+  area: string | null;
+  place: string | null;
   updated_at: Date | string;
 }
 
@@ -67,12 +78,16 @@ const toRecord = (r: Row): RepositoryRoute => ({
   lengthMeters: Math.round(Number(r.length_m)),
   geometry: r.geometry,
   props: r.props ?? {},
+  waypoints: r.waypoints ?? [],
+  country: r.country,
+  area: r.area,
+  place: r.place,
   updatedAt: iso(r.updated_at),
 });
 
 const SELECT = `
-  SELECT r.id, r.name, r.category, r.notes, r.current_version, r.version, r.updated_at,
-         v.length_m, v.geometry, v.props
+  SELECT r.id, r.name, r.category, r.notes, r.current_version, r.version, r.updated_at, r.country, r.area, r.place,
+         v.length_m, v.geometry, v.props, v.waypoints
     FROM route_repository r
     JOIN route_repository_versions v ON v.tenant_id = r.tenant_id AND v.route_id = r.id AND v.version = r.current_version`;
 
@@ -91,9 +106,21 @@ async function assertCourses(t: Db, tenantId: string, f: RepositoryRouteFields) 
 async function addVersion(t: Db, ctx: CommandContext, routeId: string, version: number, f: RepositoryRouteFields) {
   const coords = f.geometry.coordinates as number[][];
   await t.query(
-    `INSERT INTO route_repository_versions (id, tenant_id, route_id, version, gpx, geometry, props, length_m, source, created_by)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-    [uuidv7(), ctx.tenantId, routeId, version, toGpx(f.name, coords), JSON.stringify(f.geometry), JSON.stringify(f.props), lineLength(coords), f.source, ctx.actorId]
+    `INSERT INTO route_repository_versions (id, tenant_id, route_id, version, gpx, geometry, props, length_m, source, created_by, waypoints)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+    [
+      uuidv7(),
+      ctx.tenantId,
+      routeId,
+      version,
+      toGpx(f.name, coords, f.waypoints),
+      JSON.stringify(f.geometry),
+      JSON.stringify(f.props),
+      lineLength(coords),
+      f.source,
+      ctx.actorId,
+      JSON.stringify(f.waypoints),
+    ]
   );
 }
 
@@ -107,8 +134,8 @@ export async function createRoute(db: Db, ctx: CommandContext, cmd: ParsedComman
       await assertCourses(t, ctx.tenantId, f);
       const id = uuidv7();
       await t.query(
-        `INSERT INTO route_repository (id, tenant_id, name, category, notes, created_by) VALUES ($1, $2, $3, $4, $5, $6)`,
-        [id, ctx.tenantId, f.name, f.category, f.notes, ctx.actorId]
+        `INSERT INTO route_repository (id, tenant_id, name, category, notes, created_by, country, area, place) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [id, ctx.tenantId, f.name, f.category, f.notes, ctx.actorId, f.country, f.area, f.place]
       );
       await addVersion(t, ctx, id, 1, f);
       const record = await getRoute(t, ctx.tenantId, id);
@@ -140,14 +167,47 @@ export async function updateRoute(db: Db, ctx: CommandContext, id: string, cmd: 
       const next = before.currentVersion + 1;
       await addVersion(t, ctx, id, next, f);
       await t.query(
-        `UPDATE route_repository SET name = $3, category = $4, notes = $5, current_version = $6, version = version + 1, updated_at = now()
+        `UPDATE route_repository SET name = $3, category = $4, notes = $5, current_version = $6, country = $7, area = $8, place = $9,
+                version = version + 1, updated_at = now()
           WHERE tenant_id = $1 AND id = $2`,
-        [ctx.tenantId, id, f.name, f.category, f.notes, next]
+        [ctx.tenantId, id, f.name, f.category, f.notes, next, f.country, f.area, f.place]
       );
       const after = await getRoute(t, ctx.tenantId, id);
       return {
         result: after,
         audit: [{ action: "repository.route.updated", recordType: "route", recordId: id, change: { before: { name: before.name, version: before.currentVersion }, after: { name: f.name, version: next } } }],
+        outbox: [],
+      };
+    }
+  );
+}
+
+// The general location only (grouping): recorded in the history, no new GPX version.
+export async function setRouteLocation(db: Db, ctx: CommandContext, id: string, cmd: ParsedCommand<RouteLocation>) {
+  return executeCommand(
+    db,
+    ctx,
+    { commandId: cmd.commandId, commandType: "repository.route.location", occurredAt: cmd.occurredAt, payload: { id, ...cmd.payload } },
+    async (t) => {
+      const before = await getRoute(t, ctx.tenantId, id);
+      if (cmd.expectedVersion === null || before.version !== cmd.expectedVersion) {
+        throw new DomainError("stale_version", "Someone else changed this route. Reload it and try again.");
+      }
+      const p = cmd.payload;
+      await t.query(
+        "UPDATE route_repository SET country = $3, area = $4, place = $5, version = version + 1, updated_at = now() WHERE tenant_id = $1 AND id = $2",
+        [ctx.tenantId, id, p.country, p.area, p.place]
+      );
+      return {
+        result: await getRoute(t, ctx.tenantId, id),
+        audit: [
+          {
+            action: "repository.route.location",
+            recordType: "route",
+            recordId: id,
+            change: { before: { country: before.country, area: before.area, place: before.place }, after: p },
+          },
+        ],
         outbox: [],
       };
     }
@@ -182,11 +242,12 @@ export function repositoryRoutes(app: FastifyInstance, db: Db, config: Config): 
     let cond = "r.tenant_id = $1 AND r.removed_at IS NULL";
     if (q) {
       params.push(`%${q}%`);
-      cond += ` AND (r.name ILIKE $2 OR r.notes ILIKE $2)`;
+      cond += ` AND (r.name ILIKE $2 OR r.notes ILIKE $2 OR r.place ILIKE $2 OR r.area ILIKE $2 OR r.country ILIKE $2)`;
     }
-    const { rows } = await db.query<Row>(`${SELECT} WHERE ${cond} ORDER BY r.name`, params);
+    // Grouped by general location (country, area, place), then name.
+    const { rows } = await db.query<Row>(`${SELECT} WHERE ${cond} ORDER BY r.country NULLS LAST, r.area NULLS LAST, r.place NULLS LAST, r.name`, params);
     // The list carries no geometry (it can be long); open a route for it.
-    return { items: rows.map((r) => ({ ...toRecord(r), geometry: undefined })) };
+    return { items: rows.map((r) => ({ ...toRecord(r), geometry: undefined, waypoints: undefined, waypointCount: (r.waypoints ?? []).length })) };
   });
 
   app.get("/api/repository/routes/:id", async (req) => {
@@ -238,6 +299,12 @@ export function repositoryRoutes(app: FastifyInstance, db: Db, config: Config): 
     const id = idParam(req);
     const { ctx, cmd } = commandRequest(req, "map.edit", repositoryRouteFields, config.deploymentId, config.now());
     return updateRoute(db, ctx, id, cmd);
+  });
+
+  app.put("/api/repository/routes/:id/location", async (req) => {
+    const id = idParam(req);
+    const { ctx, cmd } = commandRequest(req, "map.edit", routeLocationFields, config.deploymentId, config.now());
+    return setRouteLocation(db, ctx, id, cmd);
   });
 
   app.post("/api/repository/routes/:id/remove", async (req) => {

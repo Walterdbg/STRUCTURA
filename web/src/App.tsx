@@ -14,6 +14,7 @@ import { MovementsList } from "./pages/MovementsList.js";
 import { Login } from "./pages/Login.js";
 import { Members } from "./pages/Members.js";
 import { DateRulesCard } from "./pages/DateRulesCard.js";
+import { VersionTag } from "./components/VersionTag.js";
 import { RepositoryList, RepositoryRouteEditor } from "./pages/RepositoryPage.js";
 import { MyAccount } from "./pages/MyAccount.js";
 import { SystemStatus } from "./pages/SystemStatus.js";
@@ -129,6 +130,7 @@ export function App() {
           <header className="top">
             <div>
               <h1>STRUCTURA</h1>
+              <VersionTag />
               <p className="tagline">{t("app.tagline")}</p>
             </div>
             {languagePicker}
@@ -143,6 +145,7 @@ export function App() {
             <a href="#/events" className="home-link brand" title={t("nav.home")}>
               STRUCTURA
             </a>
+            <VersionTag />
             <p className="tagline">{session.me.tenant.name}</p>
             <nav className="side-nav">
               <a href="#/inventory" className={section === "inventory" ? "active" : ""}>

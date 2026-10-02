@@ -272,6 +272,13 @@ the top right, and place search finds buildings (e.g. "PH Palmas Bellas").
   straight into the repository and opens it. Only the line and its place are loaded: choose its
   **type** afterwards (course, delivery, pickup, other). The type can be changed any time, so a race
   map can be reused, e.g. as the delivery route for water stations and course signs.
+- The list is **grouped by Country › Area › Place** (e.g. USA › New Jersey › Liberty State Park) and
+  can be filtered by type. Set a route's Country, Area and Place on its page; **📍 Guardar ubicación**
+  saves only that (no new GPX version).
+- A GPX's **points of interest** (start, finish, water stations, restrooms, medical, U-turns…) come
+  with it, shown on the map with their full names. Racemap's hidden timing points are left out. Used
+  in an Event, they become the Event's points.
+- Courses show small **arrows** along the line: the running direction.
 - **Ruta guía**: while drawing in Mapas, show another route as a faint guide line and draw along it.
 - **+ Nuevo recorrido / Nueva ruta de entrega / Nueva ruta de recogida**: draw it (courses by hand
   with ✏️; deliveries and pickups with 🚗 car, 🏍 motorcycle or ✏️), or **⤒ Cargar GPX** at the top

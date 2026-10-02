@@ -1,17 +1,18 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { elevationProfile, lineLength, markersAlong, type FeatureProps } from "@structura/domain";
+import { elevationProfile, lineLength, markersAlong, type FeatureProps, type Waypoint } from "@structura/domain";
 import { ApiError, get, newCommand, send } from "../api.js";
 import { addBaseLayers, addFullscreen, geoStatus, type GeoStatus } from "../components/basemap.js";
-import { parseGpx } from "../components/gpx.js";
+import { guessPointCategory, parseGpx } from "../components/gpx.js";
 import { MapSearch } from "../components/MapSearch.js";
+import { addDirectionArrows } from "../components/arrows.js";
 import { RouteEditor, anchorIndexes, joinSegments, shapeFromLine, type RouteShape, type SegMode } from "../components/routeEditor.js";
 import { MARKER_STEPS, METERS, fmtDist, markerLabel, useMarkerStep, useShowMarkers, useUnit, type Unit } from "../components/units.js";
 import { describeFailure } from "../forms.js";
 import { LocaleContext, useT, type TextKey } from "../i18n.js";
 import { go } from "../router.js";
-import { ElevationChart, ROUTE_COLOR } from "./EventMap.js";
+import { ElevationChart, ICON, ROUTE_COLOR } from "./EventMap.js";
 
 // Maps section (DEC-033): a repository of routes made ahead of time - race
 // courses, delivery and pickup routes - outside any Event. Every save is a
@@ -27,6 +28,13 @@ export interface RepoRoute {
   lengthMeters: number;
   geometry?: { type: "LineString"; coordinates: number[][] };
   props: FeatureProps;
+  // The course's points of interest (from its GPX; Racemap's visible ones).
+  waypoints?: Waypoint[];
+  waypointCount?: number;
+  // General location, to group the library (country > area > place).
+  country?: string | null;
+  area?: string | null;
+  place?: string | null;
   updatedAt: string;
   versions?: { version: number; lengthMeters: number; source: string | null; createdAt: string; createdBy: string | null }[];
 }
@@ -54,6 +62,7 @@ export function RepositoryList({ canEdit, features }: { canEdit: boolean; featur
   const [error, setError] = useState<string | null>(null);
   const hasCourses = features.includes("courses");
   const [uploading, setUploading] = useState(false);
+  const [typeFilter, setTypeFilter] = useState("");
 
   // Upload a GPX straight into the repository (version 1) and open it. Only
   // the line and its place are loaded: it starts as a plain route and its
@@ -66,7 +75,7 @@ export function RepositoryList({ canEdit, features }: { canEdit: boolean; featur
     try {
       const g = parseGpx(await file.text());
       // Heights come later, when it is made a course and saved.
-      const payload = { name: g.name ?? file.name.replace(/\.gpx$/i, ""), category: "other", notes: null, geometry: { type: "LineString", coordinates: g.coordinates }, props: {}, source: file.name };
+      const payload = { name: g.name ?? file.name.replace(/\.gpx$/i, ""), category: "other", notes: null, geometry: { type: "LineString", coordinates: g.coordinates }, props: {}, source: file.name, waypoints: g.waypoints };
       const r = await send<RepoRoute>("POST", "/api/repository/routes", newCommand(payload));
       go(`/maps/${r.result.id}`);
     } catch (err) {
@@ -111,7 +120,17 @@ export function RepositoryList({ canEdit, features }: { canEdit: boolean; featur
         )}
       </div>
       <p className="muted small">{t("repo.hint")}</p>
-      <input type="search" className="search" placeholder={t("repo.search")} aria-label={t("common.search")} value={search} onChange={(e) => setSearch(e.target.value)} />
+      <div className="row">
+        <input type="search" className="search" placeholder={t("repo.search")} aria-label={t("common.search")} value={search} onChange={(e) => setSearch(e.target.value)} />
+        <select aria-label={t("map.type")} value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+          <option value="">{t("repo.allTypes")}</option>
+          {CATS.map((c) => (
+            <option key={c} value={c}>
+              {CAT_ICON[c]} {t(`map.cat.${c}` as TextKey)}
+            </option>
+          ))}
+        </select>
+      </div>
       {error && <p className="bad">{error}</p>}
       {items === null && !error && <p>{t("common.loading")}</p>}
       {items && items.length === 0 && <p className="muted">{search ? t("common.noResults") : t("repo.empty")}</p>}
@@ -129,7 +148,31 @@ export function RepositoryList({ canEdit, features }: { canEdit: boolean; featur
               </tr>
             </thead>
             <tbody>
-              {items.map((r) => (
+              {items
+                .filter((r) => !typeFilter || r.category === typeFilter)
+                .flatMap((r, i, list) => {
+                  // A heading row when the general location changes (country > area > place).
+                  const where = [r.country, r.area, r.place].filter(Boolean).join(" › ") || t("repo.noLocation");
+                  const prev = i > 0 ? [list[i - 1]!.country, list[i - 1]!.area, list[i - 1]!.place].filter(Boolean).join(" › ") || t("repo.noLocation") : null;
+                  const rows = [];
+                  if (where !== prev)
+                    rows.push(
+                      <tr key={`h-${r.id}`} className="group-row">
+                        <td colSpan={6}>📍 {where}</td>
+                      </tr>
+                    );
+                  rows.push(row(r));
+                  return rows;
+                })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+
+  function row(r: RepoRoute) {
+    return (
                 <tr key={r.id}>
                   <td>
                     <a href={`#/maps/${r.id}`}>
@@ -147,13 +190,8 @@ export function RepositoryList({ canEdit, features }: { canEdit: boolean; featur
                     </a>
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </section>
-  );
+    );
+  }
 }
 
 // ------------------------------------------------------------------ editor
@@ -180,6 +218,10 @@ export function RepositoryRouteEditor({ routeId, newCategory, canEdit, features 
   const [props, setProps] = useState<FeatureProps>({});
   const [coords, setCoords] = useState<number[][]>([]);
   const [source, setSource] = useState<string | null>(null);
+  const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
+  const [loc, setLoc] = useState<{ country: string; area: string; place: string }>({ country: "", area: "", place: "" });
+  const [known, setKnown] = useState<{ country: string[]; area: string[]; place: string[] }>({ country: [], area: [], place: [] });
+  const poiLayer = useRef<L.LayerGroup | null>(null);
   const [drawing, setDrawing] = useState(!routeId);
   const [tool, setTool] = useState<SegMode>("l");
   const toolRef = useRef<SegMode>("l");
@@ -206,6 +248,8 @@ export function RepositoryRouteEditor({ routeId, newCategory, canEdit, features 
         setNotes(r.notes ?? "");
         setProps(r.props ?? {});
         setCoords(r.geometry?.coordinates ?? []);
+        setWaypoints(r.waypoints ?? []);
+        setLoc({ country: r.country ?? "", area: r.area ?? "", place: r.place ?? "" });
       },
       (err) => setMsg({ ok: false, text: describeFailure(err).message })
     );
@@ -219,7 +263,11 @@ export function RepositoryRouteEditor({ routeId, newCategory, canEdit, features 
     void addBaseLayers(m, locale, { map: t("map.layerMap"), satellite: t("map.layerSatellite") }, { races: category === "course" }).then((s) => setStatus(s));
     if (sectionRef.current) addFullscreen(m, sectionRef.current, { enter: t("map.fullscreen"), exit: t("map.exitFullscreen") });
     viewLayer.current = L.layerGroup().addTo(m);
-    void get<{ items: RepoRoute[] }>("/api/repository/routes").then((r) => setGuides(r.items), () => {});
+    void get<{ items: RepoRoute[] }>("/api/repository/routes").then((r) => {
+      setGuides(r.items);
+      const uniq = (k: "country" | "area" | "place") => [...new Set(r.items.map((i) => i[k]).filter((v): v is string => Boolean(v)))].sort();
+      setKnown({ country: uniq("country"), area: uniq("area"), place: uniq("place") });
+    }, () => {});
     map.current = m;
     map.current = m;
     setMapReady(true);
@@ -251,6 +299,7 @@ export function RepositoryRouteEditor({ routeId, newCategory, canEdit, features 
     g.clearLayers();
     if (drawing || coords.length < 2) return;
     const line = L.polyline(coords.map((c) => [c[1]!, c[0]!] as L.LatLngTuple), { color: ROUTE_COLOR[category] ?? "#1971c2", weight: 5 }).addTo(g);
+    addDirectionArrows(g, coords, ROUTE_COLOR[category] ?? "#1971c2");
     if (isCourse && showMarkers) {
       for (const mk of markersAlong(coords, markerStep * METERS[unit])) {
         L.marker([mk.position[1], mk.position[0]], { icon: L.divIcon({ className: "km-marker", html: markerLabel(mk.distance, unit), iconSize: [24, 24], iconAnchor: [12, 12] }), interactive: false }).addTo(g);
@@ -260,9 +309,41 @@ export function RepositoryRouteEditor({ routeId, newCategory, canEdit, features 
     const last = coords[coords.length - 1]!;
     L.marker([first[1]!, first[0]!], { icon: L.divIcon({ className: "flag-marker", html: "▶", iconSize: [26, 26], iconAnchor: [13, 13] }) }).addTo(g);
     L.marker([last[1]!, last[0]!], { icon: L.divIcon({ className: "flag-marker finish", html: "🏁", iconSize: [26, 26], iconAnchor: [4, 22] }) }).addTo(g);
-    m.fitBounds(line.getBounds().pad(0.15));
+    // Fit the course once the map has its real size (a map laid out while
+    // hidden measures 0 and would show the whole world).
+    let fitted = false;
+    const fit = () => {
+      m.invalidateSize();
+      if (m.getSize().x > 0 && m.getSize().y > 0) {
+        m.fitBounds(line.getBounds().pad(0.15), { animate: false });
+        fitted = true;
+      }
+    };
+    fit();
+    const ro = new ResizeObserver(() => {
+      if (!fitted) fit();
+    });
+    ro.observe(m.getContainer());
+    return () => ro.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [coords, drawing, unit, markerStep, showMarkers, category, mapReady]);
+
+  // Points of interest (water stations, restrooms, start, finish...), also
+  // while drawing.
+  useEffect(() => {
+    const m = map.current;
+    if (!m) return;
+    poiLayer.current ??= L.layerGroup().addTo(m);
+    poiLayer.current.clearLayers();
+    for (const w of waypoints) {
+      L.marker([w.coordinates[1]!, w.coordinates[0]!], {
+        icon: L.divIcon({ className: "poi-icon", html: ICON[guessPointCategory(w)] ?? "📍", iconSize: [26, 26], iconAnchor: [13, 13] }),
+        keyboard: false,
+      })
+        .bindTooltip(w.name, { direction: "top" })
+        .addTo(poiLayer.current);
+    }
+  }, [waypoints, mapReady]);
 
   // The guide line: faint, dashed, not clickable; only to trace along.
   useEffect(() => {
@@ -275,7 +356,7 @@ export function RepositoryRouteEditor({ routeId, newCategory, canEdit, features 
       if (c.length < 2 || !map.current) return;
       guideLayer.current = L.polyline(c.map((x) => [x[1]!, x[0]!] as L.LatLngTuple), { color: "#868e96", weight: 7, opacity: 0.55, dashArray: "6 8", interactive: false }).addTo(map.current);
       guideLayer.current.bringToBack();
-      if (coords.length < 2) map.current.fitBounds(guideLayer.current.getBounds().pad(0.15));
+      if (coords.length < 2) map.current.fitBounds(guideLayer.current.getBounds().pad(0.15), { animate: false });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [guideId, mapReady]);
@@ -307,7 +388,7 @@ export function RepositoryRouteEditor({ routeId, newCategory, canEdit, features 
     });
     ed.start(shape);
     editor.current = ed;
-    if (shape && shape.anchors.length) m.fitBounds(L.latLngBounds(shape.anchors.map((a) => [a[1]!, a[0]!] as L.LatLngTuple)).pad(0.15));
+    if (shape && shape.anchors.length) m.fitBounds(L.latLngBounds(shape.anchors.map((a) => [a[1]!, a[0]!] as L.LatLngTuple)).pad(0.15), { animate: false });
   }
 
   function withPieces(p: FeatureProps, s: RouteShape): FeatureProps {
@@ -351,6 +432,7 @@ export function RepositoryRouteEditor({ routeId, newCategory, canEdit, features 
       setDrawing(false);
       if (!name) setName(g.name ?? file.name.replace(/\.gpx$/i, ""));
       setSource(file.name);
+      setWaypoints(g.waypoints);
       setProps((p) => {
         const out = { ...p };
         delete out.anchorIdx;
@@ -379,6 +461,10 @@ export function RepositoryRouteEditor({ routeId, newCategory, canEdit, features 
       geometry: { type: "LineString", coordinates: c },
       props: asNew ? { ...p, locked: undefined } : p,
       source: asNew && record ? `${record.name} v${record.currentVersion}` : source,
+      waypoints,
+      country: loc.country.trim() || null,
+      area: loc.area.trim() || null,
+      place: loc.place.trim() || null,
     };
     setBusy("common.saving");
     try {
@@ -402,6 +488,19 @@ export function RepositoryRouteEditor({ routeId, newCategory, canEdit, features 
       setBusy(null);
     }
   }
+
+  // The general location alone: recorded, but no new GPX version.
+  async function saveLocation() {
+    if (!record) return;
+    try {
+      const res = await send<RepoRoute>("PUT", `/api/repository/routes/${record.id}/location`, newCommand({ country: loc.country, area: loc.area, place: loc.place }, record.version));
+      setRecord({ ...record, ...res.result, versions: record.versions });
+      setMsg({ ok: true, text: t("common.saved") });
+    } catch (err) {
+      setMsg({ ok: false, text: describeFailure(err).message });
+    }
+  }
+  const locChanged = record !== null && (loc.country !== (record.country ?? "") || loc.area !== (record.area ?? "") || loc.place !== (record.place ?? ""));
 
   async function remove() {
     if (!record || !window.confirm(t("repo.removeConfirm"))) return;
@@ -487,6 +586,24 @@ export function RepositoryRouteEditor({ routeId, newCategory, canEdit, features 
           <span>{t("item.notes")}</span>
           <input value={notes} disabled={!canEdit} onChange={(e) => setNotes(e.target.value)} />
         </label>
+        {(["country", "area", "place"] as const).map((k) => (
+          <label key={k}>
+            <span>{t(`repo.${k}` as TextKey)}</span>
+            <input list={`repo-${k}`} value={loc[k]} disabled={!canEdit} placeholder={t(`repo.${k}Hint` as TextKey)} onChange={(e) => setLoc({ ...loc, [k]: e.target.value })} />
+            <datalist id={`repo-${k}`}>
+              {known[k].map((v) => (
+                <option key={v} value={v} />
+              ))}
+            </datalist>
+          </label>
+        ))}
+        {canEdit && locChanged && (
+          <div className="row">
+            <button type="button" onClick={() => void saveLocation()} title={t("repo.saveLocationHint")}>
+              📍 {t("repo.saveLocation")}
+            </button>
+          </div>
+        )}
         {isCourse && (
           <>
             <label>
@@ -592,6 +709,12 @@ export function RepositoryRouteEditor({ routeId, newCategory, canEdit, features 
           </>
         )}
         {source && <span className="muted"> · {source}</span>}
+        {waypoints.length > 0 && (
+          <span className="muted">
+            {" "}
+            · 📍 {waypoints.length} {t("repo.pois")}
+          </span>
+        )}
       </p>
       {profile && <ElevationChart profile={profile} locale={locale} unit={unit} onHover={showHover} />}
 

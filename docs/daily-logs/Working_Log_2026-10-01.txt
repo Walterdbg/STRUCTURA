@@ -241,6 +241,23 @@ Roadmap section: Approved Decisions (DEC-036), Build status
 
 ---
 
+[014]
+Time: 2026-10-01, night
+Area / feature: Walter's course files - 0.1.0-dev.21 to dev.25, preload of 52 courses
+Request or objective: Walter: his GPX files work on Racemap but fail here (folder 00-Walter_Main_Data); "POI = those visible via Racemap"; the Racemap screenshot was only illustrative; "those are races, they include directions; be sure we can read the directions"; "the label issue is resolved with two columns"; "add a note with the version somewhere visible"; "preload all the courses in the folders except 00-Legacy"; "the courses should be grouped: type race, general location (country USA, area, the current folder name)"; "inside legacy you can find maps for Panama".
+Action taken: Diagnosed: Racemap files use rmx: fields without declaring them (16 of 95 files). Rewrote the GPX reader (declare missing prefixes, fallback reader, waypoints with Racemap hidden points left out, full labels from cmt/desc when plotaroute cuts names). Read Racemap's documentation (splits vs POIs); proposed a richer point model, then dropped it when Walter said the screenshot was illustrative. Migration 010 (waypoints per version, written into the GPX); POIs shown in Mapas and turned into Event points; direction arrows on courses; version tag under the name; migration 011 (country/area/place) with grouped list, type filter, location endpoint without a new version; map fit without animation. Preloaded 48 US courses (excluding 00-Legacy) and the 4 Panama courses from 00-Legacy via the API as Walter's test administrator, then set their locations.
+Files created: server/migrations/010_route_waypoints.sql, server/migrations/011_route_location.sql, web/src/components/arrows.ts, web/src/components/VersionTag.tsx
+Files modified: domain/src/gpx.ts, server/src/repository/routes.ts, server tests (repository, foundation), web/src/components/gpx.ts, web/src/pages/RepositoryPage.tsx, EventMap.tsx, CourseSheet.tsx, App.tsx, i18n.ts, styles.css, package files (0.1.0-dev.21..25), CHANGELOG.md, ROADMAP.md (v1.32.0), docs/USER_GUIDE.md
+Decision made: DEC-037, DEC-038 (Walter)
+Verification performed: 137/137 server tests; all 95 GPX files in the folder uploaded through the screen in the test copy with no failures; preload: 48/48 US courses (362 POIs, heights on all), 4/4 Panama courses; locations: 17 groups; Bay Ridge 10K: 13 POIs with full labels ("START & FINISH", "BIB PICK UP", "WATER STATION", "PORTA POTTIES", "U-TURN"), 40 arrows; course opens on its line (dev.25). Docker dev.25 health OK.
+Result: PASS for Claude's checks; NOT TESTED by Walter
+Observed issue: Some files are one lap of a longer race (e.g. Fort Hamilton Half Marathon 2024 7.01 km, Thompson Park 12 Mile Course 0.80 km, Panama Half Marathon Course 2 5.34 km, Panama 5K10K Course 2 5.08 km): set Laps on them. Three Panama courses have no place yet (only Panama > Panamá).
+Follow-up required: Walter reviews the 52 courses (laps on the loop files, places for the 3 Panama courses); tests T-020
+Roadmap update required: YES (done: v1.32.0)
+Roadmap section: Known Defects (D-019..D-021), Approved Decisions (DEC-037, DEC-038), Build status
+
+---
+
 
 DEFECTS DISCOVERED TODAY
 ========================
@@ -248,6 +265,9 @@ DEFECTS DISCOVERED TODAY
 [DEFECT-010] Map item save refused without a name and the message went unnoticed; pressing another drawing button discarded the drawing; Walter lost a route. High. FIXED-NOT-TESTED (dev.10).
 [DEFECT-011] Map/Satellite switch stayed in Spanish after switching to English; large radio circles on a white box. Low. FIXED-NOT-TESTED (dev.10).
 [DEFECT-012] A line drawn as Route and changed to Course got no elevation until "Fit to streets". Medium. FIXED-NOT-TESTED (dev.10).
+[DEFECT-021] Course opened on the world / default view. Medium. FIXED (dev.25, browser-checked).
+[DEFECT-020] plotaroute point names cut to 10 letters. Medium. FIXED (dev.21).
+[DEFECT-019] Racemap GPX files refused. High. FIXED (dev.21, all 95 files checked).
 [DEFECT-018] New course couldn't upload a GPX (button hidden while drawing). High. FIXED (dev.19, browser-checked).
 [DEFECT-017] Full screen kept tools above the map (about 40% of the screen). Medium. FIXED-NOT-TESTED (dev.18).
 [DEFECT-016] Place search list reopened after a choice. Low. FIXED (dev.17, browser-checked).
@@ -285,7 +305,7 @@ DEPLOYMENT / BUILD RECORD
 =========================
 
 Deployment performed: YES (local development only)
-Build/version: 0.1.0-dev.10, 0.1.0-dev.11, 0.1.0-dev.12, 0.1.0-dev.13, 0.1.0-dev.14, 0.1.0-dev.15, 0.1.0-dev.16, 0.1.0-dev.17, 0.1.0-dev.18, 0.1.0-dev.19, then 0.1.0-dev.20 (current)
+Build/version: 0.1.0-dev.10, 0.1.0-dev.11, 0.1.0-dev.12, 0.1.0-dev.13, 0.1.0-dev.14, 0.1.0-dev.15, 0.1.0-dev.16, 0.1.0-dev.17, 0.1.0-dev.18, 0.1.0-dev.19, 0.1.0-dev.20, 0.1.0-dev.21 to dev.24, then 0.1.0-dev.25 (current)
 Environment: Development - Docker on Walter's PC, http://127.0.0.1:8095
 Deployment result: PASS (Claude's checks); NOT TESTED by Walter
 Verification performed: health 0.1.0-dev.10, dev.11 and dev.12 (migration 008), Google status/search live
