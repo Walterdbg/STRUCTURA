@@ -16,7 +16,7 @@ import {
   type Waypoint,
 } from "@structura/domain";
 import { ApiError, get, newCommand, send, type EventRecord, type MapFeature } from "../api.js";
-import { addBaseLayers, addFullscreen, type GeoStatus } from "../components/basemap.js";
+import { addBaseLayers, addFullscreen, addLocateButton, rememberView, type GeoStatus } from "../components/basemap.js";
 import { guessPointCategory, parseGpx, toGpx } from "../components/gpx.js";
 import { RouteEditor, anchorIndexes, joinSegments, shapeFromLine, type RouteShape, type SegMode } from "../components/routeEditor.js";
 import { MapSearch } from "../components/MapSearch.js";
@@ -253,6 +253,8 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
     const m = L.map(box.current, { scrollWheelZoom: false }).setView(center, event.locationLat !== null ? 16 : 11);
     void addBaseLayers(m, locale, { map: t("map.layerMap"), satellite: t("map.layerSatellite") }, { races: event.eventType === "race" }).then((s) => setStatus(s));
     if (sectionRef.current) addFullscreen(m, sectionRef.current, { enter: t("map.fullscreen"), exit: t("map.exitFullscreen") });
+    addLocateButton(m, { locate: t("map.locate"), denied: t("map.locateDenied") });
+    rememberView(m);
     layerGroup.current = L.featureGroup().addTo(m);
     m.pm.setGlobalOptions({ snappable: true, continueDrawing: false });
     m.pm.setLang(locale === "es" ? "es" : "en");

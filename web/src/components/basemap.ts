@@ -113,6 +113,72 @@ export async function addBaseLayers(map: L.Map, locale: string, labels: { map: s
 }
 // ⛶ button (Walter, 2026-10-01): the map, or the section holding it with its
 // tools, fills the screen; the same button or Esc brings it back.
+// 📍 My location (Walter, 2026-10-02): optional. The browser asks permission
+// only when the button is pressed; nothing ever requires it (spec 12, UC-05:
+// maps never need GPS permission for manual entry).
+export function addLocateButton(map: L.Map, labels: { locate: string; denied: string }): void {
+  if (!("geolocation" in navigator)) return;
+  let dot: L.CircleMarker | null = null;
+  let ring: L.Circle | null = null;
+  const Ctl = L.Control.extend({
+    onAdd() {
+      const bar = L.DomUtil.create("div", "leaflet-bar leaflet-control");
+      const a = L.DomUtil.create("a", "map-locate", bar) as HTMLAnchorElement;
+      a.href = "#";
+      a.textContent = "📍";
+      a.title = labels.locate;
+      a.setAttribute("role", "button");
+      a.setAttribute("aria-label", labels.locate);
+      L.DomEvent.disableClickPropagation(bar);
+      L.DomEvent.on(a, "click", (e) => {
+        L.DomEvent.preventDefault(e);
+        a.classList.add("busy");
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            a.classList.remove("busy");
+            const ll: L.LatLngTuple = [pos.coords.latitude, pos.coords.longitude];
+            dot?.remove();
+            ring?.remove();
+            ring = L.circle(ll, { radius: Math.min(pos.coords.accuracy, 500), color: "#1c7ed6", weight: 1, fillOpacity: 0.1, interactive: false }).addTo(map);
+            dot = L.circleMarker(ll, { radius: 7, color: "#fff", weight: 3, fillColor: "#1c7ed6", fillOpacity: 1, interactive: false }).addTo(map);
+            map.setView(ll, Math.max(map.getZoom(), 16), { animate: false });
+          },
+          () => {
+            a.classList.remove("busy");
+            a.title = labels.denied;
+            window.alert(labels.denied);
+          },
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+        );
+      });
+      return bar;
+    },
+  });
+  new Ctl({ position: "topleft" }).addTo(map);
+}
+
+// Where the person last worked on a map, so a new course opens there instead
+// of a fixed starting view (remembered in this browser only).
+const VIEW_KEY = "structura.lastView";
+export function lastView(): { center: L.LatLngTuple; zoom: number } | null {
+  try {
+    const v = JSON.parse(localStorage.getItem(VIEW_KEY) ?? "null") as { lat: number; lng: number; zoom: number } | null;
+    return v && Number.isFinite(v.lat) && Number.isFinite(v.lng) && Number.isFinite(v.zoom) ? { center: [v.lat, v.lng], zoom: v.zoom } : null;
+  } catch {
+    return null;
+  }
+}
+export function rememberView(map: L.Map): void {
+  map.on("moveend", () => {
+    const c = map.getCenter();
+    try {
+      localStorage.setItem(VIEW_KEY, JSON.stringify({ lat: c.lat, lng: c.lng, zoom: map.getZoom() }));
+    } catch {
+      /* private window */
+    }
+  });
+}
+
 export function addFullscreen(map: L.Map, target: HTMLElement, labels: { enter: string; exit: string }): void {
   if (!target.requestFullscreen) return;
   const Ctl = L.Control.extend({

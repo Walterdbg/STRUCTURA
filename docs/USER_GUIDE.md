@@ -261,6 +261,10 @@ Without the add-on these buttons show 🔒 *Recorridos (complemento)*.
 - Move the mouse over the **elevation chart**: the spot shows on the map with its distance and
   height.
 
+**📍 My location:** the button under + / − moves the map to where you are. The browser asks
+permission the first time; it's optional and nothing else depends on it. A new course in Mapas
+opens where you last worked.
+
 **Map / Satellite:** with the Google key, every map has a **🗺 Mapa / 🛰 Satélite** switch at
 the top right, and place search finds buildings (e.g. "PH Palmas Bellas").
 

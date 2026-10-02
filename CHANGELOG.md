@@ -3,6 +3,16 @@
 Every entry gets an **Intent** and a **Result**. A Result is only marked
 confirmed once actually verified, and can honestly say FAILED.
 
+## 0.1.0-dev.31 — 2026-10-02 (My location, starting view) — NOT YET TESTED BY WALTER
+
+**Intent:** Walter: a new map opens on a fixed place although he has a
+location (DEC-042). The spec says maps must never require GPS permission.
+
+**Result:** An optional **📍 My location** button on the Event map, the
+Mapas editor and the Event location picker; the browser asks permission only
+when it is pressed. New routes in Mapas open where the person last worked
+(remembered in the browser). Checked by Claude: build, Docker, button present;
+the remembered view and the jump were not seen on screen (browser pane hidden).
 ## 0.1.0-dev.27 to dev.30 — 2026-10-01 (native heights, compact lists) — NOT YET TESTED BY WALTER
 
 **Intent:** Google's terms don't allow storing its heights; Walter: make

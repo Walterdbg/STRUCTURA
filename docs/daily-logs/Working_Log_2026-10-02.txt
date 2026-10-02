@@ -1,0 +1,94 @@
+DAILY DEVELOPMENT WORKING LOG
+=============================
+
+Date: 2026-10-02
+Project: STRUCTURA
+Application version/build at start: 0.1.0-dev.30 (READY FOR TEST, running at http://127.0.0.1:8095)
+Roadmap version at start: 1.34.0
+Primary goal for today: Walter's questions and requests; his tests T-016..T-022
+Started at: 2026-10-02
+Working by: Claude, for Walter
+
+
+PROTECTED BASELINE / DO NOT BREAK
+---------------------------------
+- Locked requirements in spec v1.3 sections 2.2, 3 and 21.1 (see docs/BUSINESS_RULES.md)
+- Maps never require GPS permission (spec 12, UC-05); location is always optional
+- Google content is not stored beyond its terms (P-023, DEC-040)
+- STRUCTURA stays independent of CITYTRI Hub (DEC-006)
+
+
+WORK ENTRIES
+============
+
+[001]
+Time: 2026-10-02
+Area / feature: Course lock (question)
+Request or objective: Walter: "what does course locked mean?"
+Action taken: Explained DEC-032 item 6: a locked course's shape can't change (the server refuses it); name, notes, laps and location can; unlock is recorded; Duplicate for next year's version.
+Files created: docs/daily-logs/Working_Log_2026-10-02.txt
+Files modified: None
+Decision made: None
+Verification performed: N/A
+Result: PASS
+Observed issue: None
+Follow-up required: None
+Roadmap update required: NO
+Roadmap section: -
+
+---
+
+[002]
+Time: 2026-10-02
+Area / feature: 0.1.0-dev.31 - My location button, new courses open where the person last worked (DEC-042)
+Request or objective: Walter: a new map opens on a fixed place even though he has a location; does the app use the device's location? He believed it should be a default requirement but didn't remember.
+Action taken: Checked the spec: maps must never require GPS permission for manual entry (spec 12, UC-05); nothing asks for device location. Added an optional 📍 My location button on the Event map, the Mapas editor and the Event location picker (the browser asks permission only when pressed; a refusal changes nothing); new routes in Mapas open where the person last worked (remembered in the browser), otherwise the default view; Event maps keep opening on the Event's location.
+Files created: None
+Files modified: web/src/components/basemap.ts, web/src/components/LocationPicker.tsx, web/src/pages/EventMap.tsx, web/src/pages/RepositoryPage.tsx, web/src/i18n.ts, web/src/styles.css, package files (0.1.0-dev.31), CHANGELOG.md, ROADMAP.md (v1.35.0)
+Decision made: DEC-042 (Walter's request, within the spec's rule that location is never required)
+Verification performed: Build; Docker dev.31 health OK; browser: the 📍 button and its hint are on the maps. NOT checked: the remembered view and the location jump (the browser pane was hidden, so the map couldn't move).
+Result: PARTIAL (button present; behaviour not seen on screen)
+Observed issue: None
+Follow-up required: Walter tries 📍 and a new course after working on another map (T-023)
+Roadmap update required: YES (done: v1.35.0)
+Roadmap section: Approved Decisions (DEC-042), Ready for test (T-023), Build status
+
+---
+
+
+DEFECTS DISCOVERED TODAY
+========================
+
+None.
+
+
+DECISIONS MADE TODAY
+====================
+
+[DECISION-001]
+Decision: DEC-042 - optional My location button on maps; new routes open where the person last worked
+Approved by: Walter (request)
+Roadmap update required: YES (done)
+
+
+DOCUMENT REGISTER
+=================
+
+docs/daily-logs/Working_Log_2026-10-02.txt | Daily working log | SUPPORTING | 001 | RETAIN
+
+
+DEPLOYMENT / BUILD RECORD
+=========================
+
+Deployment performed: YES (local development only)
+Build/version: 0.1.0-dev.31 (current)
+Environment: Development - Docker on Walter's PC, http://127.0.0.1:8095
+Deployment result: PASS (Claude's checks); NOT TESTED by Walter
+Verification performed: health 0.1.0-dev.31; 📍 button present
+Rollback required: NO
+
+
+END-OF-DAY RECONCILIATION
+=========================
+
+Ended at: (open)

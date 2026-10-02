@@ -284,3 +284,6 @@ table.compact tr.group-row:hover td { color: var(--accent); }
 .compact-tools button { padding: 2px 8px; min-height: 0; font-size: 0.85em; }
 a.icon-link { display: inline-block; padding: 0 6px; font-size: 1.05em; text-decoration: none; border-radius: 4px; }
 a.icon-link:hover { background: var(--bg); }
+/* 📍 My location button. */
+a.map-locate { font-size: 15px; text-decoration: none; }
+a.map-locate.busy { opacity: 0.5; }

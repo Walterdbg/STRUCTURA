@@ -3,7 +3,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { elevationProfile, lineLength, markersAlong, type FeatureProps, type Waypoint } from "@structura/domain";
 import { ApiError, get, newCommand, send } from "../api.js";
-import { addBaseLayers, addFullscreen, geoStatus, type GeoStatus } from "../components/basemap.js";
+import { addBaseLayers, addFullscreen, addLocateButton, geoStatus, lastView, rememberView, type GeoStatus } from "../components/basemap.js";
 import { guessPointCategory, parseGpx } from "../components/gpx.js";
 import { MapSearch } from "../components/MapSearch.js";
 import { addDirectionArrows } from "../components/arrows.js";
@@ -306,7 +306,11 @@ export function RepositoryRouteEditor({
   const typeKnown = !routeId || record !== null;
   useEffect(() => {
     if (!box.current || map.current || !typeKnown) return;
-    const m = L.map(box.current, { scrollWheelZoom: true }).setView([8.98, -79.52], 13);
+    // A new route opens where the person last worked (Walter, 2026-10-02).
+    const start = (!routeId && lastView()) || { center: [8.98, -79.52] as L.LatLngTuple, zoom: 13 };
+    const m = L.map(box.current, { scrollWheelZoom: true }).setView(start.center, start.zoom);
+    addLocateButton(m, { locate: t("map.locate"), denied: t("map.locateDenied") });
+    rememberView(m);
     void addBaseLayers(m, locale, { map: t("map.layerMap"), satellite: t("map.layerSatellite") }, { races: category === "course" }).then((s) => setStatus(s));
     if (sectionRef.current) addFullscreen(m, sectionRef.current, { enter: t("map.fullscreen"), exit: t("map.exitFullscreen") });
     viewLayer.current = L.layerGroup().addTo(m);
