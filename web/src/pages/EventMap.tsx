@@ -1166,7 +1166,7 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
               {draft.source && <span className="muted"> · {draft.source}</span>}
             </p>
           )}
-          {isCourse && !drawing && draftCoords && draftCoords.length >= 2 && <CoursePlayer map={() => map.current} coords={draftCoords} unit={unit} onPosition={setPlayerAt} />}
+          {isCourse && !drawing && draftCoords && draftCoords.length >= 2 && <CoursePlayer map={() => map.current} coords={draftCoords} name={draft.label} unit={unit} onPosition={setPlayerAt} />}
           {profile && <ElevationChart profile={profile} locale={locale} unit={unit} at={playerAt} onHover={(at) => showHover(draftCoords, at)} />}
           {isCourse && !profile && !drawing && <p className="small muted">{t("map.noElevation")}</p>}
           {error && (

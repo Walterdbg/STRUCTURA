@@ -249,7 +249,7 @@ a.map-fullscreen { font-size: 16px; font-weight: 700; color: #222; text-decorati
 /* Full screen (Walter, 2026-10-01): the map takes the whole screen and the
    tools float over it instead of taking space above it. */
 .map-full-target:fullscreen { position: relative; padding: 0; overflow: hidden; }
-.map-full-target:fullscreen > :not(.map-box):not(.drawing-hint):not(.map-tools):not(.alert):not(.map-panel) { display: none !important; }
+.map-full-target:fullscreen > :not(.map-box):not(.map-wrap):not(.drawing-hint):not(.map-tools):not(.alert):not(.map-panel):not(.player) { display: none !important; }
 .map-full-target:fullscreen .map-box.tall { height: 100vh; margin: 0; border: none; border-radius: 0; }
 .map-full-target:fullscreen .drawing-hint,
 .map-full-target:fullscreen .map-tools,
@@ -314,3 +314,16 @@ label.button.file.disabled { opacity: 0.5; pointer-events: none; }
 .player input[type="range"] { flex: 1 1 160px; min-width: 120px; }
 .leaflet-tooltip.player-tip { font-weight: 600; }
 .elevation .player-cursor { stroke: #fc4c02; }
+/* D-023: in full screen the ▶ player floats at the top of the map (where the
+   drawing bar sits while drawing; both never show at once). */
+.map-full-target:fullscreen > .player { position: absolute; z-index: 1000; top: 10px; left: 56px; right: 64px; margin: 0; padding: 6px 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+/* 🎬 3D replay: its own full-screen view. */
+.flyover { position: fixed; inset: 0; z-index: 3000; background: #dfe3ea; }
+.flyover-map { position: absolute; inset: 0; }
+.flyover-top { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; justify-content: space-between; align-items: center; pointer-events: none; }
+.flyover-top > * { pointer-events: auto; background: rgba(255,255,255,0.92); color: #1c2430; padding: 6px 10px; border-radius: 6px; }
+.flyover-msg { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255,255,255,0.95); padding: 10px 14px; border-radius: 8px; color: #1c2430; }
+.flyover-bar { position: absolute; left: 10px; right: 10px; bottom: 28px; background: rgba(255,255,255,0.94); color: #1c2430; border-radius: 8px; padding: 8px 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.25); }
+.flyover-bar .row { align-items: center; flex-wrap: wrap; gap: 6px; }
+.flyover-bar input[type="range"] { flex: 1 1 180px; }
+.flyover-bar .elevation svg { height: 60px; }

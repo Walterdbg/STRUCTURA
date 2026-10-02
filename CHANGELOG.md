@@ -3,6 +3,22 @@
 Every entry gets an **Intent** and a **Result**. A Result is only marked
 confirmed once actually verified, and can honestly say FAILED.
 
+## 0.1.0-dev.34 — 2026-10-02 (3D replay; player in full screen) — NOT YET TESTED BY WALTER
+
+**Intent:** Walter tested the player: no play controls in full screen (D-023).
+He asked for a replay like Strava's, in 3D, separate from the editing maps
+(DEC-045).
+
+**Result:** In full screen the ▶ player floats at the top of the map. While
+fixing it Claude found the Event map went blank in full screen since dev.33
+(the picture-card box wasn't on the full-screen list) - fixed too. New 🎬 3D
+button opens a full-screen 3D replay (MapLibre + OpenFreeMap buildings + AWS
+terrain): camera follows the runner, run part in yellow, height chart, camera
+Follow / Overview, Relief on/off. Checked by Claude: type check, build,
+Docker dev.34 health, the 3D view opens and fetches its map data, WebGL
+available. Not seen on screen: the 3D picture and flight (browser pane hidden:
+no size, no animation).
+
 ## 0.1.0-dev.33 — 2026-10-02 (Clear session, course player, point pictures) — NOT YET TESTED BY WALTER
 
 **Intent:** Walter: a one-step way back to where he started on a map instead

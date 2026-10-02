@@ -154,7 +154,7 @@ export function CourseSheet({ eventId, courseId }: { eventId: string; courseId: 
       </div>
       <div ref={box} className="sheet-map" />
       <div className="no-print">
-        <CoursePlayer map={() => sheetMap.current} coords={coords} unit={unit} onPosition={setPlayerAt} />
+        <CoursePlayer map={() => sheetMap.current} coords={coords} name={course.label} unit={unit} onPosition={setPlayerAt} />
       </div>
       {profile && <ElevationChart profile={profile} locale={locale} unit={unit} at={playerAt} />}
       <h3>{t("sheet.stations")}</h3>

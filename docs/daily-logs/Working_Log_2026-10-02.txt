@@ -89,6 +89,23 @@ Roadmap section: Approved Decisions (DEC-044), Pending Decisions (P-026), Ready 
 
 ---
 
+[005]
+Time: 2026-10-02
+Area / feature: 0.1.0-dev.34 - player in full screen (D-023), 3D replay (DEC-045)
+Request or objective: Walter tested the player: "we have no play control on the fullscreen"; and "can we add a version of the player that plays like the ones on Strava?" (screenshot of a 3D replay: tilted view, 3D buildings, yellow run part on a white course), separate from the current interface if needed.
+Action taken: Full screen hides everything not on a list; the player wasn't on it (Mapas), and the map-wrap box added in dev.33 wasn't either, so the Event map went blank in full screen - both added; the player floats at the top in full screen. New Flyover3D view (full-screen overlay, inside the full-screen element when one is active): MapLibre with OpenFreeMap positron style, buildings extruded from building heights, AWS terrarium terrain (x1.3), course white with glow, run part yellow, runner dot, distance markers, height chart; camera Follow (pitch 62, zoom 16.4, look-ahead 150 m, smoothed turning) with fly-in and pull-back at the finish, or Overview (slow rotation); length 30s-5min, slider, Relief toggle, Esc closes. maplibre-gl added to web (loaded only on opening 3D).
+Files created: web/src/components/Flyover3D.tsx
+Files modified: web/src/components/CoursePlayer.tsx, web/src/pages/EventMap.tsx, web/src/pages/RepositoryPage.tsx, web/src/pages/CourseSheet.tsx, web/src/i18n.ts, web/src/styles.css, web/package.json, package-lock.json, package files (0.1.0-dev.34), CHANGELOG.md, ROADMAP.md (v1.38.0), docs/USER_GUIDE.md
+Decision made: DEC-045 (Walter's request); D-023 fixed
+Verification performed: web type check and build (3D engine in its own chunk); Docker dev.34 health OK; browser: 🎬 3D opens the view, style/sprites/tile index fetched from OpenFreeMap, WebGL2 available. NOT checked: the 3D picture and the flight, and the full-screen layout (browser pane hidden: no size, no animation, so the map never finishes its first draw).
+Result: PARTIAL (opens and loads its data; picture not seen)
+Observed issue: D-023 (found while fixing: Event map blank in full screen since dev.33)
+Follow-up required: Walter checks T-025
+Roadmap update required: YES (done: v1.38.0)
+Roadmap section: Known Defects (D-023), Approved Decisions (DEC-045), Ready for test (T-025), Build status
+
+---
+
 
 DEFECTS DISCOVERED TODAY
 ========================
@@ -97,6 +114,11 @@ DEFECTS DISCOVERED TODAY
 Defect: D-022 - in full screen the tool bar covered the map's own controls
 Found by: Walter (screenshot)
 Status: FIXED in 0.1.0-dev.32, awaiting Walter's check (T-023)
+
+[DEFECT-002]
+Defect: D-023 - player hidden in full screen; Event map blank in full screen since 0.1.0-dev.33
+Found by: Walter (player); Claude (blank map, while fixing)
+Status: FIXED in 0.1.0-dev.34, awaiting Walter's check (T-025)
 
 
 DECISIONS MADE TODAY
@@ -117,21 +139,26 @@ Decision: DEC-044 - Clear session, course player, pictures (3) and zoom capture 
 Approved by: Walter (request)
 Roadmap update required: YES (done)
 
+[DECISION-004]
+Decision: DEC-045 - 3D replay (Strava style) with MapLibre, OpenFreeMap and AWS terrain
+Approved by: Walter (request)
+Roadmap update required: YES (done)
+
 
 DOCUMENT REGISTER
 =================
 
-docs/daily-logs/Working_Log_2026-10-02.txt | Daily working log | SUPPORTING | 001-004 | RETAIN
+docs/daily-logs/Working_Log_2026-10-02.txt | Daily working log | SUPPORTING | 001-005 | RETAIN
 
 
 DEPLOYMENT / BUILD RECORD
 =========================
 
 Deployment performed: YES (local development only)
-Build/version: 0.1.0-dev.33 (current; dev.31 and dev.32 earlier today)
+Build/version: 0.1.0-dev.34 (current; dev.31-33 earlier today)
 Environment: Development - Docker on Walter's PC, http://127.0.0.1:8095
 Deployment result: PASS (Claude's checks); NOT TESTED by Walter
-Verification performed: health 0.1.0-dev.33; server tests 142/142; player and Clear present
+Verification performed: health 0.1.0-dev.34; server tests 142/142 (dev.33); 3D view opens
 Rollback required: NO
 
 

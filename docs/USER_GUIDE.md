@@ -274,6 +274,11 @@ version). Undo is still there for single steps while drawing.
 course and the map follows it; choose how long the replay takes (30 s to 5 min), drag the slider to
 jump, untick *Follow* to keep the map still. The height chart shows the same spot.
 
+**🎬 3D replay:** next to ▶ Play. Opens the course in 3D on the whole screen (buildings, relief).
+▶ Play: the camera flies in behind the runner and follows the course; the part already run turns
+yellow. *Camera*: Follow the runner, or Overview (the whole course, slowly turning). *Relief* on/off.
+Esc or ✕ closes it. In full screen, the normal ▶ player sits at the top of the map.
+
 **Pictures on a point (Event maps):** click a point to open its card. *Pictures*: up to 3 in all -
 ⤒ Add photo, or zoom in until you see the streets and press 📷 Capture this view (the capture uses
 ArcGIS or OpenStreetMap; Google's picture can't be saved). Hover a point to see its first picture.

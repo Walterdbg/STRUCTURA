@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useContext, useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import { haversine } from "@structura/domain";
 import { LocaleContext, useT } from "../i18n.js";
@@ -10,21 +10,23 @@ import { fmtDist, type Unit } from "./units.js";
 // sets how long the whole course takes to play.
 
 const DURATIONS = [30, 60, 120, 300] as const;
+// The 3D replay loads its map engine only when it is opened.
+const Flyover3D = lazy(() => import("./Flyover3D.js"));
 
-interface Track {
+export interface Track {
   coords: number[][];
   cum: number[];
   total: number;
 }
 
-function track(coords: number[][]): Track {
+export function track(coords: number[][]): Track {
   const cum = [0];
   for (let i = 1; i < coords.length; i++) cum.push(cum[i - 1]! + haversine(coords[i - 1]!, coords[i]!));
   return { coords, cum, total: cum[cum.length - 1] ?? 0 };
 }
 
 // Position and height at a distance along the course.
-function at(tr: Track, d: number): { ll: L.LatLngTuple; ele: number | null } {
+export function at(tr: Track, d: number): { ll: L.LatLngTuple; ele: number | null } {
   const { coords, cum } = tr;
   let lo = 0;
   let hi = cum.length - 1;
@@ -44,11 +46,13 @@ function at(tr: Track, d: number): { ll: L.LatLngTuple; ele: number | null } {
 export function CoursePlayer({
   map,
   coords,
+  name = "",
   unit,
   onPosition,
 }: {
   map: () => L.Map | null;
   coords: number[][];
+  name?: string;
   unit: Unit;
   // The distance being shown (null when stopped), for the height chart.
   onPosition?: (meters: number | null) => void;
@@ -60,6 +64,7 @@ export function CoursePlayer({
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState<number>(60);
   const [follow, setFollow] = useState(true);
+  const [flyover, setFlyover] = useState(false);
   const marker = useRef<L.CircleMarker | null>(null);
   const progressRef = useRef(0);
   const frame = useRef<number | null>(null);
@@ -180,11 +185,19 @@ export function CoursePlayer({
         <input type="checkbox" checked={follow} onChange={(e) => setFollow(e.target.checked)} />
         <span>{t("player.follow")}</span>
       </label>
+      <button type="button" title={t("player.flyoverHint")} onClick={() => (pause(), setFlyover(true))}>
+        🎬 {t("player.flyover")}
+      </button>
       <span className="small">{started ? <strong>{label}</strong> : <span className="muted">{t("player.hint")}</span>}</span>
       {started && (
         <button type="button" onClick={close} aria-label={t("common.close")} title={t("common.close")}>
           ✕
         </button>
+      )}
+      {flyover && (
+        <Suspense fallback={null}>
+          <Flyover3D coords={coords} name={name} unit={unit} onClose={() => setFlyover(false)} />
+        </Suspense>
       )}
     </div>
   );

@@ -917,7 +917,7 @@ export function RepositoryRouteEditor({
           </span>
         )}
       </p>
-      {isCourse && !drawing && coords.length >= 2 && <CoursePlayer map={() => map.current} coords={coords} unit={unit} onPosition={setPlayerAt} />}
+      {isCourse && !drawing && coords.length >= 2 && <CoursePlayer map={() => map.current} coords={coords} name={name} unit={unit} onPosition={setPlayerAt} />}
       {profile && <ElevationChart profile={profile} locale={locale} unit={unit} at={playerAt} onHover={showHover} />}
 
       {msg && <p className={msg.ok ? "good" : "bad"}>{msg.text}</p>}
