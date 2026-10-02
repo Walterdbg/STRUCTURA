@@ -106,6 +106,23 @@ Roadmap section: Known Defects (D-023), Approved Decisions (DEC-045), Ready for 
 
 ---
 
+[006]
+Time: 2026-10-02
+Area / feature: 0.1.0-dev.35 - runner km/mi label (D-024), blank 3D map (D-025)
+Request or objective: Walter (screenshots): "the current player runner km/mi label do not update when I change the option and the 3D player is not loading yet" (3D view: controls and height chart, grey map).
+Action taken: D-024: the animation kept the unit from when Play started; the player now reads unit and language at every frame and redraws the label when they change. D-025: maplibre-gl.css sets .maplibregl-map { position: relative } on the map box, overriding my absolute fill, so the canvas was 0 px tall; rule made more specific (.flyover .flyover-map, width/height 100%) plus a resize before the first view.
+Files created: None
+Files modified: web/src/components/CoursePlayer.tsx, web/src/components/Flyover3D.tsx, web/src/styles.css, package files (0.1.0-dev.35), CHANGELOG.md, ROADMAP.md (v1.39.0)
+Decision made: None
+Verification performed: type check; build; Docker dev.35 health OK. Rule breach recorded: the first rebuild with these fixes ran while still labelled 0.1.0-dev.34 (bump.ps1 blocked by the execution policy when called from the bash shell); bumped and rebuilt as dev.35 minutes later. NOT checked on screen (browser pane hidden).
+Result: PARTIAL
+Observed issue: D-024, D-025; version-label slip (above)
+Follow-up required: Walter checks T-025; always run bump.ps1 from PowerShell, never from bash
+Roadmap update required: YES (done: v1.39.0)
+Roadmap section: Known Defects (D-024, D-025), Build status
+
+---
+
 
 DEFECTS DISCOVERED TODAY
 ========================
@@ -119,6 +136,16 @@ Status: FIXED in 0.1.0-dev.32, awaiting Walter's check (T-023)
 Defect: D-023 - player hidden in full screen; Event map blank in full screen since 0.1.0-dev.33
 Found by: Walter (player); Claude (blank map, while fixing)
 Status: FIXED in 0.1.0-dev.34, awaiting Walter's check (T-025)
+
+[DEFECT-003]
+Defect: D-024 - runner label kept the old km/mi
+Found by: Walter
+Status: FIXED in 0.1.0-dev.35, awaiting Walter's check (T-025)
+
+[DEFECT-004]
+Defect: D-025 - 3D replay map blank (0 px tall)
+Found by: Walter
+Status: FIXED in 0.1.0-dev.35, awaiting Walter's check (T-025)
 
 
 DECISIONS MADE TODAY
@@ -148,17 +175,17 @@ Roadmap update required: YES (done)
 DOCUMENT REGISTER
 =================
 
-docs/daily-logs/Working_Log_2026-10-02.txt | Daily working log | SUPPORTING | 001-005 | RETAIN
+docs/daily-logs/Working_Log_2026-10-02.txt | Daily working log | SUPPORTING | 001-006 | RETAIN
 
 
 DEPLOYMENT / BUILD RECORD
 =========================
 
 Deployment performed: YES (local development only)
-Build/version: 0.1.0-dev.34 (current; dev.31-33 earlier today)
+Build/version: 0.1.0-dev.35 (current; dev.31-34 earlier today)
 Environment: Development - Docker on Walter's PC, http://127.0.0.1:8095
 Deployment result: PASS (Claude's checks); NOT TESTED by Walter
-Verification performed: health 0.1.0-dev.34; server tests 142/142 (dev.33); 3D view opens
+Verification performed: health 0.1.0-dev.35; server tests 142/142 (dev.33)
 Rollback required: NO
 
 

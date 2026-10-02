@@ -125,6 +125,8 @@ export default function Flyover3D({ coords, name, unit, onClose }: { coords: num
             layout: { "text-field": ["get", "label"], "text-size": 12, "text-font": ["Noto Sans Bold"], "text-offset": [0, -1.2] },
             paint: { "text-color": "#ffffff", "text-halo-color": "#212529", "text-halo-width": 6 },
           });
+          // Measure the box again before the first view (it may have been laid out late).
+          m.resize();
           m.fitBounds(bounds, { padding: 80, pitch: 45, duration: 0 });
           setReady(true);
         });

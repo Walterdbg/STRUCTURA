@@ -68,8 +68,9 @@ export function CoursePlayer({
   const marker = useRef<L.CircleMarker | null>(null);
   const progressRef = useRef(0);
   const frame = useRef<number | null>(null);
-  const settings = useRef({ duration, follow });
-  settings.current = { duration, follow };
+  // Read at every frame, so a change of km/mi or length applies at once (D-024).
+  const settings = useRef({ duration, follow, unit, locale });
+  settings.current = { duration, follow, unit, locale };
 
   const here = at(tr, progress * tr.total);
   const label = `${fmtDist(progress * tr.total, unit, locale)} / ${fmtDist(tr.total, unit, locale)}${here.ele !== null ? ` · ${Math.round(here.ele)} m` : ""}`;
@@ -79,7 +80,8 @@ export function CoursePlayer({
     const m = map();
     if (!m || tr.total <= 0) return;
     const pos = at(tr, p * tr.total);
-    const text = `${fmtDist(p * tr.total, unit, locale)}${pos.ele !== null ? ` · ${Math.round(pos.ele)} m` : ""}`;
+    const { unit: u, locale: loc } = settings.current;
+    const text = `${fmtDist(p * tr.total, u, loc)}${pos.ele !== null ? ` · ${Math.round(pos.ele)} m` : ""}`;
     if (!marker.current) {
       marker.current = L.circleMarker(pos.ll, { radius: 8, color: "#fff", weight: 3, fillColor: "#fc4c02", fillOpacity: 1, interactive: false }).addTo(m);
       marker.current.bindTooltip(text, { permanent: true, direction: "top", offset: [0, -10], className: "player-tip" });
@@ -152,6 +154,12 @@ export function CoursePlayer({
     marker.current = null;
     onPosition?.(null);
   }
+
+  // km / mi changed: the runner's label follows straight away.
+  useEffect(() => {
+    if (marker.current) show(progressRef.current, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unit, locale]);
 
   // A different course, or leaving the page, ends the replay.
   useEffect(() => close, [coords]); // eslint-disable-line react-hooks/exhaustive-deps

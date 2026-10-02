@@ -3,6 +3,19 @@
 Every entry gets an **Intent** and a **Result**. A Result is only marked
 confirmed once actually verified, and can honestly say FAILED.
 
+## 0.1.0-dev.35 — 2026-10-02 (player label, 3D map fixes) — NOT YET TESTED BY WALTER
+
+**Intent:** Walter's test: the ▶ runner label kept miles after switching to km
+(D-024); the 🎬 3D replay showed only a grey screen (D-025).
+
+**Result:** The runner label reads the current unit at every frame and redraws
+on a change. The 3D map box now fills the screen (the engine's own style had
+made it 0 px tall) and is measured again before the first view. Note: a Docker
+rebuild with these fixes ran once still labelled dev.34 (the bump script was
+blocked in that shell); replaced minutes later by dev.35. Checked by Claude:
+type check, build, Docker dev.35 health. Not seen on screen (browser pane
+hidden).
+
 ## 0.1.0-dev.34 — 2026-10-02 (3D replay; player in full screen) — NOT YET TESTED BY WALTER
 
 **Intent:** Walter tested the player: no play controls in full screen (D-023).
