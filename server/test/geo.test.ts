@@ -28,6 +28,7 @@ function fakeGoogle() {
     if (url.includes("places:autocomplete")) return json({ suggestions: [{ placePrediction: { placeId: "ChIJ-palmas-bellas-01", text: { text: "PH Palmas Bellas, Panamá" } } }] });
     if (url.includes("places.googleapis.com/v1/places/")) return json({ displayName: { text: "PH Palmas Bellas" }, formattedAddress: "Panamá", location: { latitude: 9.007344, longitude: -79.50703 } });
     if (url.includes("createSession")) return json({ session: "sess-1", expiry: String(Math.floor(Date.now() / 1000) + 14 * 86400) });
+    if (url.includes("World_Imagery")) return new Response(new Uint8Array([0xff, 0xd8, 0xff]), { status: 200, headers: { "content-type": "image/jpeg" } });
     if (url.includes("static-basemap-tiles-service")) return new Response(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 1]), { status: 200, headers: { "content-type": "image/png" } });
     if (url.includes("/2dtiles/")) return new Response(new Uint8Array([0x89, 0x50, 0x4e, 0x47]), { status: 200, headers: { "content-type": "image/png" } });
     if (url.includes("/tile/v1/viewport")) return json({ copyright: "Map data ©2026 Google" });
@@ -107,12 +108,14 @@ describe("map services through our server, with Google (DEC-026)", () => {
     for (const style of ["topo", "streets", "imagery"]) {
       const res = await app.inject({ method: "GET", url: `/api/geo/arcgis/${style}/14/7845/4669`, headers: { cookie } });
       expect(res.statusCode).toBe(200);
-      expect(res.headers["content-type"]).toBe("image/png");
+      expect(res.headers["content-type"]).toBe(style === "imagery" ? "image/jpeg" : "image/png");
     }
     const call = calls.find((c) => c.url.includes("arcgis/outdoor"))!;
     expect(call.url).toContain("/static/tile/14/7845/4669");
     expect(call.url).not.toContain("arcgis-key"); // the key goes in a header, never in the address
     expect(call.headers.Authorization).toBe("Bearer arcgis-key");
+    // World Imagery takes the key as a token parameter, server to server only.
+    expect(calls.find((c) => c.url.includes("World_Imagery"))!.url).toContain("/MapServer/tile/14/7845/4669?token=arcgis-key");
     expect((await app.inject({ method: "GET", url: "/api/geo/arcgis/bing/1/0/0", headers: { cookie } })).statusCode).toBe(400);
   });
 

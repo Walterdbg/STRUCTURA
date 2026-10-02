@@ -21,8 +21,14 @@ export function MapSearch({ onPick, near }: { onPick: (lat: number, lng: number)
   const [results, setResults] = useState<Place[] | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const session = useRef<string | null>(null);
+  // Showing the chosen place's name in the box must not search again.
+  const chosen = useRef(false);
 
   useEffect(() => {
+    if (chosen.current) {
+      chosen.current = false;
+      return;
+    }
     if (q.trim().length < 3) {
       setResults(null);
       return;
@@ -55,6 +61,7 @@ export function MapSearch({ onPick, near }: { onPick: (lat: number, lng: number)
       }
     }
     if (place.lat !== undefined && place.lng !== undefined) {
+      chosen.current = true;
       setQ(place.name || p.name);
       onPick(place.lat, place.lng);
     }

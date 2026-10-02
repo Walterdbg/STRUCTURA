@@ -173,6 +173,23 @@ Roadmap section: Approved Decisions (DEC-035), Pending (P-022), Ready for test (
 
 ---
 
+[010]
+Time: 2026-10-01, night
+Area / feature: ArcGIS key; 0.1.0-dev.16 (D-015) and 0.1.0-dev.17 (D-016)
+Request or objective: Walter created the ArcGIS Location Platform account (portal ratioillustrata), a Public application API key with only Static basemap tiles, no referrers, and put ARCGIS_KEY in .env. He asked how testing works locally (answer: our local server calls ArcGIS over the internet; no public server needed).
+Action taken: Checked the key format without printing it; restarted; Topo and Streets OK, Imagery failed. The service's own style list showed no plain imagery (only imagery/labels), so Imagery was switched to ArcGIS World Imagery (token parameter server to server; checked the app log has no token). Found and fixed the place search list reopening after a choice.
+Files created: None
+Files modified: server/src/geo.ts, server/test/geo.test.ts, web/src/components/basemap.ts, web/src/components/MapSearch.tsx, package files (0.1.0-dev.16, 0.1.0-dev.17), CHANGELOG.md, ROADMAP.md (v1.28.0)
+Decision made: None new
+Verification performed: 136/136 server tests; live through Docker: topo 200 PNG, streets 200 PNG, imagery 200 JPEG; log lines containing "token=": 0; browser: Central Park in ArcGIS Imagery with leafless trees on a repository course map, Esri attribution; place list closes after a choice; base map choice remembered.
+Result: PASS
+Observed issue: D-015 (documentation said plain imagery existed in the static service; it doesn't); D-016
+Follow-up required: Walter tests T-016..T-022; renew the ArcGIS key before its expiry date
+Roadmap update required: YES (done: v1.28.0)
+Roadmap section: Known Defects (D-015, D-016), Pending (P-022 closed), Ready for test (T-022), Build status
+
+---
+
 
 DEFECTS DISCOVERED TODAY
 ========================
@@ -180,6 +197,8 @@ DEFECTS DISCOVERED TODAY
 [DEFECT-010] Map item save refused without a name and the message went unnoticed; pressing another drawing button discarded the drawing; Walter lost a route. High. FIXED-NOT-TESTED (dev.10).
 [DEFECT-011] Map/Satellite switch stayed in Spanish after switching to English; large radio circles on a white box. Low. FIXED-NOT-TESTED (dev.10).
 [DEFECT-012] A line drawn as Route and changed to Course got no elevation until "Fit to streets". Medium. FIXED-NOT-TESTED (dev.10).
+[DEFECT-016] Place search list reopened after a choice. Low. FIXED (dev.17, browser-checked).
+[DEFECT-015] ArcGIS Imagery path not in the static tiles service. Medium. FIXED (dev.16, live check).
 [DEFECT-014] Street tools took wild routes between two clicks; red route error treated Walter's drawing as a failure. Medium. FIXED-NOT-TESTED (dev.13).
 [DEFECT-013] Event map hidden while the Event is in edit mode; no full-screen view; wheel zoom unavailable while drawing. Medium. FIXED-NOT-TESTED (dev.10).
 
@@ -213,7 +232,7 @@ DEPLOYMENT / BUILD RECORD
 =========================
 
 Deployment performed: YES (local development only)
-Build/version: 0.1.0-dev.10, 0.1.0-dev.11, 0.1.0-dev.12, 0.1.0-dev.13, 0.1.0-dev.14, then 0.1.0-dev.15 (current)
+Build/version: 0.1.0-dev.10, 0.1.0-dev.11, 0.1.0-dev.12, 0.1.0-dev.13, 0.1.0-dev.14, 0.1.0-dev.15, 0.1.0-dev.16, then 0.1.0-dev.17 (current)
 Environment: Development - Docker on Walter's PC, http://127.0.0.1:8095
 Deployment result: PASS (Claude's checks); NOT TESTED by Walter
 Verification performed: health 0.1.0-dev.10, dev.11 and dev.12 (migration 008), Google status/search live

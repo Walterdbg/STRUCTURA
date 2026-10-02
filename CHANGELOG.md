@@ -3,6 +3,21 @@
 Every entry gets an **Intent** and a **Result**. A Result is only marked
 confirmed once actually verified, and can honestly say FAILED.
 
+## 0.1.0-dev.17 — 2026-10-01 (place search fix) — NOT YET TESTED BY WALTER
+
+**Intent / Result:** D-016: after choosing a place in *Go to a place*, the
+suggestion list no longer opens again. Browser-checked by Claude.
+
+## 0.1.0-dev.16 — 2026-10-01 (ArcGIS Imagery fixed, key live)
+
+**Intent:** With Walter's ArcGIS key in place, the live check showed
+ArcGIS Imagery failing (D-015): the Static Basemap Tiles service only has
+imagery labels, not the photos.
+
+**Result:** ArcGIS Imagery now comes from ArcGIS World Imagery (256 px;
+the key goes server to server as a token and is never logged or shown).
+Live: Topo, Streets and Imagery all served through our server; Central
+Park shown with leafless trees on a course map. 136/136 server tests.
 ## 0.1.0-dev.15 — 2026-10-01 (ArcGIS for race courses) — NOT YET TESTED BY WALTER
 
 **Intent:** B-005, the base maps RunningAhead offers, limited by Walter to

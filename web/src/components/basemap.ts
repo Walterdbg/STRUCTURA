@@ -53,11 +53,15 @@ export async function addBaseLayers(map: L.Map, locale: string, labels: { map: s
     google.add(roadmap).add(satellite);
   }
   if (status.arcgis && opts.races) {
-    // 512 px pictures: one zoom level less for the same detail.
+    // Topo and Streets come as 512 px pictures (one zoom level less for the
+    // same detail); Imagery as 256 px.
     const esri = (style: string) => L.tileLayer(`/api/geo/arcgis/${style}/{z}/{y}/{x}?lang=${lang}`, { maxZoom: 22, tileSize: 512, zoomOffset: -1, attribution: ESRI });
     layers["⛰ ArcGIS Topo"] = esri("topo");
     layers[`🛣 ArcGIS ${es ? "Calles" : "Streets"}`] = esri("streets");
-    layers[`🌳 ArcGIS ${es ? "Imágenes" : "Imagery"}`] = esri("imagery");
+    layers[`🌳 ArcGIS ${es ? "Imágenes" : "Imagery"}`] = L.tileLayer(`/api/geo/arcgis/imagery/{z}/{y}/{x}`, {
+      maxZoom: 21,
+      attribution: "Powered by Esri | Esri, Maxar, Earthstar Geographics, and the GIS User Community",
+    });
   }
   layers["🌍 OSM"] = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "&copy; OpenStreetMap" });
 

@@ -134,9 +134,11 @@ export function geoRoutes(app: FastifyInstance, db: Db, config: Config): void {
     };
   });
 
-  // ArcGIS map pictures (B-005): Topo (outdoor), Streets and Imagery, through
-  // our server so the key stays here. 512 px tiles, {z}/{row}/{col}.
-  const ARCGIS_STYLES: Record<string, string> = { topo: "arcgis/outdoor", streets: "arcgis/streets", imagery: "arcgis/imagery" };
+  // ArcGIS map pictures (DEC-035): Topo (outdoor) and Streets from the Static
+  // Basemap Tiles service (512 px, key in a header); Imagery from World
+  // Imagery (256 px; that service takes the key only as a token parameter,
+  // so it is sent server to server and never logged or shown). {z}/{row}/{col}.
+  const ARCGIS_STYLES: Record<string, string> = { topo: "arcgis/outdoor", streets: "arcgis/streets", imagery: "World_Imagery" };
   app.get("/api/geo/arcgis/:style/:z/:y/:x", async (req, reply) => {
     requireAuth(req);
     const arcgisKey = config.arcgisKey;
@@ -147,10 +149,15 @@ export function geoRoutes(app: FastifyInstance, db: Db, config: Config): void {
     if (!style || ![z, y, x].every((v) => Number.isInteger(v) && v! >= 0) || z! > 22) throw new DomainError("validation", "Invalid tile");
     const lang = (req.query as Record<string, string | undefined>).lang === "en" ? "en" : "es";
     try {
-      const res = await fetch(
-        `https://static-map-tiles-api.arcgis.com/arcgis/rest/services/static-basemap-tiles-service/v1/${style}/static/tile/${z}/${y}/${x}?language=${lang}`,
-        { headers: { Authorization: `Bearer ${arcgisKey}` }, signal: AbortSignal.timeout(10000) }
-      );
+      const res =
+        style === "World_Imagery"
+          ? await fetch(`https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}?token=${encodeURIComponent(arcgisKey)}`, {
+              signal: AbortSignal.timeout(10000),
+            })
+          : await fetch(`https://static-map-tiles-api.arcgis.com/arcgis/rest/services/static-basemap-tiles-service/v1/${style}/static/tile/${z}/${y}/${x}?language=${lang}`, {
+              headers: { Authorization: `Bearer ${arcgisKey}` },
+              signal: AbortSignal.timeout(10000),
+            });
       if (!res.ok) throw new Error(`arcgis tile ${res.status}`);
       return reply
         .header("content-type", res.headers.get("content-type") ?? "image/png")
