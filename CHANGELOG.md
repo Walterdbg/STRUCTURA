@@ -3,7 +3,7 @@
 Every entry gets an **Intent** and a **Result**. A Result is only marked
 confirmed once actually verified, and can honestly say FAILED.
 
-## 0.1.0-dev.36 — 2026-10-02 (3D replay starts moving) — NOT YET TESTED BY WALTER
+## 0.1.0-dev.36 — 2026-10-02 (3D replay starts moving) — PLAYERS CONFIRMED BY WALTER ("the player works, both of them"); full retest pending
 
 **Intent:** Walter: the 3D map now shows, but Play never moves (D-026).
 

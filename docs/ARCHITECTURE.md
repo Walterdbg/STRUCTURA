@@ -75,6 +75,7 @@ CLOUD (Linux server/VM with Docker)          ONSITE (Linux mini-PC with Docker E
 | License files | Signed with Ed25519 through `jose` (already used by the Hub) | The onsite box can verify a license offline; it can't be edited without breaking the signature |
 | Web UI | React 18 + Vite | Same as the Hub |
 | Maps | Leaflet | Suggested by the spec; handles points, routes and GeoJSON |
+| 3D replay | MapLibre GL (open source), OpenFreeMap vector tiles, AWS open terrain tiles (DEC-045) | Strava-style 3D course replay; loaded only when 🎬 3D is opened; no key |
 | File storage | S3-compatible in the cloud, a folder on disk onsite, behind one adapter | Spec 5.1 and 13 |
 | Tests | Vitest (with PGlite for fast database tests, as in the Hub), plus real-PostgreSQL integration tests. Playwright for end-to-end tests later | Spec 19.2 test layers |
 

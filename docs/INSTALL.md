@@ -95,6 +95,18 @@ the free public OpenTopoData service (fine for testing, one request a second). I
 OpenTopoData on our own server with the elevation files for our regions and set
 `ELEVATION_URL=http://our-server:5000/v1` in `.env`. `ELEVATION=none` switches heights off.
 
+## 3D replay and point pictures (DEC-044, DEC-045)
+
+The 🎬 3D replay loads its map in the browser straight from free public services, no key and no
+setting: **OpenFreeMap** (streets and building heights, tiles.openfreemap.org) and the **AWS open
+terrain tiles** (s3.amazonaws.com/elevation-tiles-prod). The viewer's browser needs internet access
+to them. OpenFreeMap is donation-funded with no service guarantee; when we move to our own server
+(P-011) it can be self-hosted. The browser needs WebGL (all current browsers).
+
+Pictures on Event points of interest (up to 3 each) are stored like product photos, under
+`FILES_DIR` (default `data/files`), so include that folder in backups. Migration 013 adds the
+picture role.
+
 ## Platform administrator (DEC-039)
 
 The platform administrator sees the **🌐 Platform** section (every organization's course library,
