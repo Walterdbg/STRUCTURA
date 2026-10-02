@@ -58,6 +58,7 @@ export default function Flyover3D({ coords, name, unit, onClose }: { coords: num
   const progressRef = useRef(0);
   const heading = useRef(0);
   const frame = useRef<number | null>(null);
+  const startTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const settings = useRef({ duration, camera });
   settings.current = { duration, camera };
 
@@ -108,7 +109,8 @@ export default function Flyover3D({ coords, name, unit, onClose }: { coords: num
           m.addSource("done", { type: "geojson", data: line([]) });
           m.addSource("head", { type: "geojson", data: point(coords[0]![0]!, coords[0]![1]!) });
           const round = { "line-join": "round", "line-cap": "round" } as const;
-          m.addLayer({ id: "course-glow", type: "line", source: "course", layout: round, paint: { "line-color": "#ffffff", "line-width": 16, "line-blur": 10, "line-opacity": 0.7 } });
+          m.addLayer({ id: "course-edge", type: "line", source: "course", layout: round, paint: { "line-color": "#3d4a66", "line-width": 10, "line-opacity": 0.85 } });
+          m.addLayer({ id: "course-glow", type: "line", source: "course", layout: round, paint: { "line-color": "#ffffff", "line-width": 16, "line-blur": 10, "line-opacity": 0.5 } });
           m.addLayer({ id: "course", type: "line", source: "course", layout: round, paint: { "line-color": "#ffffff", "line-width": 6 } });
           m.addLayer({ id: "done", type: "line", source: "done", layout: round, paint: { "line-color": "#ffcc00", "line-width": 9 } });
           m.addLayer({ id: "head", type: "circle", source: "head", paint: { "circle-radius": 8, "circle-color": "#fc4c02", "circle-stroke-color": "#ffffff", "circle-stroke-width": 3 } });
@@ -139,7 +141,8 @@ export default function Flyover3D({ coords, name, unit, onClose }: { coords: num
     return () => {
       live = false;
       document.removeEventListener("keydown", onKey);
-      if (frame.current !== null) cancelAnimationFrame(frame.current);
+      if (frame.current !== null) clearTimeout(frame.current);
+      if (startTimer.current) clearTimeout(startTimer.current);
       m?.remove();
       map.current = null;
     };
@@ -175,13 +178,21 @@ export default function Flyover3D({ coords, name, unit, onClose }: { coords: num
     setProgress(p);
   }
 
+  // Driven by a plain timer (~60 per second), never by the browser's paint
+  // signal, so nothing outside the replay can hold it up (D-026).
   function loop() {
+    if (frame.current !== null) return;
     let last = performance.now();
     const step = (now: number) => {
       const dt = Math.min(0.1, (now - last) / 1000);
       last = now;
       progressRef.current = Math.min(1, progressRef.current + dt / settings.current.duration);
-      show(progressRef.current, dt);
+      // One bad frame never stops the replay (D-026).
+      try {
+        show(progressRef.current, dt);
+      } catch (err) {
+        console.error("3D replay frame", err);
+      }
       if (progressRef.current >= 1) {
         frame.current = null;
         setPlaying(false);
@@ -189,9 +200,9 @@ export default function Flyover3D({ coords, name, unit, onClose }: { coords: num
         map.current?.fitBounds(bounds, { padding: 80, pitch: 45, bearing: map.current.getBearing(), duration: 2500 });
         return;
       }
-      frame.current = requestAnimationFrame(step);
+      frame.current = window.setTimeout(() => step(performance.now()), 16);
     };
-    frame.current = requestAnimationFrame(step);
+    frame.current = window.setTimeout(() => step(performance.now()), 16);
   }
 
   function play() {
@@ -205,16 +216,30 @@ export default function Flyover3D({ coords, name, unit, onClose }: { coords: num
       const here = at(tr, d).ll;
       const ahead = at(tr, Math.min(tr.total, d + LOOK_AHEAD_M)).ll;
       heading.current = bearing([here[1], here[0]], [ahead[1], ahead[0]]);
-      m.flyTo({ center: [here[1], here[0]], zoom: FOLLOW.zoom, pitch: FOLLOW.pitch, bearing: heading.current, duration: progressRef.current === 0 ? 2500 : 600 });
-      m.once("moveend", loop);
+      const ms = progressRef.current === 0 ? 2500 : 600;
+      m.flyTo({ center: [here[1], here[0]], zoom: FOLLOW.zoom, pitch: FOLLOW.pitch, bearing: heading.current, duration: ms });
+      startAfter(ms);
     } else {
       m.fitBounds(bounds, { padding: 80, pitch: 55, bearing: m.getBearing(), duration: 800 });
-      m.once("moveend", loop);
+      startAfter(800);
     }
   }
 
+  // D-026: the run starts when the fly-in is over, by the clock. Waiting for
+  // the map's "move ended" signal froze the replay when the computer reduces
+  // animations (the camera jumps and the signal comes before anyone listens).
+  function startAfter(ms: number) {
+    if (startTimer.current) clearTimeout(startTimer.current);
+    startTimer.current = setTimeout(() => {
+      startTimer.current = null;
+      loop();
+    }, ms + 50);
+  }
+
   function pause() {
-    if (frame.current !== null) cancelAnimationFrame(frame.current);
+    if (startTimer.current) clearTimeout(startTimer.current);
+    startTimer.current = null;
+    if (frame.current !== null) clearTimeout(frame.current);
     frame.current = null;
     map.current?.stop();
     setPlaying(false);

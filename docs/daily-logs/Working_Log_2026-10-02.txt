@@ -123,6 +123,23 @@ Roadmap section: Known Defects (D-024, D-025), Build status
 
 ---
 
+[007]
+Time: 2026-10-02
+Area / feature: 0.1.0-dev.36 - 3D replay froze at Play (D-026)
+Request or objective: Walter (screenshot, March Madness 5K 10K): the 3D map shows (buildings, markers) but "3D map got stuck" / "press play and it never move".
+Action taken: Play showed Pause with progress 0: the run loop was started from map.once("moveend") after flyTo; with reduced motion the camera jumps and moveend fires inside flyTo, before the listener exists, so the loop never started. Now: start by timer after the fly-in duration; loop on setTimeout (~16 ms) instead of requestAnimationFrame; each frame in try/catch; dark edge under the white course for contrast.
+Files created: None
+Files modified: web/src/components/Flyover3D.tsx, package files (0.1.0-dev.36), CHANGELOG.md, ROADMAP.md (v1.40.0)
+Decision made: None
+Verification performed: type check; build; Docker dev.36 health OK. NOT checked on screen (browser pane hidden).
+Result: PARTIAL
+Observed issue: D-026
+Follow-up required: Walter checks T-025
+Roadmap update required: YES (done: v1.40.0)
+Roadmap section: Known Defects (D-026), Build status
+
+---
+
 
 DEFECTS DISCOVERED TODAY
 ========================
@@ -141,6 +158,11 @@ Status: FIXED in 0.1.0-dev.34, awaiting Walter's check (T-025)
 Defect: D-024 - runner label kept the old km/mi
 Found by: Walter
 Status: FIXED in 0.1.0-dev.35, awaiting Walter's check (T-025)
+
+[DEFECT-005]
+Defect: D-026 - 3D replay froze at Play
+Found by: Walter
+Status: FIXED in 0.1.0-dev.36, awaiting Walter's check (T-025)
 
 [DEFECT-004]
 Defect: D-025 - 3D replay map blank (0 px tall)
@@ -175,17 +197,17 @@ Roadmap update required: YES (done)
 DOCUMENT REGISTER
 =================
 
-docs/daily-logs/Working_Log_2026-10-02.txt | Daily working log | SUPPORTING | 001-006 | RETAIN
+docs/daily-logs/Working_Log_2026-10-02.txt | Daily working log | SUPPORTING | 001-007 | RETAIN
 
 
 DEPLOYMENT / BUILD RECORD
 =========================
 
 Deployment performed: YES (local development only)
-Build/version: 0.1.0-dev.35 (current; dev.31-34 earlier today)
+Build/version: 0.1.0-dev.36 (current; dev.31-35 earlier today)
 Environment: Development - Docker on Walter's PC, http://127.0.0.1:8095
 Deployment result: PASS (Claude's checks); NOT TESTED by Walter
-Verification performed: health 0.1.0-dev.35; server tests 142/142 (dev.33)
+Verification performed: health 0.1.0-dev.36; server tests 142/142 (dev.33)
 Rollback required: NO
 
 

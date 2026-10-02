@@ -3,6 +3,16 @@
 Every entry gets an **Intent** and a **Result**. A Result is only marked
 confirmed once actually verified, and can honestly say FAILED.
 
+## 0.1.0-dev.36 — 2026-10-02 (3D replay starts moving) — NOT YET TESTED BY WALTER
+
+**Intent:** Walter: the 3D map now shows, but Play never moves (D-026).
+
+**Result:** The run starts by the clock after the fly-in instead of waiting for
+the map's "move ended" signal (missed when animations are reduced); it runs on
+a plain timer, and one bad frame can't stop it. The white course has a dark
+edge. Checked by Claude: type check, build, Docker dev.36 health. Not seen on
+screen (browser pane hidden: the 3D map never finishes its first draw there).
+
 ## 0.1.0-dev.35 — 2026-10-02 (player label, 3D map fixes) — NOT YET TESTED BY WALTER
 
 **Intent:** Walter's test: the ▶ runner label kept miles after switching to km

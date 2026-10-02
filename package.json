@@ -1,6 +1,6 @@
 {
   "name": "structura",
-  "version": "0.1.0-dev.35",
+  "version": "0.1.0-dev.36",
   "private": true,
   "description": "STRUCTURA - event-centered inventory, services and commercial operations platform",
   "workspaces": ["domain", "server", "web"],
