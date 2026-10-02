@@ -5,6 +5,7 @@ import { courseTotal, elevationProfile, haversine, markersAlong, projectOnLine }
 import { api, get, type EventRecord, type MapFeature } from "../api.js";
 import { addBaseLayers } from "../components/basemap.js";
 import { addDirectionArrows } from "../components/arrows.js";
+import { CoursePlayer } from "../components/CoursePlayer.js";
 import { LocaleContext, useT, type TextKey } from "../i18n.js";
 import { ElevationChart, ICON, ROUTE_COLOR } from "./EventMap.js";
 import { METERS, fmtDist, markerLabel, useMarkerStep, useShowMarkers, useUnit } from "../components/units.js";
@@ -28,6 +29,8 @@ export function CourseSheet({ eventId, courseId }: { eventId: string; courseId: 
   const [showMarkers] = useShowMarkers();
   const km = (m: number, _l?: string) => fmtDist(m, unit, locale);
   const box = useRef<HTMLDivElement>(null);
+  const sheetMap = useRef<L.Map | null>(null);
+  const [playerAt, setPlayerAt] = useState<number | null>(null);
   const [event, setEvent] = useState<EventRecord | null>(null);
   const [items, setItems] = useState<MapFeature[] | null>(null);
   const [failed, setFailed] = useState(false);
@@ -67,6 +70,7 @@ export function CourseSheet({ eventId, courseId }: { eventId: string; courseId: 
   useEffect(() => {
     if (!box.current || !course || coords.length < 2) return;
     const m = L.map(box.current, { zoomControl: false, attributionControl: true, dragging: true, scrollWheelZoom: false });
+    sheetMap.current = m;
     void addBaseLayers(m, locale, { map: t("map.layerMap"), satellite: t("map.layerSatellite") }, { races: true });
     const line = L.polyline(coords.map((c) => [c[1]!, c[0]!] as L.LatLngTuple), { color: ROUTE_COLOR.course, weight: 5 }).addTo(m);
     const arrows = L.layerGroup().addTo(m);
@@ -89,6 +93,7 @@ export function CourseSheet({ eventId, courseId }: { eventId: string; courseId: 
     }
     m.fitBounds(line.getBounds().pad(0.08), { animate: false });
     return () => {
+      sheetMap.current = null;
       m.remove();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -148,7 +153,10 @@ export function CourseSheet({ eventId, courseId }: { eventId: string; courseId: 
         </div>
       </div>
       <div ref={box} className="sheet-map" />
-      {profile && <ElevationChart profile={profile} locale={locale} unit={unit} />}
+      <div className="no-print">
+        <CoursePlayer map={() => sheetMap.current} coords={coords} unit={unit} onPosition={setPlayerAt} />
+      </div>
+      {profile && <ElevationChart profile={profile} locale={locale} unit={unit} at={playerAt} />}
       <h3>{t("sheet.stations")}</h3>
       {stations.length === 0 ? (
         <p className="muted">{t("sheet.noStations")}</p>

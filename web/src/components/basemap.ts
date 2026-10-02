@@ -33,6 +33,29 @@ export function geoStatus(): Promise<GeoStatus> {
   return statusPromise;
 }
 
+// What each map is showing, for the zoom capture (DEC-044): a capture never
+// saves Google's picture (Google's terms); it uses ArcGIS (race maps) or
+// OpenStreetMap instead.
+export interface BaseInfo {
+  current: L.TileLayer;
+  google: boolean;
+  satellite: boolean;
+  arcgis: boolean;
+  lang: string;
+}
+const baseInfo = new WeakMap<L.Map, BaseInfo>();
+export const baseOf = (map: L.Map): BaseInfo | undefined => baseInfo.get(map);
+
+export const OSM_ATTRIBUTION = "© OpenStreetMap contributors";
+export const ESRI_IMAGERY_ATTRIBUTION = "Powered by Esri | Esri, Maxar, Earthstar Geographics, and the GIS User Community";
+// OpenStreetMap pictures are fetched with CORS so a capture can read them.
+export const osmLayer = () =>
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "&copy; OpenStreetMap", crossOrigin: "anonymous" });
+export const arcgisLayer = (style: "streets" | "imagery", lang: string) =>
+  style === "imagery"
+    ? L.tileLayer(`/api/geo/arcgis/imagery/{z}/{y}/{x}`, { maxZoom: 21, attribution: ESRI_IMAGERY_ATTRIBUTION })
+    : L.tileLayer(`/api/geo/arcgis/streets/{z}/{y}/{x}?lang=${lang}`, { maxZoom: 22, tileSize: 512, zoomOffset: -1, attribution: ESRI });
+
 const GOOGLE_LOGO = '<span class="google-logo">Google</span>';
 const ESRI = "Powered by Esri | Esri, TomTom, Garmin, FAO, NOAA, USGS, &copy; OpenStreetMap contributors, GIS User Community";
 const PREF = "structura.basemap";
@@ -63,7 +86,7 @@ export async function addBaseLayers(map: L.Map, locale: string, labels: { map: s
       attribution: "Powered by Esri | Esri, Maxar, Earthstar Geographics, and the GIS User Community",
     });
   }
-  layers["🌍 OSM"] = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "&copy; OpenStreetMap" });
+  layers["🌍 OSM"] = osmLayer();
 
   const names = Object.keys(layers);
   let saved: string | null = null;
@@ -78,6 +101,16 @@ export async function addBaseLayers(map: L.Map, locale: string, labels: { map: s
 
   // Google copyright text for what is on screen, refreshed as the map moves.
   let current: L.Layer = layers[first]!;
+  const arcgisOn = Boolean(status.arcgis && opts.races);
+  const remember = () =>
+    baseInfo.set(map, {
+      current: current as L.TileLayer,
+      google: google.has(current),
+      satellite: current === layers[`🛰 ${labels.satellite}`] || current === layers[`🌳 ArcGIS ${es ? "Imágenes" : "Imagery"}`],
+      arcgis: arcgisOn,
+      lang,
+    });
+  remember();
   let pending: ReturnType<typeof setTimeout> | null = null;
   const refresh = () => {
     if (pending) clearTimeout(pending);
@@ -101,6 +134,7 @@ export async function addBaseLayers(map: L.Map, locale: string, labels: { map: s
   map.on("moveend", refresh);
   map.on("baselayerchange", (e: L.LayersControlEvent) => {
     current = e.layer;
+    remember();
     try {
       localStorage.setItem(PREF, e.name);
     } catch {

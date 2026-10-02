@@ -20,6 +20,8 @@ import { addBaseLayers, addFullscreen, addLocateButton, addResetButton, currentL
 import { guessPointCategory, parseGpx, toGpx } from "../components/gpx.js";
 import { RouteEditor, anchorIndexes, joinSegments, shapeFromLine, type RouteShape, type SegMode } from "../components/routeEditor.js";
 import { MapSearch } from "../components/MapSearch.js";
+import { CoursePlayer } from "../components/CoursePlayer.js";
+import { PoiCard, photoUrl } from "../components/PoiCard.js";
 import { addDirectionArrows } from "../components/arrows.js";
 import { MARKER_STEPS, METERS, fmtDist, markerLabel, useMarkerStep, useShowMarkers, useUnit, type Unit } from "../components/units.js";
 import { describeFailure } from "../forms.js";
@@ -60,6 +62,15 @@ export const ICON: Record<string, string> = {
 export const ROUTE_COLOR: Record<string, string> = { delivery: "#d9480f", pickup: "#0c8599", course: "#7048e8", other: "#1971c2" };
 const AREA_COLOR = "#2b8a3e";
 const DEFAULT_CENTER: L.LatLngTuple = [8.98, -79.52];
+
+// Session Clear (DEC-044): an item as it was when the map was opened.
+const snapshotOf = (f: MapFeature) => ({
+  id: f.id,
+  fields: { kind: f.kind, category: f.category, label: f.label, notes: f.notes, geometry: f.geometry, preferred: f.preferred, source: f.source, props: f.props ?? {} },
+  photos: (f.photos ?? []).map((p) => p.id),
+});
+type Snapshot = ReturnType<typeof snapshotOf>[];
+const escapeHtml = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 const NEAR_COURSE_M = 30;
 
 export const km = (m: number, locale: string) =>
@@ -190,10 +201,16 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
   const unitRef = useRef<Unit>(unit);
   unitRef.current = unit;
   const courses = (items ?? []).filter((f) => f.category === "course" && f.geometry.type === "LineString");
+  // DEC-044: the map as it was when it was opened (for Clear), the point
+  // whose work card is closed, and where the course player is.
+  const sessionStart = useRef<Snapshot | null>(null);
+  const [cardClosed, setCardClosed] = useState(false);
+  const [playerAt, setPlayerAt] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     try {
       const r = await get<{ items: MapFeature[] }>(`/api/events/${event.id}/map`);
+      sessionStart.current ??= r.items.map(snapshotOf);
       setItems(r.items);
     } catch (err) {
       setError(describeFailure(err).message);
@@ -381,7 +398,12 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
           L.marker([last[1]!, last[0]!], { icon: L.divIcon({ className: "flag-marker finish", html: "🏁", iconSize: [26, 26], iconAnchor: [4, 22] }), title: t("map.finishLine") }).addTo(g);
         }
       }
-      (layer as L.Path).bindTooltip?.(label, { direction: "top" });
+      // A point with pictures shows its first one on hover (DEC-044).
+      const first = f.kind === "point" ? f.photos?.[0] : undefined;
+      (layer as L.Path).bindTooltip?.(
+        first ? `<div class="poi-tip"><img src="${photoUrl(first.id)}" alt=""><div>${escapeHtml(label)} · 🖼 ${f.photos!.length}</div></div>` : escapeHtml(label),
+        { direction: "top", className: first ? "poi-tip-wrap" : "" }
+      );
       layer.on("click", () => {
         // While drawing, a click on an existing item is part of the drawing.
         if (map.current?.pm.globalDrawModeEnabled() || editor.current) return;
@@ -455,6 +477,7 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
     if (d && !d.id) cancelDraft();
     setError(null);
     setDraft(toDraft(f));
+    setCardClosed(false);
     // Every item opens zoomed onto itself (Walter, 2026-10-01).
     const m = map.current;
     if (!m) return;
@@ -659,6 +682,29 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
     }
   }
 
+  // Clear (DEC-044, Walter: "a session reset ... go back to the point where
+  // you started on that map"): everything done since the map was opened is
+  // undone on the server in one step - added items go, changed or removed
+  // items come back as they were, with their pictures.
+  const sessionChanged =
+    (sessionStart.current !== null && items !== null && JSON.stringify(items.map(snapshotOf)) !== JSON.stringify(sessionStart.current)) || Boolean(draft && !draft.id);
+  async function clearSession() {
+    if (!sessionStart.current || !window.confirm(t("map.clearSessionConfirm"))) return;
+    cancelDraft();
+    setBusy("common.saving");
+    setError(null);
+    try {
+      await send("POST", `/api/events/${event.id}/map/restore`, newCommand({ items: sessionStart.current }));
+      pendingPois.current = [];
+      await load();
+      setInfo(t("map.clearSessionDone"));
+    } catch (err) {
+      setError(describeFailure(err).message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
   // DEC-033: the repository's routes this Event can use (courses only on races).
   async function openRepository() {
     setInfo(null);
@@ -854,6 +900,9 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
             <button type="button" title={t("repo.pick")} onClick={() => void openRepository()}>
               📚 {t("repo.fromRepo")}
             </button>
+            <button type="button" title={t("map.clearSessionHint")} disabled={!sessionChanged || busy !== null} onClick={() => void clearSession()}>
+              ⤺ {t("map.clearSession")}
+            </button>
             {/* DEC-031: no course tools on a rental Event. */}
             {!isRace ? null : hasCourses ? (
               <>
@@ -996,7 +1045,14 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
           </button>
         </p>
       )}
-      <div ref={box} className="map-box tall" />
+      <div className="map-wrap">
+        <div ref={box} className="map-box tall" />
+        {/* The work card of a point of interest (DEC-044). */}
+        {draft?.id && draft.kind === "point" && !editingShape && !cardClosed && (() => {
+          const f = (items ?? []).find((x) => x.id === draft.id);
+          return f ? <PoiCard eventId={event.id} feature={f} canEdit={canEdit} map={() => map.current} onChanged={load} onClose={() => setCardClosed(true)} /> : null;
+        })()}
+      </div>
       {busy && <p className="small muted">{t(busy)}</p>}
 
       {draft && (
@@ -1110,7 +1166,8 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
               {draft.source && <span className="muted"> · {draft.source}</span>}
             </p>
           )}
-          {profile && <ElevationChart profile={profile} locale={locale} unit={unit} onHover={(at) => showHover(draftCoords, at)} />}
+          {isCourse && !drawing && draftCoords && draftCoords.length >= 2 && <CoursePlayer map={() => map.current} coords={draftCoords} unit={unit} onPosition={setPlayerAt} />}
+          {profile && <ElevationChart profile={profile} locale={locale} unit={unit} at={playerAt} onHover={(at) => showHover(draftCoords, at)} />}
           {isCourse && !profile && !drawing && <p className="small muted">{t("map.noElevation")}</p>}
           {error && (
             <p className="bad" role="alert">
@@ -1140,6 +1197,11 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
               {(draft.id || draft.kind === "route") && !editingShape && !drawing && !draft.props.courseId && !draft.props.locked && (
                 <button type="button" onClick={editShape}>
                   ✎ {t("map.editShape")}
+                </button>
+              )}
+              {draft.id && draft.kind === "point" && cardClosed && (
+                <button type="button" onClick={() => setCardClosed(false)}>
+                  🖼 {t("poi.pictures")}
                 </button>
               )}
               {draft.id && draft.kind === "route" && !drawing && (
@@ -1236,11 +1298,14 @@ export function ElevationChart({
   profile,
   locale,
   unit = "km",
+  at,
   onHover,
 }: {
   profile: NonNullable<ReturnType<typeof elevationProfile>>;
   locale: string;
   unit?: Unit;
+  // The course player's spot (DEC-044), shown while the mouse isn't on the chart.
+  at?: number | null;
   // DEC-032 item 8: where the mouse is along the course (null when it leaves).
   onHover?: (at: { distance: number; elevation: number } | null) => void;
 }) {
@@ -1279,6 +1344,7 @@ export function ElevationChart({
         <path d={`${path} L${w},${h} L0,${h} Z`} className="area" />
         <path d={path} className="line" />
         {hover && <line x1={hover.x} x2={hover.x} y1={0} y2={h} className="cursor" />}
+        {!hover && at != null && <line x1={(at / maxD) * w} x2={(at / maxD) * w} y1={0} y2={h} className="cursor player-cursor" />}
       </svg>
       <p className="small">
         {hover ? (

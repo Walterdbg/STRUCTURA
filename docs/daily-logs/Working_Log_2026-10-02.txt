@@ -72,6 +72,23 @@ Roadmap section: Known Defects (D-022), Approved Decisions (DEC-043), Ready for 
 
 ---
 
+[004]
+Time: 2026-10-02
+Area / feature: 0.1.0-dev.33 - Clear session, course player, pictures on Event points of interest (DEC-044); inventory requirements recorded (P-026)
+Request or objective: Walter (voice): keep Reset view; add a restore button, called Clear: a session reset back to where he started on that map; a Strava-style play button for courses; points of interest with up to 3 pictures, hover shows the picture, click opens a card with two tabs (pictures, checklist), zoom capture of the area; checklist/inventory links/PDF only referenced, not built (wait for inventory phase 1). Event-only (each Event has its own needs). He asked whether reservations exist ("are you hallucinating?").
+Action taken: Answered: Event inventory lines + reservations exist from spec v1.3 (migration 004, spec 6.5/UC-21); not used for the cards; recorded for the inventory review (P-026). Built: server commands map.photo.add / map.photo.remove (up to 3, points only, image checked by content) and map.session.restore (one transaction: items added since removed, others restored with same ids, pictures restored); migration 013 (attachments.role). Web: ⤺ Clear session on Event map and Mapas editor; CoursePlayer (marker, follow, length 30s-5min, slider, chart cursor) in Mapas, Event map and course sheet; PoiCard (Pictures/Checklist tabs, upload with phone-photo shrinking, 📷 capture of the map view drawn from ArcGIS/OSM tiles plus lines and icons, never Google); hover tooltip with first picture.
+Files created: server/migrations/013_poi_photos.sql, server/test/poi.test.ts, web/src/components/CoursePlayer.tsx, web/src/components/PoiCard.tsx, web/src/components/capture.ts
+Files modified: server/src/events/maps.ts, server/src/app.ts, server/test/foundation.test.ts, web/src/api.ts, web/src/components/basemap.ts, web/src/pages/EventMap.tsx, web/src/pages/RepositoryPage.tsx, web/src/pages/CourseSheet.tsx, web/src/i18n.ts, web/src/styles.css, package files (0.1.0-dev.33), CHANGELOG.md, ROADMAP.md (v1.37.0), docs/USER_GUIDE.md
+Decision made: DEC-044 (Walter's request); P-026 recorded (not to build yet)
+Verification performed: server tests 142/142 (4 new: 3-picture limit, routes/non-images refused, Clear restores items and pictures, foreign state refused); web type check and build; Docker dev.33 health OK; browser: player and Clear present on a Mapas course, Clear disabled when nothing changed. NOT checked: the replay moving, the capture and the card (browser pane hidden - no animation, no layout); Walter's Event maps are empty and I did not add test points to his data.
+Result: PARTIAL (server verified; screen behaviour not seen)
+Observed issue: None
+Follow-up required: Walter checks T-024
+Roadmap update required: YES (done: v1.37.0)
+Roadmap section: Approved Decisions (DEC-044), Pending Decisions (P-026), Ready for test (T-024), Build status
+
+---
+
 
 DEFECTS DISCOVERED TODAY
 ========================
@@ -95,21 +112,26 @@ Decision: DEC-043 - maps open on the current location by default; ⟲ Reset view
 Approved by: Walter (request)
 Roadmap update required: YES (done)
 
+[DECISION-003]
+Decision: DEC-044 - Clear session, course player, pictures (3) and zoom capture on Event points; P-026 inventory requirements recorded, not built
+Approved by: Walter (request)
+Roadmap update required: YES (done)
+
 
 DOCUMENT REGISTER
 =================
 
-docs/daily-logs/Working_Log_2026-10-02.txt | Daily working log | SUPPORTING | 001-003 | RETAIN
+docs/daily-logs/Working_Log_2026-10-02.txt | Daily working log | SUPPORTING | 001-004 | RETAIN
 
 
 DEPLOYMENT / BUILD RECORD
 =========================
 
 Deployment performed: YES (local development only)
-Build/version: 0.1.0-dev.32 (current; dev.31 earlier today)
+Build/version: 0.1.0-dev.33 (current; dev.31 and dev.32 earlier today)
 Environment: Development - Docker on Walter's PC, http://127.0.0.1:8095
 Deployment result: PASS (Claude's checks); NOT TESTED by Walter
-Verification performed: health 0.1.0-dev.32; 📍 and ⟲ Reset view present
+Verification performed: health 0.1.0-dev.33; server tests 142/142; player and Clear present
 Rollback required: NO
 
 

@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import {
@@ -11,11 +12,12 @@ import {
   type Geometry,
   type MapFeatureFields,
 } from "@structura/domain";
-import { requireAuth } from "../auth.js";
+import { requireAuth, requireCapability } from "../auth.js";
 import { executeCommand, type CommandContext } from "../commands.js";
 import type { Config } from "../config.js";
 import type { Db } from "../db.js";
 import { commandRequest, idParam, type ParsedCommand } from "../http.js";
+import { MAX_PHOTO_BYTES, sniffImage, type FileStore } from "../storage.js";
 import { getEvent } from "./service.js";
 
 // Event maps (UC-05, AT-07; DEC-022): points, small areas and routes.
@@ -36,7 +38,18 @@ export interface MapFeatureRecord {
   // Courses: one pass x (2 if out-and-back) x laps.
   totalMeters: number | null;
   version: number;
+  // Pictures of a point of interest (DEC-044): photos and zoom captures.
+  photos?: PoiPhoto[];
 }
+
+export interface PoiPhoto {
+  id: string;
+  role: "photo" | "capture";
+  filename: string;
+}
+
+// Up to three pictures per point (Walter, 2026-10-02).
+export const MAX_POI_PHOTOS = 3;
 
 interface Row {
   id: string;
@@ -149,7 +162,25 @@ export async function listFeatures(db: Db, tenantId: string, eventId: string): P
       ORDER BY kind, label`,
     [tenantId, eventId]
   );
-  return rows.map(toRecord);
+  const photos = await photosOf(db, tenantId, rows.map((r) => r.id));
+  return rows.map((r) => ({ ...toRecord(r), photos: photos.get(r.id) ?? [] }));
+}
+
+async function photosOf(db: Db, tenantId: string, ids: string[]): Promise<Map<string, PoiPhoto[]>> {
+  const out = new Map<string, PoiPhoto[]>();
+  if (ids.length === 0) return out;
+  const { rows } = await db.query<{ id: string; parent_id: string; role: string | null; filename: string }>(
+    `SELECT id, parent_id, role, filename FROM attachments
+      WHERE tenant_id = $1 AND parent_type = 'map_feature' AND parent_id = ANY($2::uuid[]) AND state = 'available'
+      ORDER BY created_at, id`,
+    [tenantId, ids]
+  );
+  for (const r of rows) {
+    const list = out.get(r.parent_id) ?? [];
+    list.push({ id: r.id, role: r.role === "capture" ? "capture" : "photo", filename: r.filename });
+    out.set(r.parent_id, list);
+  }
+  return out;
 }
 
 // Only one preferred route per category (e.g. the preferred delivery path).
@@ -265,7 +296,176 @@ export async function removeFeature(db: Db, ctx: CommandContext, eventId: string
   );
 }
 
-export function mapRoutes(app: FastifyInstance, db: Db, config: Config): void {
+// ================================================================ pictures (DEC-044)
+// A point of interest keeps up to three pictures: photos taken there, or
+// captures of the map zoomed in on it (streets, corners) for the crew.
+export interface PoiPhotoUpload {
+  commandId: string;
+  occurredAt: string;
+  role: "photo" | "capture";
+  filename: string;
+  contentType: string;
+  bytes: Buffer;
+}
+
+export async function addPoiPhoto(db: Db, store: FileStore, ctx: CommandContext, eventId: string, featureId: string, up: PoiPhotoUpload) {
+  const sha256 = crypto.createHash("sha256").update(up.bytes).digest("hex");
+  return executeCommand(
+    db,
+    ctx,
+    {
+      commandId: up.commandId,
+      commandType: "map.photo.add",
+      occurredAt: up.occurredAt,
+      payload: { eventId, featureId, role: up.role, sha256, byteSize: up.bytes.length, contentType: up.contentType, filename: up.filename },
+    },
+    async (t) => {
+      // The point's row is locked so two uploads at once can't pass the limit.
+      const { rows } = await t.query<{ kind: string }>(
+        "SELECT kind FROM map_features WHERE tenant_id = $1 AND event_id = $2 AND id = $3 AND removed_at IS NULL FOR UPDATE",
+        [ctx.tenantId, eventId, featureId]
+      );
+      if (!rows[0]) throw new DomainError("not_found", "Map item not found");
+      if (rows[0].kind !== "point") throw new DomainError("validation", "Pictures go on points of interest", { field: "kind" });
+      const have = (await photosOf(t, ctx.tenantId, [featureId])).get(featureId)?.length ?? 0;
+      if (have >= MAX_POI_PHOTOS) {
+        throw new DomainError("validation", `A point keeps up to ${MAX_POI_PHOTOS} pictures. Remove one first.`, {
+          field: "photo",
+          reason: "limit",
+          max: MAX_POI_PHOTOS,
+        });
+      }
+      const attachmentId = uuidv7();
+      const key = `${ctx.tenantId}/${attachmentId}`;
+      try {
+        await store.put(key, up.bytes);
+      } catch {
+        throw new DomainError("provider_failure", "The picture could not be stored. Nothing was changed.");
+      }
+      await t.query(
+        `INSERT INTO attachments (id, tenant_id, parent_type, parent_id, filename, content_type, byte_size, sha256, storage_key, state, uploaded_by, role)
+         VALUES ($1, $2, 'map_feature', $3, $4, $5, $6, $7, $8, 'available', $9, $10)`,
+        [attachmentId, ctx.tenantId, featureId, up.filename, up.contentType, up.bytes.length, sha256, key, ctx.actorId, up.role]
+      );
+      return {
+        result: { id: attachmentId, role: up.role, filename: up.filename },
+        audit: [
+          {
+            action: "map.photo.added",
+            recordType: "event",
+            recordId: eventId,
+            change: { featureId, attachmentId, role: up.role, filename: up.filename, byteSize: up.bytes.length, sha256 },
+          },
+        ],
+        outbox: [{ aggregateType: "attachment", aggregateId: attachmentId, payload: { type: "attachment.stored", featureId, sha256, byteSize: up.bytes.length } }],
+      };
+    }
+  );
+}
+
+// Removing hides the picture; the file and its record stay (a session Clear
+// can bring it back).
+export async function removePoiPhoto(db: Db, ctx: CommandContext, eventId: string, featureId: string, attachmentId: string, cmd: ParsedCommand<unknown>) {
+  return executeCommand(
+    db,
+    ctx,
+    { commandId: cmd.commandId, commandType: "map.photo.remove", occurredAt: cmd.occurredAt, payload: { eventId, featureId, attachmentId } },
+    async (t) => {
+      await getFeature(t, ctx.tenantId, eventId, featureId);
+      const { rows } = await t.query(
+        `UPDATE attachments SET state = 'removed', updated_at = now()
+          WHERE tenant_id = $1 AND id = $2 AND parent_type = 'map_feature' AND parent_id = $3 AND state = 'available' RETURNING id`,
+        [ctx.tenantId, attachmentId, featureId]
+      );
+      if (rows.length === 0) throw new DomainError("not_found", "Picture not found");
+      return {
+        result: { id: attachmentId, removed: true },
+        audit: [{ action: "map.photo.removed", recordType: "event", recordId: eventId, change: { featureId, attachmentId } }],
+      };
+    }
+  );
+}
+
+// ================================================================ session Clear (DEC-044)
+// "Go back to where I started on this map" (Walter, 2026-10-02): the map is
+// put back exactly as it was when it was opened - items added since are
+// removed, items changed or removed come back as they were, and so do their
+// pictures. Ids stay the same, so nothing linked to an item is lost. One
+// step, recorded as one change.
+export const sessionSnapshot = z.object({
+  items: z
+    .array(
+      z.object({
+        id: z.string().uuid(),
+        fields: mapFeatureFields,
+        photos: z.array(z.string().uuid()).max(MAX_POI_PHOTOS).default([]),
+      })
+    )
+    .max(5000),
+});
+export type SessionSnapshot = z.infer<typeof sessionSnapshot>;
+
+export async function restoreSession(db: Db, ctx: CommandContext, eventId: string, cmd: ParsedCommand<SessionSnapshot>) {
+  return executeCommand(
+    db,
+    ctx,
+    { commandId: cmd.commandId, commandType: "map.session.restore", occurredAt: cmd.occurredAt, payload: { eventId, items: cmd.payload.items.length } },
+    async (t) => {
+      const ev = await getEvent(t, ctx.tenantId, eventId);
+      const { rows: all } = await t.query<{ id: string; removed: boolean }>(
+        "SELECT id, removed_at IS NOT NULL AS removed FROM map_features WHERE tenant_id = $1 AND event_id = $2 FOR UPDATE",
+        [ctx.tenantId, eventId]
+      );
+      const known = new Set(all.map((r) => r.id));
+      const keep = new Set(cmd.payload.items.map((i) => i.id));
+      for (const i of cmd.payload.items) {
+        if (!known.has(i.id)) throw new DomainError("validation", "That map state belongs to another Event", { field: "items" });
+        assertRace(ev.eventType, i.fields);
+        await assertAddOn(t, ctx.tenantId, i.fields);
+      }
+      let removed = 0;
+      for (const r of all) {
+        if (!r.removed && !keep.has(r.id)) {
+          await t.query("UPDATE map_features SET removed_at = now(), version = version + 1 WHERE tenant_id = $1 AND id = $2", [ctx.tenantId, r.id]);
+          removed++;
+        }
+      }
+      for (const i of cmd.payload.items) {
+        const f = i.fields;
+        await t.query(
+          `UPDATE map_features SET category = $3, label = $4, notes = $5, geometry = $6, preferred = $7, source = $8, props = $9,
+                  removed_at = NULL, version = version + 1, updated_at = now()
+            WHERE tenant_id = $1 AND id = $2`,
+          [ctx.tenantId, i.id, f.category, f.label, f.notes, JSON.stringify(f.geometry), f.preferred, f.source, JSON.stringify(f.props)]
+        );
+      }
+      // Pictures: as they were when the map was opened.
+      const wanted = cmd.payload.items.flatMap((i) => i.photos);
+      await t.query(
+        `UPDATE attachments SET state = CASE WHEN id = ANY($3::uuid[]) THEN 'available' ELSE 'removed' END, updated_at = now()
+          WHERE tenant_id = $1 AND parent_type = 'map_feature' AND parent_id = ANY($2::uuid[])
+            AND state IN ('available', 'removed') AND (state = 'available') <> (id = ANY($3::uuid[]))`,
+        [ctx.tenantId, all.map((r) => r.id), wanted]
+      );
+      return {
+        result: { restored: cmd.payload.items.length, removed },
+        audit: [{ action: "map.session.restored", recordType: "event", recordId: eventId, change: { items: cmd.payload.items.length, removedSince: removed } }],
+        outbox: [{ aggregateType: "event", aggregateId: eventId, payload: { type: "map.session.restored" } }],
+      };
+    }
+  );
+}
+
+// Picture uploads send the raw image as the body; the command envelope
+// travels in headers (as for product photos).
+const poiPhotoHeaders = z.object({
+  "x-command-id": z.string().uuid(),
+  "x-occurred-at": z.string().datetime({ offset: true }),
+  "x-filename": z.string().max(300).optional(),
+  "x-photo-role": z.enum(["photo", "capture"]).default("photo"),
+});
+
+export function mapRoutes(app: FastifyInstance, db: Db, config: Config, store: FileStore): void {
   app.get("/api/events/:id/map", async (req) => {
     const auth = requireAuth(req);
     const eventId = idParam(req);
@@ -291,5 +491,42 @@ export function mapRoutes(app: FastifyInstance, db: Db, config: Config): void {
     const id = idParam(req, "featureId");
     const { ctx, cmd } = commandRequest(req, "map.edit", z.object({}).passthrough(), config.deploymentId, config.now());
     return removeFeature(db, ctx, eventId, id, cmd);
+  });
+
+  // Session Clear (DEC-044): the map back as it was when it was opened.
+  app.post("/api/events/:id/map/restore", async (req) => {
+    const eventId = idParam(req);
+    const { ctx, cmd } = commandRequest(req, "map.edit", sessionSnapshot, config.deploymentId, config.now());
+    return restoreSession(db, ctx, eventId, cmd);
+  });
+
+  // Pictures of a point of interest (DEC-044).
+  app.put("/api/events/:id/map/:featureId/photos", { bodyLimit: MAX_PHOTO_BYTES }, async (req, reply) => {
+    const auth = requireCapability(req, "map.edit");
+    const eventId = idParam(req);
+    const featureId = idParam(req, "featureId");
+    const h = poiPhotoHeaders.safeParse(req.headers);
+    if (!h.success) throw new DomainError("validation", "Missing command headers for the picture upload");
+    const bytes = req.body;
+    if (!Buffer.isBuffer(bytes) || bytes.length === 0) throw new DomainError("validation", "No image received");
+    const contentType = sniffImage(bytes);
+    if (!contentType) throw new DomainError("validation", "Only JPEG, PNG or WebP images are accepted", { field: "photo" });
+    const res = await addPoiPhoto(db, store, { tenantId: auth.tenantId, actorId: auth.userId, deploymentId: config.deploymentId }, eventId, featureId, {
+      commandId: h.data["x-command-id"],
+      occurredAt: h.data["x-occurred-at"],
+      role: h.data["x-photo-role"],
+      filename: decodeURIComponent(h.data["x-filename"] ?? "picture"),
+      contentType,
+      bytes,
+    });
+    return reply.status(res.replayed ? 200 : 201).send(res);
+  });
+
+  app.post("/api/events/:id/map/:featureId/photos/:photoId/remove", async (req) => {
+    const eventId = idParam(req);
+    const featureId = idParam(req, "featureId");
+    const photoId = idParam(req, "photoId");
+    const { ctx, cmd } = commandRequest(req, "map.edit", z.object({}).passthrough(), config.deploymentId, config.now());
+    return removePoiPhoto(db, ctx, eventId, featureId, photoId, cmd);
   });
 }

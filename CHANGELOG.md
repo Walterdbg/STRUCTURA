@@ -3,6 +3,23 @@
 Every entry gets an **Intent** and a **Result**. A Result is only marked
 confirmed once actually verified, and can honestly say FAILED.
 
+## 0.1.0-dev.33 — 2026-10-02 (Clear session, course player, point pictures) — NOT YET TESTED BY WALTER
+
+**Intent:** Walter: a one-step way back to where he started on a map instead
+of many Undos; a Strava-style play button for courses; pictures on Event
+points of interest, up to three, with a capture of the zoomed-in map (DEC-044).
+The checklist, inventory links and crew PDF wait for inventory phase 1 (P-026).
+
+**Result:** ⤺ Clear session on the Event map (one server step, ids and
+pictures kept) and in Mapas (opening state saved again as a version if
+needed). ▶ player on courses in Mapas, the Event map and the course sheet.
+Event points open a work card: Pictures (up to 3: photos or 📷 map captures,
+never Google's picture) and Checklist (announcement only); the first picture
+shows on hover. New migration 013 (picture role). Checked by Claude: 142/142
+server tests (4 new), type check, build, Docker dev.33 health, the player and
+Clear buttons on a course. Not seen on screen: the replay moving, the capture,
+the card (browser pane hidden: it doesn't animate or lay out).
+
 ## 0.1.0-dev.32 — 2026-10-02 (Reset view, current location, full-screen controls) — NOT YET TESTED BY WALTER
 
 **Intent:** Walter's screenshot: in full screen the tool bar covered the

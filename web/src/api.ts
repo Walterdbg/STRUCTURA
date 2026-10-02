@@ -111,6 +111,8 @@ export interface MapFeature {
   lengthMeters: number | null;
   totalMeters: number | null;
   version: number;
+  // Pictures of a point of interest (DEC-044).
+  photos?: { id: string; role: "photo" | "capture"; filename: string }[];
 }
 
 export interface Page<T> {

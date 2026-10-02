@@ -67,7 +67,7 @@ export async function buildApp({ db, config, logger = true, store }: AppOptions)
 
   identityRoutes(app, db, config);
   eventRoutes(app, db, config);
-  mapRoutes(app, db, config);
+  mapRoutes(app, db, config, files);
   inventoryRoutes(app, db, config, files);
   auditRoutes(app, db);
   geoRoutes(app, db, config);

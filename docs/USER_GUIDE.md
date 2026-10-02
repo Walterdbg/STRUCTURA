@@ -265,6 +265,20 @@ Without the add-on these buttons show 🔒 *Recorridos (complemento)*.
 its own to show (a new course, an Event with no place yet) opens where you are. The browser asks
 permission the first time; if you refuse, the map opens as before and everything still works.
 
+**⤺ Clear session:** puts the map back exactly as it was when you opened it - everything you did
+since is discarded (on an Event map: items added are removed, items changed or removed come back,
+with their pictures; in Mapas, if you saved versions meanwhile, the original is saved again as a new
+version). Undo is still there for single steps while drawing.
+
+**▶ Play a course:** under a course (Mapas, Event map, course sheet). The orange marker runs along the
+course and the map follows it; choose how long the replay takes (30 s to 5 min), drag the slider to
+jump, untick *Follow* to keep the map still. The height chart shows the same spot.
+
+**Pictures on a point (Event maps):** click a point to open its card. *Pictures*: up to 3 in all -
+⤒ Add photo, or zoom in until you see the streets and press 📷 Capture this view (the capture uses
+ArcGIS or OpenStreetMap; Google's picture can't be saved). Hover a point to see its first picture.
+*Checklist* (what to deliver and do there, and the crew PDF) arrives with the inventory's phase 1.
+
 **⟲ Reset view:** brings the map back to its starting view: the course, the Event's items, the
 Event's place, or your location.
 

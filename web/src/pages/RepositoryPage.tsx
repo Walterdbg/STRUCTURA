@@ -6,6 +6,7 @@ import { ApiError, get, newCommand, send } from "../api.js";
 import { addBaseLayers, addFullscreen, addLocateButton, addResetButton, currentLocation, geoStatus, lastView, rememberView, type GeoStatus } from "../components/basemap.js";
 import { guessPointCategory, parseGpx } from "../components/gpx.js";
 import { MapSearch } from "../components/MapSearch.js";
+import { CoursePlayer } from "../components/CoursePlayer.js";
 import { addDirectionArrows } from "../components/arrows.js";
 import { RouteEditor, anchorIndexes, joinSegments, shapeFromLine, type RouteShape, type SegMode } from "../components/routeEditor.js";
 import { MARKER_STEPS, METERS, fmtDist, markerLabel, useMarkerStep, useShowMarkers, usePref, useUnit, type Unit } from "../components/units.js";
@@ -227,6 +228,27 @@ export function RepositoryList({ canEdit, features, platform = false }: { canEdi
 }
 
 // ------------------------------------------------------------------ editor
+// Clear (DEC-044): the route as it was when the editor was opened. A new
+// route's first save opens its own page; the blank start travels with it.
+interface OpenState {
+  recordId: string | null;
+  currentVersion: number | null;
+  name: string;
+  category: string;
+  notes: string;
+  props: FeatureProps;
+  coords: number[][];
+  source: string | null;
+  waypoints: Waypoint[];
+  loc: { country: string; area: string; place: string };
+}
+let carriedStart: { routeId: string; state: OpenState } | null = null;
+// Heights added on their own (native heights) are not a change by the person.
+const flat = (c: number[][]) => c.map((x) => [x[0], x[1]]);
+const sameWork = (a: OpenState, b: OpenState) =>
+  JSON.stringify([a.name.trim(), a.notes.trim(), a.category, a.props, flat(a.coords), a.waypoints, a.loc]) ===
+  JSON.stringify([b.name.trim(), b.notes.trim(), b.category, b.props, flat(b.coords), b.waypoints, b.loc]);
+
 export function RepositoryRouteEditor({
   routeId,
   newCategory,
@@ -281,6 +303,8 @@ export function RepositoryRouteEditor({
   const [notice, setNotice] = useState<string | null>(null);
   const [guides, setGuides] = useState<RepoRoute[]>([]);
   const [guideId, setGuideId] = useState("");
+  const [playerAt, setPlayerAt] = useState<number | null>(null);
+  const opened = useRef<OpenState | null>(null);
   const guideLayer = useRef<L.Polyline | null>(null);
   const isCourse = category === "course";
   const dist = (m: number) => fmtDist(m, unit, locale);
@@ -299,6 +323,22 @@ export function RepositoryRouteEditor({
         setCoords(r.geometry?.coordinates ?? []);
         setWaypoints(r.waypoints ?? []);
         setLoc({ country: r.country ?? "", area: r.area ?? "", place: r.place ?? "" });
+        if (!opened.current) {
+          const carried = carriedStart?.routeId === r.id ? carriedStart.state : null;
+          carriedStart = null;
+          opened.current = carried ?? {
+            recordId: r.id,
+            currentVersion: r.currentVersion,
+            name: r.name,
+            category: r.category,
+            notes: r.notes ?? "",
+            props: r.props ?? {},
+            coords: r.geometry?.coordinates ?? [],
+            source: null,
+            waypoints: r.waypoints ?? [],
+            loc: { country: r.country ?? "", area: r.area ?? "", place: r.place ?? "" },
+          };
+        }
       },
       (err) => setMsg({ ok: false, text: describeFailure(err).message })
     );
@@ -556,6 +596,7 @@ export function RepositoryRouteEditor({
       editor.current = null;
       setDrawing(false);
       setMsg({ ok: true, text: `${t("common.saved")} · v${res.result.currentVersion}` });
+      if (res.result.id !== record?.id && opened.current) carriedStart = { routeId: res.result.id, state: asNew ? { ...current(), recordId: null, currentVersion: null } : opened.current };
       go(`/maps/${res.result.id}`);
       const fresh = await get<RepoRoute>(`/api/repository/routes/${res.result.id}`);
       setRecord(fresh);
@@ -589,6 +630,86 @@ export function RepositoryRouteEditor({
       go("/maps");
     } catch (err) {
       setMsg({ ok: false, text: describeFailure(err).message });
+    }
+  }
+
+  // What is on screen now, in the same shape as the opening state.
+  function current(): OpenState {
+    return { recordId: record?.id ?? null, currentVersion: record?.currentVersion ?? null, name, category, notes, props, coords, source, waypoints, loc };
+  }
+  const startState: OpenState = opened.current ?? {
+    recordId: null,
+    currentVersion: null,
+    name: "",
+    category,
+    notes: "",
+    props: {},
+    coords: [],
+    source: null,
+    waypoints: [],
+    loc: { country: "", area: "", place: "" },
+  };
+  if (!routeId && !opened.current) opened.current = startState;
+  const sessionChanged = (opened.current !== null && !sameWork(current(), opened.current)) || (record !== null && record.currentVersion !== opened.current?.currentVersion);
+
+  // Clear (DEC-044, Walter: "a session reset ... go back to the point where
+  // you started on that map"): the route as it was when it was opened. If a
+  // version was saved since, the opening state is saved again as a new
+  // version (history is kept); a route created in this session is removed.
+  async function clearSession() {
+    const o = opened.current;
+    if (!o || !window.confirm(t("map.clearSessionConfirm"))) return;
+    editor.current?.stop();
+    editor.current = null;
+    setDrawing(false);
+    setNotice(null);
+    setName(o.name);
+    setCategory(o.category);
+    setNotes(o.notes);
+    setProps(o.props);
+    setCoords(o.coords);
+    setSource(o.source);
+    setWaypoints(o.waypoints);
+    setLoc(o.loc);
+    setBusy("common.saving");
+    try {
+      if (record && o.recordId === null) {
+        await send("POST", `/api/repository/routes/${record.id}/remove`, newCommand({}, record.version));
+        setMsg({ ok: true, text: t("map.clearSessionDone") });
+        go(`/maps/new?cat=${o.category}`);
+        return;
+      }
+      if (record && record.currentVersion !== o.currentVersion) {
+        const payload = {
+          name: o.name.trim() || t(`map.cat.${o.category}` as TextKey),
+          category: o.category,
+          notes: o.notes.trim() || null,
+          geometry: { type: "LineString", coordinates: o.coords },
+          props: o.props,
+          source: `${t("map.clearSessionSource")} v${o.currentVersion}`.slice(0, 300),
+          waypoints: o.waypoints,
+          country: o.loc.country.trim() || null,
+          area: o.loc.area.trim() || null,
+          place: o.loc.place.trim() || null,
+        };
+        await send("PUT", `/api/repository/routes/${record.id}`, newCommand(payload, record.version));
+      } else if (record && (record.country ?? "") + (record.area ?? "") + (record.place ?? "") !== o.loc.country + o.loc.area + o.loc.place) {
+        await send("PUT", `/api/repository/routes/${record.id}/location`, newCommand(o.loc, record.version));
+      }
+      if (record) {
+        const fresh = await get<RepoRoute>(`${apiBase}/${record.id}`);
+        setRecord(fresh);
+        // Now the saved route matches the opening state again.
+        opened.current = { ...o, currentVersion: fresh.currentVersion };
+      } else {
+        // A new route not saved yet: back to a blank map, ready to draw.
+        setTimeout(() => setDrawing(true), 0);
+      }
+      setMsg({ ok: true, text: t("map.clearSessionDone") });
+    } catch (err) {
+      setMsg({ ok: false, text: describeFailure(err).message });
+    } finally {
+      setBusy(null);
     }
   }
 
@@ -796,7 +917,8 @@ export function RepositoryRouteEditor({
           </span>
         )}
       </p>
-      {profile && <ElevationChart profile={profile} locale={locale} unit={unit} onHover={showHover} />}
+      {isCourse && !drawing && coords.length >= 2 && <CoursePlayer map={() => map.current} coords={coords} unit={unit} onPosition={setPlayerAt} />}
+      {profile && <ElevationChart profile={profile} locale={locale} unit={unit} at={playerAt} onHover={showHover} />}
 
       {msg && <p className={msg.ok ? "good" : "bad"}>{msg.text}</p>}
       {canEdit && (
@@ -810,6 +932,9 @@ export function RepositoryRouteEditor({
               ✎ {t("map.editShape")}
             </button>
           )}
+          <button type="button" title={t("map.clearSessionHint")} disabled={!sessionChanged || busy !== null} onClick={() => void clearSession()}>
+            ⤺ {t("map.clearSession")}
+          </button>
           {/* Importing a GPX is always possible, also while drawing (Walter, 2026-10-01). */}
           <label className="button file" title={t("repo.importHint")}>
             ⤒ {t("repo.importGpx")}
