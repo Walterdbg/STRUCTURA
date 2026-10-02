@@ -3,6 +3,16 @@
 Every entry gets an **Intent** and a **Result**. A Result is only marked
 confirmed once actually verified, and can honestly say FAILED.
 
+## 0.1.0-dev.19 — 2026-10-01 (GPX upload in Mapas) — NOT YET TESTED BY WALTER
+
+**Intent:** Walter: "in new course I cannot upload maps?" (D-018): the GPX
+button was hidden while drawing, and a new course opens in drawing mode.
+
+**Result:** **⤒ Upload GPX** is always at the top of a course page (also
+while drawing) and at the bottom. The Mapas list has **⤒ Upload GPX** too:
+the file is saved straight to the repository as version 1 (a course, with
+heights) and opened. Browser-checked by Claude with a GPX file (2.52 km,
+climb 12 m).
 ## 0.1.0-dev.18 — 2026-10-01 (full screen map) — NOT YET TESTED BY WALTER
 
 **Intent:** Walter: wheel zoom in full screen is good, but "the controls

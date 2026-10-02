@@ -207,6 +207,23 @@ Roadmap section: Known Defects (D-017), Build status
 
 ---
 
+[012]
+Time: 2026-10-01, night
+Area / feature: 0.1.0-dev.19 - GPX upload in Mapas (D-018)
+Request or objective: Walter: "in new course I cannot upload maps? are you serious here?"
+Action taken: The GPX button had been hidden while drawing (a new course opens in drawing mode). Now: Upload GPX always at the top of the course page and at the bottom; Upload GPX on the Mapas list saves straight to the repository (course with heights, version 1) and opens it.
+Files created: None
+Files modified: web/src/pages/RepositoryPage.tsx, web/src/i18n.ts, package files (0.1.0-dev.19), CHANGELOG.md, ROADMAP.md (v1.30.0), docs/USER_GUIDE.md
+Decision made: None
+Verification performed: Test copy with a GPX file: from the list, saved and opened as "Prueba Cinta Costera 5K", 2.52 km, heights 2-13 m; on a new course while drawing, the file loaded with name and distance and drawing ended. Docker dev.19 health OK.
+Result: PASS for Claude's checks; NOT TESTED by Walter
+Observed issue: D-018 was missed in my own checks of dev.14 (I tested drawing and saving, not uploading on a new course)
+Follow-up required: Walter tests T-020
+Roadmap update required: YES (done: v1.30.0)
+Roadmap section: Known Defects (D-018), Build status
+
+---
+
 
 DEFECTS DISCOVERED TODAY
 ========================
@@ -214,6 +231,7 @@ DEFECTS DISCOVERED TODAY
 [DEFECT-010] Map item save refused without a name and the message went unnoticed; pressing another drawing button discarded the drawing; Walter lost a route. High. FIXED-NOT-TESTED (dev.10).
 [DEFECT-011] Map/Satellite switch stayed in Spanish after switching to English; large radio circles on a white box. Low. FIXED-NOT-TESTED (dev.10).
 [DEFECT-012] A line drawn as Route and changed to Course got no elevation until "Fit to streets". Medium. FIXED-NOT-TESTED (dev.10).
+[DEFECT-018] New course couldn't upload a GPX (button hidden while drawing). High. FIXED (dev.19, browser-checked).
 [DEFECT-017] Full screen kept tools above the map (about 40% of the screen). Medium. FIXED-NOT-TESTED (dev.18).
 [DEFECT-016] Place search list reopened after a choice. Low. FIXED (dev.17, browser-checked).
 [DEFECT-015] ArcGIS Imagery path not in the static tiles service. Medium. FIXED (dev.16, live check).
@@ -250,7 +268,7 @@ DEPLOYMENT / BUILD RECORD
 =========================
 
 Deployment performed: YES (local development only)
-Build/version: 0.1.0-dev.10, 0.1.0-dev.11, 0.1.0-dev.12, 0.1.0-dev.13, 0.1.0-dev.14, 0.1.0-dev.15, 0.1.0-dev.16, 0.1.0-dev.17, then 0.1.0-dev.18 (current)
+Build/version: 0.1.0-dev.10, 0.1.0-dev.11, 0.1.0-dev.12, 0.1.0-dev.13, 0.1.0-dev.14, 0.1.0-dev.15, 0.1.0-dev.16, 0.1.0-dev.17, 0.1.0-dev.18, then 0.1.0-dev.19 (current)
 Environment: Development - Docker on Walter's PC, http://127.0.0.1:8095
 Deployment result: PASS (Claude's checks); NOT TESTED by Walter
 Verification performed: health 0.1.0-dev.10, dev.11 and dev.12 (migration 008), Google status/search live

@@ -268,8 +268,11 @@ the top right, and place search finds buildings (e.g. "PH Palmas Bellas").
 
 **Mapas** keeps race courses and delivery / pickup routes made ahead of time, for any Event.
 
+- **⤒ Cargar GPX** on the Mapas list saves a GPX file (Strava, Garmin, plotaroute, RunningAhead…)
+  straight into the repository and opens it.
 - **+ Nuevo recorrido / Nueva ruta de entrega / Nueva ruta de recogida**: draw it (courses by hand
-  with ✏️; deliveries and pickups with 🚗 car, 🏍 motorcycle or ✏️), or **⤒ GPX** to import a file.
+  with ✏️; deliveries and pickups with 🚗 car, 🏍 motorcycle or ✏️), or **⤒ Cargar GPX** at the top
+  of the page, at any moment.
 - Every **Guardar** keeps a **new version as a GPX file** (v1, v2, ...). The *Versiones* list
   downloads any of them. Earlier versions are never lost.
 - **⧉ Duplicar** starts a new route from this one (e.g. next year's course). **🔒** locks a final

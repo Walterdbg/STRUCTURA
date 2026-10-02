@@ -53,6 +53,31 @@ export function RepositoryList({ canEdit, features }: { canEdit: boolean; featur
   const [items, setItems] = useState<RepoRoute[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const hasCourses = features.includes("courses");
+  const [uploading, setUploading] = useState(false);
+
+  // Upload a GPX straight into the repository (version 1) and open it. A
+  // course when the organization has the courses add-on, otherwise a route.
+  async function uploadGpx(file: File | undefined) {
+    if (!file) return;
+    setError(null);
+    setUploading(true);
+    try {
+      const g = parseGpx(await file.text());
+      const category = hasCourses ? "course" : "other";
+      let coordinates = g.coordinates;
+      if (category === "course" && !coordinates.every((c) => c.length > 2)) {
+        const res = await fetch("/api/geo/elevation", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ coordinates: coordinates.map((c) => [c[0], c[1]]) }) });
+        if (res.ok) coordinates = (await res.json()).coordinates as number[][];
+      }
+      const payload = { name: g.name ?? file.name.replace(/\.gpx$/i, ""), category, notes: null, geometry: { type: "LineString", coordinates }, props: {}, source: file.name };
+      const r = await send<RepoRoute>("POST", "/api/repository/routes", newCommand(payload));
+      go(`/maps/${r.result.id}`);
+    } catch (err) {
+      setError(err instanceof ApiError ? describeFailure(err).message : t("map.gpxInvalid"));
+    } finally {
+      setUploading(false);
+    }
+  }
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -70,8 +95,12 @@ export function RepositoryList({ canEdit, features }: { canEdit: boolean; featur
         <h2>{t("repo.title")}</h2>
         {canEdit && (
           <div className="row">
+            <label className="button file primary" title={t("repo.importHint")}>
+              ⤒ {uploading ? t("common.saving") : t("repo.importGpx")}
+              <input type="file" accept=".gpx,application/gpx+xml" disabled={uploading} onChange={(e) => (void uploadGpx(e.target.files?.[0]), (e.target.value = ""))} />
+            </label>
             {hasCourses && (
-              <a className="button primary" href="#/maps/new?cat=course">
+              <a className="button" href="#/maps/new?cat=course">
                 🏃 {t("repo.newCourse")}
               </a>
             )}
@@ -408,6 +437,12 @@ export function RepositoryRouteEditor({ routeId, newCategory, canEdit, features 
           <a className="button" href="#/maps">
             {t("common.back")}
           </a>
+          {canEdit && (
+            <label className="button file primary" title={t("repo.importHint")}>
+              ⤒ {t("repo.importGpx")}
+              <input type="file" accept=".gpx,application/gpx+xml" onChange={(e) => (void importGpx(e.target.files?.[0]), (e.target.value = ""))} />
+            </label>
+          )}
           {record && (
             <a className="button" href={`/api/repository/routes/${record.id}/gpx`} download>
               ⤓ GPX v{record.currentVersion}
@@ -543,12 +578,11 @@ export function RepositoryRouteEditor({ routeId, newCategory, canEdit, features 
               ✎ {t("map.editShape")}
             </button>
           )}
-          {!drawing && (
-            <label className="button file">
-              ⤒ GPX
-              <input type="file" accept=".gpx,application/gpx+xml" onChange={(e) => (void importGpx(e.target.files?.[0]), (e.target.value = ""))} />
-            </label>
-          )}
+          {/* Importing a GPX is always possible, also while drawing (Walter, 2026-10-01). */}
+          <label className="button file" title={t("repo.importHint")}>
+            ⤒ {t("repo.importGpx")}
+            <input type="file" accept=".gpx,application/gpx+xml" onChange={(e) => (void importGpx(e.target.files?.[0]), (e.target.value = ""))} />
+          </label>
           {record && (
             <button type="button" onClick={() => void save(true)} title={t("repo.duplicateHint")}>
               ⧉ {t("repo.duplicate")}
