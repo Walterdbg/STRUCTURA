@@ -224,6 +224,23 @@ Roadmap section: Known Defects (D-018), Build status
 
 ---
 
+[013]
+Time: 2026-10-01, night
+Area / feature: 0.1.0-dev.20 - reusable routes (DEC-036)
+Request or objective: Walter: "you can load a map and [its] state, only load location, as it may need to be repurposed, like a race map used then for a delivery route for the water stations, course signs and others. Do you get the idea now?"
+Action taken: Upload from the Mapas list now saves a plain route (type other, no heights yet); the type select is editable on existing routes (each change a new version; a course gets heights on save); guide route select in the Mapas editor draws another route as a faint dashed line to trace along.
+Files created: None
+Files modified: web/src/pages/RepositoryPage.tsx, web/src/i18n.ts, package files (0.1.0-dev.20), CHANGELOG.md, ROADMAP.md (v1.31.0), docs/USER_GUIDE.md
+Decision made: DEC-036 (Walter)
+Verification performed: Test copy: GPX uploaded as plain route (type other, editable); changed to course and saved as v2 with heights 2-13 m; new delivery route showed the course in the guide list and drew the guide line. Docker dev.20 health OK.
+Result: PASS for Claude's checks; NOT TESTED by Walter
+Observed issue: None
+Follow-up required: Walter tests T-020
+Roadmap update required: YES (done: v1.31.0)
+Roadmap section: Approved Decisions (DEC-036), Build status
+
+---
+
 
 DEFECTS DISCOVERED TODAY
 ========================
@@ -268,7 +285,7 @@ DEPLOYMENT / BUILD RECORD
 =========================
 
 Deployment performed: YES (local development only)
-Build/version: 0.1.0-dev.10, 0.1.0-dev.11, 0.1.0-dev.12, 0.1.0-dev.13, 0.1.0-dev.14, 0.1.0-dev.15, 0.1.0-dev.16, 0.1.0-dev.17, 0.1.0-dev.18, then 0.1.0-dev.19 (current)
+Build/version: 0.1.0-dev.10, 0.1.0-dev.11, 0.1.0-dev.12, 0.1.0-dev.13, 0.1.0-dev.14, 0.1.0-dev.15, 0.1.0-dev.16, 0.1.0-dev.17, 0.1.0-dev.18, 0.1.0-dev.19, then 0.1.0-dev.20 (current)
 Environment: Development - Docker on Walter's PC, http://127.0.0.1:8095
 Deployment result: PASS (Claude's checks); NOT TESTED by Walter
 Verification performed: health 0.1.0-dev.10, dev.11 and dev.12 (migration 008), Google status/search live

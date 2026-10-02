@@ -3,6 +3,20 @@
 Every entry gets an **Intent** and a **Result**. A Result is only marked
 confirmed once actually verified, and can honestly say FAILED.
 
+## 0.1.0-dev.20 — 2026-10-01 (reusable routes) — NOT YET TESTED BY WALTER
+
+**Intent:** Walter: a loaded map is only a location that may be repurposed,
+e.g. a race map reused for the delivery route to the water stations and
+course signs (DEC-036).
+
+**Result:**
+- Uploading a GPX loads only the line and its place, as a plain route.
+- The type (course, delivery, pickup, other) can be changed any time; each
+  change is a new GPX version; a course gets its heights when saved.
+- **Guide route**: in Mapas, another repository route can be shown as a
+  faint guide line to draw along.
+- Browser-checked by Claude: upload -> plain route; changed to course ->
+  v2 with heights; new delivery route with the course as guide line.
 ## 0.1.0-dev.19 — 2026-10-01 (GPX upload in Mapas) — NOT YET TESTED BY WALTER
 
 **Intent:** Walter: "in new course I cannot upload maps?" (D-018): the GPX

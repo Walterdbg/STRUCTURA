@@ -269,7 +269,10 @@ the top right, and place search finds buildings (e.g. "PH Palmas Bellas").
 **Mapas** keeps race courses and delivery / pickup routes made ahead of time, for any Event.
 
 - **⤒ Cargar GPX** on the Mapas list saves a GPX file (Strava, Garmin, plotaroute, RunningAhead…)
-  straight into the repository and opens it.
+  straight into the repository and opens it. Only the line and its place are loaded: choose its
+  **type** afterwards (course, delivery, pickup, other). The type can be changed any time, so a race
+  map can be reused, e.g. as the delivery route for water stations and course signs.
+- **Ruta guía**: while drawing in Mapas, show another route as a faint guide line and draw along it.
 - **+ Nuevo recorrido / Nueva ruta de entrega / Nueva ruta de recogida**: draw it (courses by hand
   with ✏️; deliveries and pickups with 🚗 car, 🏍 motorcycle or ✏️), or **⤒ Cargar GPX** at the top
   of the page, at any moment.

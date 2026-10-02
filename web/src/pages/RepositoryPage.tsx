@@ -55,21 +55,18 @@ export function RepositoryList({ canEdit, features }: { canEdit: boolean; featur
   const hasCourses = features.includes("courses");
   const [uploading, setUploading] = useState(false);
 
-  // Upload a GPX straight into the repository (version 1) and open it. A
-  // course when the organization has the courses add-on, otherwise a route.
+  // Upload a GPX straight into the repository (version 1) and open it. Only
+  // the line and its place are loaded: it starts as a plain route and its
+  // type is chosen afterwards, so a race map can be reused for deliveries,
+  // water stations or course signs (Walter, 2026-10-01).
   async function uploadGpx(file: File | undefined) {
     if (!file) return;
     setError(null);
     setUploading(true);
     try {
       const g = parseGpx(await file.text());
-      const category = hasCourses ? "course" : "other";
-      let coordinates = g.coordinates;
-      if (category === "course" && !coordinates.every((c) => c.length > 2)) {
-        const res = await fetch("/api/geo/elevation", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ coordinates: coordinates.map((c) => [c[0], c[1]]) }) });
-        if (res.ok) coordinates = (await res.json()).coordinates as number[][];
-      }
-      const payload = { name: g.name ?? file.name.replace(/\.gpx$/i, ""), category, notes: null, geometry: { type: "LineString", coordinates }, props: {}, source: file.name };
+      // Heights come later, when it is made a course and saved.
+      const payload = { name: g.name ?? file.name.replace(/\.gpx$/i, ""), category: "other", notes: null, geometry: { type: "LineString", coordinates: g.coordinates }, props: {}, source: file.name };
       const r = await send<RepoRoute>("POST", "/api/repository/routes", newCommand(payload));
       go(`/maps/${r.result.id}`);
     } catch (err) {
@@ -191,6 +188,9 @@ export function RepositoryRouteEditor({ routeId, newCategory, canEdit, features 
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [guides, setGuides] = useState<RepoRoute[]>([]);
+  const [guideId, setGuideId] = useState("");
+  const guideLayer = useRef<L.Polyline | null>(null);
   const isCourse = category === "course";
   const dist = (m: number) => fmtDist(m, unit, locale);
   const tools: SegMode[] = status?.routing && byCar(category) ? ["d", "m", "l"] : ["l"];
@@ -219,6 +219,7 @@ export function RepositoryRouteEditor({ routeId, newCategory, canEdit, features 
     void addBaseLayers(m, locale, { map: t("map.layerMap"), satellite: t("map.layerSatellite") }, { races: category === "course" }).then((s) => setStatus(s));
     if (sectionRef.current) addFullscreen(m, sectionRef.current, { enter: t("map.fullscreen"), exit: t("map.exitFullscreen") });
     viewLayer.current = L.layerGroup().addTo(m);
+    void get<{ items: RepoRoute[] }>("/api/repository/routes").then((r) => setGuides(r.items), () => {});
     map.current = m;
     map.current = m;
     setMapReady(true);
@@ -262,6 +263,22 @@ export function RepositoryRouteEditor({ routeId, newCategory, canEdit, features 
     m.fitBounds(line.getBounds().pad(0.15));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [coords, drawing, unit, markerStep, showMarkers, category, mapReady]);
+
+  // The guide line: faint, dashed, not clickable; only to trace along.
+  useEffect(() => {
+    const m = map.current;
+    guideLayer.current?.remove();
+    guideLayer.current = null;
+    if (!m || !guideId) return;
+    void get<RepoRoute>(`/api/repository/routes/${guideId}`).then((g) => {
+      const c = g.geometry?.coordinates ?? [];
+      if (c.length < 2 || !map.current) return;
+      guideLayer.current = L.polyline(c.map((x) => [x[1]!, x[0]!] as L.LatLngTuple), { color: "#868e96", weight: 7, opacity: 0.55, dashArray: "6 8", interactive: false }).addTo(map.current);
+      guideLayer.current.bringToBack();
+      if (coords.length < 2) map.current.fitBounds(guideLayer.current.getBounds().pad(0.15));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [guideId, mapReady]);
 
   function startEditor(shape?: RouteShape) {
     const m = map.current;
@@ -458,7 +475,7 @@ export function RepositoryRouteEditor({ routeId, newCategory, canEdit, features 
         </label>
         <label>
           <span>{t("map.type")}</span>
-          <select value={category} disabled={!canEdit || Boolean(record)} onChange={(e) => setCategory(e.target.value)}>
+          <select value={category} disabled={!canEdit || drawing} onChange={(e) => setCategory(e.target.value)} title={t("repo.typeHint")}>
             {CATS.filter((c) => c !== "course" || features.includes("courses") || category === "course").map((c) => (
               <option key={c} value={c}>
                 {t(`map.cat.${c}` as TextKey)}
@@ -487,7 +504,19 @@ export function RepositoryRouteEditor({ routeId, newCategory, canEdit, features 
       </div>
 
       <div className="row between map-tools">
-        <MapSearch onPick={(lat, lng) => map.current?.setView([lat, lng], 17)} />
+        <div className="row">
+          <MapSearch onPick={(lat, lng) => map.current?.setView([lat, lng], 17)} />
+          <select aria-label={t("repo.guide")} title={t("repo.guideHint")} value={guideId} onChange={(e) => setGuideId(e.target.value)}>
+            <option value="">{t("repo.guideNone")}</option>
+            {guides
+              .filter((g) => g.id !== record?.id)
+              .map((g) => (
+                <option key={g.id} value={g.id}>
+                  {CAT_ICON[g.category]} {g.name}
+                </option>
+              ))}
+          </select>
+        </div>
         <div className="row">
           <select aria-label={t("map.unit")} value={unit} onChange={(e) => setUnit(e.target.value as Unit)}>
             <option value="km">km</option>
