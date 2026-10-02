@@ -261,9 +261,12 @@ Without the add-on these buttons show 🔒 *Recorridos (complemento)*.
 - Move the mouse over the **elevation chart**: the spot shows on the map with its distance and
   height.
 
-**📍 My location:** the button under + / − moves the map to where you are. The browser asks
-permission the first time; it's optional and nothing else depends on it. A new course in Mapas
-opens where you last worked.
+**📍 My location:** the button under + / − moves the map to where you are. A map with nothing of
+its own to show (a new course, an Event with no place yet) opens where you are. The browser asks
+permission the first time; if you refuse, the map opens as before and everything still works.
+
+**⟲ Reset view:** brings the map back to its starting view: the course, the Event's items, the
+Event's place, or your location.
 
 **Map / Satellite:** with the Google key, every map has a **🗺 Mapa / 🛰 Satélite** switch at
 the top right, and place search finds buildings (e.g. "PH Palmas Bellas").

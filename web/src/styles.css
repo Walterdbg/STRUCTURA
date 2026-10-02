@@ -287,3 +287,8 @@ a.icon-link:hover { background: var(--bg); }
 /* 📍 My location button. */
 a.map-locate { font-size: 15px; text-decoration: none; }
 a.map-locate.busy { opacity: 0.5; }
+/* ⟲ Reset view: a word, not only an icon, so it is obvious. */
+.map-reset a { width: auto !important; padding: 0 8px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+/* Full screen: the map's own controls sit below the floating tool bar, so
+   the bar never covers the zoom, 📍, ⟲ or the map-layer list. */
+.map-full-target:fullscreen .leaflet-top { top: 58px; }

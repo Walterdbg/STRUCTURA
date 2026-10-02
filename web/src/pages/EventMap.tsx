@@ -16,7 +16,7 @@ import {
   type Waypoint,
 } from "@structura/domain";
 import { ApiError, get, newCommand, send, type EventRecord, type MapFeature } from "../api.js";
-import { addBaseLayers, addFullscreen, addLocateButton, rememberView, type GeoStatus } from "../components/basemap.js";
+import { addBaseLayers, addFullscreen, addLocateButton, addResetButton, currentLocation, rememberView, type GeoStatus } from "../components/basemap.js";
 import { guessPointCategory, parseGpx, toGpx } from "../components/gpx.js";
 import { RouteEditor, anchorIndexes, joinSegments, shapeFromLine, type RouteShape, type SegMode } from "../components/routeEditor.js";
 import { MapSearch } from "../components/MapSearch.js";
@@ -152,6 +152,8 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
   const drawingLayer = useRef<L.Layer | null>(null);
   const pendingCategory = useRef<string | null>(null);
   const [items, setItems] = useState<MapFeature[] | null>(null);
+  const itemsRef = useRef<MapFeature[] | null>(null);
+  itemsRef.current = items;
   const [draft, setDraft] = useState<Draft | null>(null);
   const draftRef = useRef<Draft | null>(null);
   draftRef.current = draft;
@@ -255,6 +257,20 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
     if (sectionRef.current) addFullscreen(m, sectionRef.current, { enter: t("map.fullscreen"), exit: t("map.exitFullscreen") });
     addLocateButton(m, { locate: t("map.locate"), denied: t("map.locateDenied") });
     rememberView(m);
+    // Home view: all the Event's items; else the Event's place; else the
+    // current location (Walter, 2026-10-02).
+    const home = () => {
+      const b = layerGroup.current?.getBounds();
+      if (b && b.isValid()) m.fitBounds(b.pad(0.2), { maxZoom: 17, animate: false });
+      else if (event.locationLat !== null && event.locationLng !== null) m.setView([event.locationLat, event.locationLng], 16, { animate: false });
+      else void currentLocation().then((ll) => ll && m.setView(ll, 15, { animate: false }));
+    };
+    addResetButton(m, t("map.reset"), home);
+    if (event.locationLat === null)
+      void currentLocation().then((ll) => {
+        const hasItems = (itemsRef.current ?? []).length > 0;
+        if (ll && !hasItems) m.setView(ll, 15, { animate: false });
+      });
     layerGroup.current = L.featureGroup().addTo(m);
     m.pm.setGlobalOptions({ snappable: true, continueDrawing: false });
     m.pm.setLang(locale === "es" ? "es" : "en");

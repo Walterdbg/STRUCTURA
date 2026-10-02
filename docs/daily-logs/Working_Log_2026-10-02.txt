@@ -55,11 +55,31 @@ Roadmap section: Approved Decisions (DEC-042), Ready for test (T-023), Build sta
 
 ---
 
+[003]
+Time: 2026-10-02
+Area / feature: 0.1.0-dev.32 - full-screen controls covered (D-022), Reset view and current location by default (DEC-043)
+Request or objective: Walter (screenshot, map-layer list partly covered): "interphase defect / and we need also a obvious reset button for the maps. All maps must open in a default location of the current location"
+Action taken: Full screen: the map's own controls now sit below the floating tool bar. Added a ⟲ Reset view button (icon + word) to the Event map, the Mapas editor and the Event location picker; home = the course / the Event's items / the Event's place / else the current location. Maps with nothing of their own (new course, Event map with no place and nothing drawn, location picker without a point) open on the current location; the browser asks permission and a refusal leaves the map as before (location still never required, spec 12 / UC-05).
+Files created: None
+Files modified: web/src/components/basemap.ts, web/src/components/LocationPicker.tsx, web/src/pages/EventMap.tsx, web/src/pages/RepositoryPage.tsx, web/src/i18n.ts, web/src/styles.css, package files (0.1.0-dev.32), CHANGELOG.md, ROADMAP.md (v1.36.0), docs/USER_GUIDE.md
+Decision made: DEC-043 (Walter's request; refines DEC-042)
+Verification performed: Type check; build; Docker dev.32 health OK; browser: ⟲ Reset view and 📍 are on the Mapas editor. NOT checked: the full-screen layout and the location jump (the browser pane was hidden, width 0).
+Result: PARTIAL (buttons present; layout and behaviour not seen on screen)
+Observed issue: None
+Follow-up required: Walter checks T-023
+Roadmap update required: YES (done: v1.36.0)
+Roadmap section: Known Defects (D-022), Approved Decisions (DEC-043), Ready for test (T-023), Build status
+
+---
+
 
 DEFECTS DISCOVERED TODAY
 ========================
 
-None.
+[DEFECT-001]
+Defect: D-022 - in full screen the tool bar covered the map's own controls
+Found by: Walter (screenshot)
+Status: FIXED in 0.1.0-dev.32, awaiting Walter's check (T-023)
 
 
 DECISIONS MADE TODAY
@@ -70,21 +90,26 @@ Decision: DEC-042 - optional My location button on maps; new routes open where t
 Approved by: Walter (request)
 Roadmap update required: YES (done)
 
+[DECISION-002]
+Decision: DEC-043 - maps open on the current location by default; ⟲ Reset view on every map
+Approved by: Walter (request)
+Roadmap update required: YES (done)
+
 
 DOCUMENT REGISTER
 =================
 
-docs/daily-logs/Working_Log_2026-10-02.txt | Daily working log | SUPPORTING | 001 | RETAIN
+docs/daily-logs/Working_Log_2026-10-02.txt | Daily working log | SUPPORTING | 001-003 | RETAIN
 
 
 DEPLOYMENT / BUILD RECORD
 =========================
 
 Deployment performed: YES (local development only)
-Build/version: 0.1.0-dev.31 (current)
+Build/version: 0.1.0-dev.32 (current; dev.31 earlier today)
 Environment: Development - Docker on Walter's PC, http://127.0.0.1:8095
 Deployment result: PASS (Claude's checks); NOT TESTED by Walter
-Verification performed: health 0.1.0-dev.31; 📍 button present
+Verification performed: health 0.1.0-dev.32; 📍 and ⟲ Reset view present
 Rollback required: NO
 
 

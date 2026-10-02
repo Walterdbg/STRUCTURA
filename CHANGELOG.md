@@ -3,6 +3,19 @@
 Every entry gets an **Intent** and a **Result**. A Result is only marked
 confirmed once actually verified, and can honestly say FAILED.
 
+## 0.1.0-dev.32 — 2026-10-02 (Reset view, current location, full-screen controls) — NOT YET TESTED BY WALTER
+
+**Intent:** Walter's screenshot: in full screen the tool bar covered the
+map-layer list (D-022). He also asked for an obvious reset button and for
+every map to open on the current location (DEC-043).
+
+**Result:** In full screen the map's own controls sit below the tool bar.
+Every map (Event map, Mapas editor, Event location picker) has a
+**⟲ Reset view** button that returns it to its course / items / place, or the
+current location. Maps with nothing of their own open on the current location
+(the browser asks; refusing leaves the map as before). Checked by Claude:
+type check, build, Docker dev.32 health, the button is on the map. Not seen on
+screen: the layout and the location jump (browser pane hidden).
 ## 0.1.0-dev.31 — 2026-10-02 (My location, starting view) — NOT YET TESTED BY WALTER
 
 **Intent:** Walter: a new map opens on a fixed place although he has a

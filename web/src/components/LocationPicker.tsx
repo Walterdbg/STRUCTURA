@@ -3,7 +3,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { ApiError, get } from "../api.js";
 import { uuidv7 } from "@structura/domain";
-import { addBaseLayers, addFullscreen, addLocateButton, geoStatus } from "./basemap.js";
+import { addBaseLayers, addFullscreen, addLocateButton, addResetButton, currentLocation, geoStatus } from "./basemap.js";
 import { LocaleContext, useT } from "../i18n.js";
 
 // The Event location as a point on a map (Walter, 2026-09-30): search a
@@ -57,6 +57,13 @@ export function LocationPicker({ value, onChange, disabled }: { value: MapPoint;
     void addBaseLayers(m, locale, { map: t("map.layerMap"), satellite: t("map.layerSatellite") });
     addFullscreen(m, box.current, { enter: t("map.fullscreen"), exit: t("map.exitFullscreen") });
     addLocateButton(m, { locate: t("map.locate"), denied: t("map.locateDenied") });
+    // Home view: the chosen point; without one, the current location.
+    addResetButton(m, t("map.reset"), () => {
+      const v = latest.current;
+      if (v.lat !== null && v.lng !== null) m.setView([v.lat, v.lng], 17, { animate: false });
+      else void currentLocation().then((ll) => ll && m.setView(ll, 15, { animate: false }));
+    });
+    if (value.lat === null) void currentLocation().then((ll) => ll && latest.current.lat === null && m.setView(ll, 15, { animate: false }));
     map.current = m;
     return () => {
       m.remove();

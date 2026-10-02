@@ -3,7 +3,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { elevationProfile, lineLength, markersAlong, type FeatureProps, type Waypoint } from "@structura/domain";
 import { ApiError, get, newCommand, send } from "../api.js";
-import { addBaseLayers, addFullscreen, addLocateButton, geoStatus, lastView, rememberView, type GeoStatus } from "../components/basemap.js";
+import { addBaseLayers, addFullscreen, addLocateButton, addResetButton, currentLocation, geoStatus, lastView, rememberView, type GeoStatus } from "../components/basemap.js";
 import { guessPointCategory, parseGpx } from "../components/gpx.js";
 import { MapSearch } from "../components/MapSearch.js";
 import { addDirectionArrows } from "../components/arrows.js";
@@ -264,6 +264,8 @@ export function RepositoryRouteEditor({
   const [notes, setNotes] = useState("");
   const [props, setProps] = useState<FeatureProps>({});
   const [coords, setCoords] = useState<number[][]>([]);
+  const coordsRef = useRef<number[][]>([]);
+  coordsRef.current = coords;
   const [source, setSource] = useState<string | null>(null);
   const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
   const [loc, setLoc] = useState<{ country: string; area: string; place: string }>({ country: "", area: "", place: "" });
@@ -311,6 +313,15 @@ export function RepositoryRouteEditor({
     const m = L.map(box.current, { scrollWheelZoom: true }).setView(start.center, start.zoom);
     addLocateButton(m, { locate: t("map.locate"), denied: t("map.locateDenied") });
     rememberView(m);
+    // Home view: the route itself; with nothing drawn yet, the current location.
+    const home = () => {
+      const c = coordsRef.current;
+      if (c.length >= 2) m.fitBounds(L.latLngBounds(c.map((x) => [x[1]!, x[0]!] as L.LatLngTuple)).pad(0.15), { animate: false });
+      else void currentLocation().then((ll) => ll && m.setView(ll, 15, { animate: false }));
+    };
+    addResetButton(m, t("map.reset"), home);
+    // A new route opens on the current location (Walter, 2026-10-02).
+    if (!routeId) void currentLocation().then((ll) => ll && coordsRef.current.length < 2 && m.setView(ll, 15, { animate: false }));
     void addBaseLayers(m, locale, { map: t("map.layerMap"), satellite: t("map.layerSatellite") }, { races: category === "course" }).then((s) => setStatus(s));
     if (sectionRef.current) addFullscreen(m, sectionRef.current, { enter: t("map.fullscreen"), exit: t("map.exitFullscreen") });
     viewLayer.current = L.layerGroup().addTo(m);

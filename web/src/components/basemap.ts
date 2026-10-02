@@ -157,6 +157,43 @@ export function addLocateButton(map: L.Map, labels: { locate: string; denied: st
   new Ctl({ position: "topleft" }).addTo(map);
 }
 
+// The device's current location, once (Walter, 2026-10-02: "all maps must
+// open in a default location of the current location"). Resolves with the
+// position, or null when the person refuses or it isn't available - then the
+// map simply stays where it was. Permission is asked by the browser.
+export function currentLocation(timeoutMs = 8000): Promise<L.LatLngTuple | null> {
+  return new Promise((resolve) => {
+    if (!("geolocation" in navigator)) return resolve(null);
+    navigator.geolocation.getCurrentPosition(
+      (p) => resolve([p.coords.latitude, p.coords.longitude]),
+      () => resolve(null),
+      { enableHighAccuracy: false, timeout: timeoutMs, maximumAge: 5 * 60_000 }
+    );
+  });
+}
+
+// ⟲ Reset: brings the map back to its home view (its course, its items, the
+// Event's place or the current location). Obvious on purpose: icon + word.
+export function addResetButton(map: L.Map, label: string, onReset: () => void): void {
+  const Ctl = L.Control.extend({
+    onAdd() {
+      const bar = L.DomUtil.create("div", "leaflet-bar leaflet-control map-reset");
+      const a = L.DomUtil.create("a", "", bar) as HTMLAnchorElement;
+      a.href = "#";
+      a.textContent = `⟲ ${label}`;
+      a.title = label;
+      a.setAttribute("role", "button");
+      L.DomEvent.disableClickPropagation(bar);
+      L.DomEvent.on(a, "click", (e) => {
+        L.DomEvent.preventDefault(e);
+        onReset();
+      });
+      return bar;
+    },
+  });
+  new Ctl({ position: "topleft" }).addTo(map);
+}
+
 // Where the person last worked on a map, so a new course opens there instead
 // of a fixed starting view (remembered in this browser only).
 const VIEW_KEY = "structura.lastView";
