@@ -3,6 +3,17 @@
 Every entry gets an **Intent** and a **Result**. A Result is only marked
 confirmed once actually verified, and can honestly say FAILED.
 
+## 0.1.0-dev.18 — 2026-10-01 (full screen map) — NOT YET TESTED BY WALTER
+
+**Intent:** Walter: wheel zoom in full screen is good, but "the controls
+must be over the map at that moment, not using 40% of the screen" (D-017).
+
+**Result:** In full screen the map fills the screen. The drawing tools float
+in a slim bar at the top (instructions hidden); units, markers and *Go to
+a place* at the bottom left; the open item's panel (Event map) or the Save
+buttons (Mapas) at the bottom right; everything else is hidden until full
+screen ends. Layout checked by Claude with a simulation (a real full screen
+needs a click).
 ## 0.1.0-dev.17 — 2026-10-01 (place search fix) — NOT YET TESTED BY WALTER
 
 **Intent / Result:** D-016: after choosing a place in *Go to a place*, the

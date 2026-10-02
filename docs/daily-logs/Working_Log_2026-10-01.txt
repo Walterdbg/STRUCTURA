@@ -190,6 +190,23 @@ Roadmap section: Known Defects (D-015, D-016), Pending (P-022 closed), Ready for
 
 ---
 
+[011]
+Time: 2026-10-01, night
+Area / feature: 0.1.0-dev.18 - full screen map with floating tools (D-017)
+Request or objective: Walter (logged in at his request, screenshots of the course editor): "looks good; the zoom wheel works in the expanded view, good; but the controls must be over the map at that moment, not using 40% of the available screen".
+Action taken: Full-screen styles: map fills the screen; drawing bar floats at the top (instruction text hidden), map tools at the bottom left, item panel / Mapas buttons at the bottom right, other content hidden; Mapas action buttons moved into a floating panel.
+Files created: None
+Files modified: web/src/styles.css, web/src/pages/RepositoryPage.tsx, package files (0.1.0-dev.18), CHANGELOG.md, ROADMAP.md (v1.29.0)
+Decision made: None
+Verification performed: Build; layout checked by applying the full-screen styles to the page (browsers allow real full screen only from a click): map 720 px high filling the view, bar at the top, tools bottom left, Save bottom right. Docker dev.18 health OK.
+Result: PASS for Claude's checks; NOT TESTED by Walter in real full screen
+Observed issue: None
+Follow-up required: Walter retests full screen (T-016 / T-019 / T-020)
+Roadmap update required: YES (done: v1.29.0)
+Roadmap section: Known Defects (D-017), Build status
+
+---
+
 
 DEFECTS DISCOVERED TODAY
 ========================
@@ -197,6 +214,7 @@ DEFECTS DISCOVERED TODAY
 [DEFECT-010] Map item save refused without a name and the message went unnoticed; pressing another drawing button discarded the drawing; Walter lost a route. High. FIXED-NOT-TESTED (dev.10).
 [DEFECT-011] Map/Satellite switch stayed in Spanish after switching to English; large radio circles on a white box. Low. FIXED-NOT-TESTED (dev.10).
 [DEFECT-012] A line drawn as Route and changed to Course got no elevation until "Fit to streets". Medium. FIXED-NOT-TESTED (dev.10).
+[DEFECT-017] Full screen kept tools above the map (about 40% of the screen). Medium. FIXED-NOT-TESTED (dev.18).
 [DEFECT-016] Place search list reopened after a choice. Low. FIXED (dev.17, browser-checked).
 [DEFECT-015] ArcGIS Imagery path not in the static tiles service. Medium. FIXED (dev.16, live check).
 [DEFECT-014] Street tools took wild routes between two clicks; red route error treated Walter's drawing as a failure. Medium. FIXED-NOT-TESTED (dev.13).
@@ -232,7 +250,7 @@ DEPLOYMENT / BUILD RECORD
 =========================
 
 Deployment performed: YES (local development only)
-Build/version: 0.1.0-dev.10, 0.1.0-dev.11, 0.1.0-dev.12, 0.1.0-dev.13, 0.1.0-dev.14, 0.1.0-dev.15, 0.1.0-dev.16, then 0.1.0-dev.17 (current)
+Build/version: 0.1.0-dev.10, 0.1.0-dev.11, 0.1.0-dev.12, 0.1.0-dev.13, 0.1.0-dev.14, 0.1.0-dev.15, 0.1.0-dev.16, 0.1.0-dev.17, then 0.1.0-dev.18 (current)
 Environment: Development - Docker on Walter's PC, http://127.0.0.1:8095
 Deployment result: PASS (Claude's checks); NOT TESTED by Walter
 Verification performed: health 0.1.0-dev.10, dev.11 and dev.12 (migration 008), Google status/search live

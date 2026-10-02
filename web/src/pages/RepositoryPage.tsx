@@ -533,7 +533,8 @@ export function RepositoryRouteEditor({ routeId, newCategory, canEdit, features 
 
       {msg && <p className={msg.ok ? "good" : "bad"}>{msg.text}</p>}
       {canEdit && (
-        <div className="row">
+        // Floats over the map in full screen (the Save button stays at hand).
+        <div className="row map-panel repo-actions">
           <button type="button" className="primary" disabled={busy !== null || coords.length < 2} onClick={() => void save()}>
             {busy === "common.saving" ? t("common.saving") : record ? t("repo.saveVersion") : t("common.save")}
           </button>
