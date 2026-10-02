@@ -419,6 +419,16 @@ export function EventMap({ event, canEdit, features }: { event: EventRecord; can
     if (d && !d.id) cancelDraft();
     setError(null);
     setDraft(toDraft(f));
+    // Every item opens zoomed onto itself (Walter, 2026-10-01).
+    const m = map.current;
+    if (!m) return;
+    if (f.geometry.type === "Point") {
+      const [lng, lat] = f.geometry.coordinates as number[];
+      m.setView([lat!, lng!], Math.max(m.getZoom(), 17), { animate: false });
+    } else {
+      const pts = f.geometry.type === "Polygon" ? (f.geometry.coordinates as number[][][])[0]! : (f.geometry.coordinates as number[][]);
+      if (pts.length) m.fitBounds(L.latLngBounds(pts.map((c) => [c[1]!, c[0]!] as L.LatLngTuple)).pad(0.15), { animate: false });
+    }
   }
 
   // The route editor on the map: new route (no shape) or a saved one.

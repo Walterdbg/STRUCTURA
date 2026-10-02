@@ -37,6 +37,8 @@ await bootstrapTenant(db, {
   adminName: "Admin de prueba",
   adminPassword: password,
 });
+// The test account is a platform administrator too (Walter's full-access rule).
+await db.query("UPDATE users SET platform_admin = true WHERE email = $1", ["admin@structura.test"]);
 // The test organization has full access: every add-on (Walter's rule).
 // DEV_FEATURES=none (or a list) narrows it for testing a restriction.
 const devFeatures = process.env.DEV_FEATURES === undefined ? [...FEATURES] : process.env.DEV_FEATURES.split(",").map((s) => s.trim()).filter((s) => s && s !== "none");

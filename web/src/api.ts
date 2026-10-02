@@ -63,7 +63,7 @@ export const send = <R>(method: "POST" | "PUT", url: string, cmd: Command<unknow
 
 // ---------------------------------------------------------------- shapes
 export interface Me {
-  user: { id: string; email: string; displayName: string; locale: string };
+  user: { id: string; email: string; displayName: string; locale: string; platformAdmin?: boolean };
   tenant: { id: string; name: string; defaultTimezone: string; defaultLocale: string; features: string[] };
   capabilities: Capability[];
 }

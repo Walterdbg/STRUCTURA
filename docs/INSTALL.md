@@ -87,6 +87,17 @@ Mapas and the course sheet also offer **ArcGIS Topo, Streets and Imagery**. The 
 Location Platform API key (free account at location.arcgis.com) with only the **Static basemap
 tiles** privilege and no referrers; it stays on the server. Without it, those layers are hidden.
 
+## Platform administrator (DEC-039)
+
+The platform administrator sees the **🌐 Platform** section (every organization's course library,
+read-only). Only the operator tool grants it:
+
+```bash
+docker compose exec structura-app node server/dist/cli/platform.js --grant EMAIL
+docker compose exec structura-app node server/dist/cli/platform.js --revoke EMAIL
+docker compose exec structura-app node server/dist/cli/platform.js --list
+```
+
 ## Where things are kept
 
 | What | Where |

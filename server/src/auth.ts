@@ -75,6 +75,8 @@ export interface AuthContext {
   displayName: string;
   locale: string;
   capabilities: Capability[];
+  // Platform administrator (DEC-039): platform-wide, read-only views.
+  platformAdmin: boolean;
 }
 
 // Looks the session up on every request, so a disabled user, removed
@@ -88,8 +90,9 @@ export async function loadSession(db: Db, token: string | undefined): Promise<Au
     display_name: string;
     locale: string;
     capabilities: string[];
+    platform_admin: boolean;
   }>(
-    `SELECT s.user_id, s.tenant_id, u.email, u.display_name, u.locale, m.capabilities
+    `SELECT s.user_id, s.tenant_id, u.email, u.display_name, u.locale, m.capabilities, u.platform_admin
        FROM sessions s
        JOIN users u ON u.id = s.user_id
        JOIN memberships m ON m.tenant_id = s.tenant_id AND m.user_id = s.user_id
@@ -106,6 +109,7 @@ export async function loadSession(db: Db, token: string | undefined): Promise<Au
     displayName: row.display_name,
     locale: row.locale,
     capabilities: row.capabilities.filter(isCapability),
+    platformAdmin: Boolean(row.platform_admin),
   };
 }
 
@@ -119,6 +123,12 @@ declare module "fastify" {
 export function requireAuth(req: FastifyRequest): AuthContext {
   if (!req.auth) throw new DomainError("unauthenticated", "Sign in required");
   return req.auth;
+}
+
+export function requirePlatformAdmin(req: FastifyRequest): AuthContext {
+  const auth = requireAuth(req);
+  if (!auth.platformAdmin) throw new DomainError("permission_denied", "Platform administrators only", { capability: "platform.admin" });
+  return auth;
 }
 
 export function requireCapability(req: FastifyRequest, capability: Capability): AuthContext {

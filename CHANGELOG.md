@@ -3,6 +3,25 @@
 Every entry gets an **Intent** and a **Result**. A Result is only marked
 confirmed once actually verified, and can honestly say FAILED.
 
+## 0.1.0-dev.26 — 2026-10-01 (Platform course library) — NOT YET TESTED BY WALTER
+
+**Intent:** Walter: all organizations' courses are in our database and must
+be visible, grouped, at his super-admin level (DEC-039); every item opens
+zoomed onto itself.
+
+**Result:**
+- **Platform administrator** flag (migration 012), granted only with
+  `cli/platform.js --grant <email>`; Walter's test account granted.
+- **🌐 Platform** section (platform administrators only): every
+  organization's courses, grouped country › area › place, with the
+  organization shown; read-only; GPX download.
+- Event map items open zoomed onto themselves.
+- Found while checking (P-023): Google's terms don't allow storing Elevation
+  API results, and Routes API paths only 30 days. 6 preloaded courses carry
+  Google heights; no Google street paths are stored yet.
+- Checked by Claude: 138/138 server tests (other organizations and
+  non-administrators can't see the platform library); browser: Platform
+  menu, 52 courses in 17 groups with their organization.
 ## 0.1.0-dev.21 to dev.25 — 2026-10-01 (Walter's course files) — NOT YET TESTED BY WALTER
 
 **Intent:** Walter's GPX files work on Racemap but not here; keep the

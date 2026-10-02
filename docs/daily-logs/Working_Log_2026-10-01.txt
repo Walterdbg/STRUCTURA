@@ -258,6 +258,23 @@ Roadmap section: Known Defects (D-019..D-021), Approved Decisions (DEC-037, DEC-
 
 ---
 
+[015]
+Time: 2026-10-01, night
+Area / feature: 0.1.0-dev.26 - platform administrator and Platform course library (DEC-039); legal and Google terms questions
+Request or objective: Walter: "yes" to a platform-wide library; "all created courses, imported, must open zoomed into themselves"; "if a tenant creates a course, it will be in our database, therefore the country level makes sense"; "I will also need a tenant level super user for support; their inventory and finance are theirs; we already defined the levels of encryption"; "GPX maps are not proprietary so we can copy them (check if viable legally with the correct disclaimer)"; "if they create a map, it must generate a GPX".
+Action taken: Migration 012 (users.platform_admin), operator tool cli/platform.js, requirePlatformAdmin, /api/platform/routes (list across organizations grouped, detail, GPX), me.user.platformAdmin; Platform section in the menu (read-only library with organization tags); dev test account flagged automatically; Walter's Docker test account granted with the tool. Event map items zoom onto themselves when opened. Checked Google Maps Platform terms: Elevation API results may not be stored; Routes API lat/lng at most 30 days. Measured: 6 of 52 preloaded courses carry Google heights; no Google street paths stored. Recorded P-023 (Google storage), P-024 (support user), P-025 (sharing courses legally); the "every map generates a GPX" item waits for P-023 because Event delivery routes can be Google-derived.
+Files created: server/migrations/012_platform_admin.sql, server/src/cli/platform.ts
+Files modified: server/src/auth.ts, server/src/identity/routes.ts, server/src/repository/routes.ts, server/src/cli/dev.ts, server tests (repository, foundation), web/src/api.ts, App.tsx, router.ts, i18n.ts, pages/RepositoryPage.tsx, pages/EventMap.tsx, package files (0.1.0-dev.26), CHANGELOG.md, ROADMAP.md (v1.33.0), docs/INSTALL.md
+Decision made: DEC-039 (Walter)
+Verification performed: 138/138 server tests; browser on Walter's PC: Platform menu entry, 52 courses in 17 groups with organization tags, no create buttons. Docker dev.26 health OK; cli/platform.js --grant OK.
+Result: PASS for Claude's checks; NOT TESTED by Walter
+Observed issue: Google terms conflict (P-023)
+Follow-up required: Walter decides P-023, P-024, P-025; then the GPX-for-every-map item
+Roadmap update required: YES (done: v1.33.0)
+Roadmap section: Approved Decisions (DEC-039), Pending (P-023..P-025), Build status
+
+---
+
 
 DEFECTS DISCOVERED TODAY
 ========================
@@ -305,7 +322,7 @@ DEPLOYMENT / BUILD RECORD
 =========================
 
 Deployment performed: YES (local development only)
-Build/version: 0.1.0-dev.10, 0.1.0-dev.11, 0.1.0-dev.12, 0.1.0-dev.13, 0.1.0-dev.14, 0.1.0-dev.15, 0.1.0-dev.16, 0.1.0-dev.17, 0.1.0-dev.18, 0.1.0-dev.19, 0.1.0-dev.20, 0.1.0-dev.21 to dev.24, then 0.1.0-dev.25 (current)
+Build/version: 0.1.0-dev.10, 0.1.0-dev.11, 0.1.0-dev.12, 0.1.0-dev.13, 0.1.0-dev.14, 0.1.0-dev.15, 0.1.0-dev.16, 0.1.0-dev.17, 0.1.0-dev.18, 0.1.0-dev.19, 0.1.0-dev.20, 0.1.0-dev.21 to dev.25, then 0.1.0-dev.26 (current)
 Environment: Development - Docker on Walter's PC, http://127.0.0.1:8095
 Deployment result: PASS (Claude's checks); NOT TESTED by Walter
 Verification performed: health 0.1.0-dev.10, dev.11 and dev.12 (migration 008), Google status/search live

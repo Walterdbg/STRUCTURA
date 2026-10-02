@@ -89,6 +89,24 @@ describe("Maps repository (DEC-033)", () => {
     expect(rows[0]).toMatchObject({ n: 1 });
   });
 
+  it("platform administrators see every organization's courses, grouped; nobody else does (DEC-039)", async () => {
+    await req("POST", "/api/repository/routes", { ...course, country: "USA", area: "New Jersey", place: "Lincoln Park" });
+    const other = await tenant(w, "Otra org");
+    await w.db.query("UPDATE tenants SET features = '{courses}' WHERE id = $1", [other.tenantId]);
+    const theirs = (await req("POST", "/api/repository/routes", { ...course, name: "Cinta 10K", country: "Panama", area: "Panamá", place: null }, null, other.cookie)).json().result;
+    expect((await req("GET", "/api/platform/routes")).statusCode).toBe(403);
+    await w.db.query("UPDATE users SET platform_admin = true WHERE id = $1", [t.adminId]);
+    const all = (await req("GET", "/api/platform/routes")).json().items as { name: string; organization: string; country: string }[];
+    expect(all.map((i) => [i.country, i.organization])).toEqual([
+      ["Panama", "Otra org"],
+      ["USA", expect.any(String)],
+    ]);
+    expect((await req("GET", `/api/platform/routes/${theirs.id}`)).json()).toMatchObject({ name: "Cinta 10K", organization: "Otra org" });
+    expect((await req("GET", `/api/platform/routes/${theirs.id}/gpx`)).body).toContain("<name>Cinta 10K</name>");
+    // Their own library still shows only their own courses.
+    expect((await req("GET", "/api/repository/routes", undefined, null, other.cookie)).json().items).toHaveLength(1);
+  });
+
   it("anyone in the organization can see the repository; changing it needs map.edit", async () => {
     await req("POST", "/api/repository/routes", course);
     await w.app.inject({ method: "POST", url: "/api/members", headers: { cookie: t.cookie }, payload: command({ email: "op@example.test", displayName: "Op", password: "operator-pass-1", preset: "inventory_operator" }) });

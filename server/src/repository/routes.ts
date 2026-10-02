@@ -12,7 +12,7 @@ import {
   routeLocationFields,
   type Waypoint,
 } from "@structura/domain";
-import { requireAuth } from "../auth.js";
+import { requireAuth, requirePlatformAdmin } from "../auth.js";
 import { executeCommand, type CommandContext } from "../commands.js";
 import type { Config } from "../config.js";
 import type { Db } from "../db.js";
@@ -287,6 +287,59 @@ export function repositoryRoutes(app: FastifyInstance, db: Db, config: Config): 
       .header("content-type", "application/gpx+xml; charset=utf-8")
       .header("content-disposition", `attachment; filename="${encodeURIComponent(file)}"`)
       .send(rows[0].gpx);
+  });
+
+  // ------------------------------------------------------------ platform level
+  // DEC-039: the platform administrator sees the course library of every
+  // organization, grouped by country > area > place, read-only.
+  app.get("/api/platform/routes", async (req) => {
+    requirePlatformAdmin(req);
+    const q = String((req.query as Record<string, string | undefined>).search ?? "").trim();
+    const params: unknown[] = [];
+    let cond = "r.removed_at IS NULL";
+    if (q) {
+      params.push(`%${q}%`);
+      cond += ` AND (r.name ILIKE $1 OR r.notes ILIKE $1 OR r.place ILIKE $1 OR r.area ILIKE $1 OR r.country ILIKE $1 OR t.display_name ILIKE $1)`;
+    }
+    const { rows } = await db.query<Row & { tenant_name: string }>(
+      `${SELECT.replace("FROM route_repository r", "FROM route_repository r JOIN tenants t ON t.id = r.tenant_id").replace("SELECT r.id,", "SELECT t.display_name AS tenant_name, r.id,")}
+        WHERE ${cond} ORDER BY r.country NULLS LAST, r.area NULLS LAST, r.place NULLS LAST, r.name`,
+      params
+    );
+    return { items: rows.map((r) => ({ ...toRecord(r), geometry: undefined, waypoints: undefined, waypointCount: (r.waypoints ?? []).length, organization: r.tenant_name })) };
+  });
+
+  async function platformRoute(id: string): Promise<{ tenantId: string; organization: string }> {
+    const { rows } = await db.query<{ tenant_id: string; display_name: string }>(
+      "SELECT r.tenant_id, t.display_name FROM route_repository r JOIN tenants t ON t.id = r.tenant_id WHERE r.id = $1 AND r.removed_at IS NULL",
+      [id]
+    );
+    if (!rows[0]) throw new DomainError("not_found", "Route not found");
+    return { tenantId: rows[0].tenant_id, organization: rows[0].display_name };
+  }
+
+  app.get("/api/platform/routes/:id", async (req) => {
+    requirePlatformAdmin(req);
+    const id = idParam(req);
+    const { tenantId, organization } = await platformRoute(id);
+    return { ...(await getRoute(db, tenantId, id)), organization };
+  });
+
+  app.get("/api/platform/routes/:id/gpx", async (req, reply) => {
+    requirePlatformAdmin(req);
+    const id = idParam(req);
+    const { tenantId } = await platformRoute(id);
+    const route = await getRoute(db, tenantId, id);
+    const { rows } = await db.query<{ gpx: string }>("SELECT gpx FROM route_repository_versions WHERE tenant_id = $1 AND route_id = $2 AND version = $3", [
+      tenantId,
+      id,
+      route.currentVersion,
+    ]);
+    const file = `${route.name.replace(/[^\w\-áéíóúñÁÉÍÓÚÑ ]+/g, "_")} v${route.currentVersion}.gpx`;
+    return reply
+      .header("content-type", "application/gpx+xml; charset=utf-8")
+      .header("content-disposition", `attachment; filename="${encodeURIComponent(file)}"`)
+      .send(rows[0]!.gpx);
   });
 
   app.post("/api/repository/routes", async (req, reply) => {

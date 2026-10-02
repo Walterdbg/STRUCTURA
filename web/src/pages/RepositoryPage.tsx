@@ -35,6 +35,8 @@ export interface RepoRoute {
   country?: string | null;
   area?: string | null;
   place?: string | null;
+  // Platform view (DEC-039): which organization the course belongs to.
+  organization?: string;
   updatedAt: string;
   versions?: { version: number; lengthMeters: number; source: string | null; createdAt: string; createdBy: string | null }[];
 }
@@ -53,7 +55,11 @@ const showDate = (iso: string, locale: string) => {
 };
 
 // ------------------------------------------------------------------ list
-export function RepositoryList({ canEdit, features }: { canEdit: boolean; features: string[] }) {
+// platform: the platform administrator's read-only view of every
+// organization's courses (DEC-039).
+export function RepositoryList({ canEdit, features, platform = false }: { canEdit: boolean; features: string[]; platform?: boolean }) {
+  const apiBase = platform ? "/api/platform/routes" : "/api/repository/routes";
+  const linkBase = platform ? "#/platform" : "#/maps";
   const t = useT();
   const locale = useContext(LocaleContext);
   const [unit] = useUnit();
@@ -87,7 +93,7 @@ export function RepositoryList({ canEdit, features }: { canEdit: boolean; featur
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      get<{ items: RepoRoute[] }>(`/api/repository/routes?search=${encodeURIComponent(search)}`).then(
+      get<{ items: RepoRoute[] }>(`${apiBase}?search=${encodeURIComponent(search)}`).then(
         (r) => (setItems(r.items), setError(null)),
         (err) => setError(describeFailure(err).message)
       );
@@ -98,8 +104,8 @@ export function RepositoryList({ canEdit, features }: { canEdit: boolean; featur
   return (
     <section className="card">
       <div className="row between">
-        <h2>{t("repo.title")}</h2>
-        {canEdit && (
+        <h2>{t(platform ? "platform.title" : "repo.title")}</h2>
+        {canEdit && !platform && (
           <div className="row">
             <label className="button file primary" title={t("repo.importHint")}>
               ⤒ {uploading ? t("common.saving") : t("repo.importGpx")}
@@ -119,7 +125,7 @@ export function RepositoryList({ canEdit, features }: { canEdit: boolean; featur
           </div>
         )}
       </div>
-      <p className="muted small">{t("repo.hint")}</p>
+      <p className="muted small">{t(platform ? "platform.hint" : "repo.hint")}</p>
       <div className="row">
         <input type="search" className="search" placeholder={t("repo.search")} aria-label={t("common.search")} value={search} onChange={(e) => setSearch(e.target.value)} />
         <select aria-label={t("map.type")} value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
@@ -175,17 +181,18 @@ export function RepositoryList({ canEdit, features }: { canEdit: boolean; featur
     return (
                 <tr key={r.id}>
                   <td>
-                    <a href={`#/maps/${r.id}`}>
+                    <a href={`${linkBase}/${r.id}`}>
                       {CAT_ICON[r.category]} {r.name}
                     </a>
                     {r.props?.locked && <span className="tag">🔒</span>}
+                    {platform && r.organization && <span className="tag">🏢 {r.organization}</span>}
                   </td>
                   <td className="small">{t(`map.cat.${r.category}` as TextKey)}</td>
                   <td className="num">{fmtDist(r.lengthMeters, unit, locale)}</td>
                   <td>v{r.currentVersion}</td>
                   <td className="small">{showDate(r.updatedAt, locale)}</td>
                   <td>
-                    <a className="button" href={`/api/repository/routes/${r.id}/gpx`} download>
+                    <a className="button" href={`${apiBase}/${r.id}/gpx`} download>
                       ⤓ GPX
                     </a>
                   </td>
@@ -195,7 +202,22 @@ export function RepositoryList({ canEdit, features }: { canEdit: boolean; featur
 }
 
 // ------------------------------------------------------------------ editor
-export function RepositoryRouteEditor({ routeId, newCategory, canEdit, features }: { routeId?: string; newCategory?: string; canEdit: boolean; features: string[] }) {
+export function RepositoryRouteEditor({
+  routeId,
+  newCategory,
+  canEdit: canEditProp,
+  features,
+  platform = false,
+}: {
+  routeId?: string;
+  newCategory?: string;
+  canEdit: boolean;
+  features: string[];
+  platform?: boolean;
+}) {
+  // The platform view is read-only: the course belongs to its organization.
+  const canEdit = canEditProp && !platform;
+  const apiBase = platform ? "/api/platform/routes" : "/api/repository/routes";
   const t = useT();
   const locale = useContext(LocaleContext);
   const [unit, setUnit] = useUnit();
@@ -240,7 +262,7 @@ export function RepositoryRouteEditor({ routeId, newCategory, canEdit, features 
   // Load an existing route.
   useEffect(() => {
     if (!routeId) return;
-    get<RepoRoute>(`/api/repository/routes/${routeId}`).then(
+    get<RepoRoute>(`${apiBase}/${routeId}`).then(
       (r) => {
         setRecord(r);
         setName(r.name);
@@ -263,7 +285,7 @@ export function RepositoryRouteEditor({ routeId, newCategory, canEdit, features 
     void addBaseLayers(m, locale, { map: t("map.layerMap"), satellite: t("map.layerSatellite") }, { races: category === "course" }).then((s) => setStatus(s));
     if (sectionRef.current) addFullscreen(m, sectionRef.current, { enter: t("map.fullscreen"), exit: t("map.exitFullscreen") });
     viewLayer.current = L.layerGroup().addTo(m);
-    void get<{ items: RepoRoute[] }>("/api/repository/routes").then((r) => {
+    void get<{ items: RepoRoute[] }>(apiBase).then((r) => {
       setGuides(r.items);
       const uniq = (k: "country" | "area" | "place") => [...new Set(r.items.map((i) => i[k]).filter((v): v is string => Boolean(v)))].sort();
       setKnown({ country: uniq("country"), area: uniq("area"), place: uniq("place") });
@@ -351,7 +373,7 @@ export function RepositoryRouteEditor({ routeId, newCategory, canEdit, features 
     guideLayer.current?.remove();
     guideLayer.current = null;
     if (!m || !guideId) return;
-    void get<RepoRoute>(`/api/repository/routes/${guideId}`).then((g) => {
+    void get<RepoRoute>(`${apiBase}/${guideId}`).then((g) => {
       const c = g.geometry?.coordinates ?? [];
       if (c.length < 2 || !map.current) return;
       guideLayer.current = L.polyline(c.map((x) => [x[1]!, x[0]!] as L.LatLngTuple), { color: "#868e96", weight: 7, opacity: 0.55, dashArray: "6 8", interactive: false }).addTo(map.current);
@@ -548,9 +570,9 @@ export function RepositoryRouteEditor({ routeId, newCategory, canEdit, features 
   return (
     <section className="card map-full-target" ref={sectionRef}>
       <div className="row between">
-        <h2>{record ? `${CAT_ICON[record.category]} ${record.name}` : t(isCourse ? "repo.newCourse" : category === "pickup" ? "repo.newPickup" : "repo.newDelivery")}</h2>
+        <h2>{record ? `${CAT_ICON[record.category]} ${record.name}${platform && record.organization ? ` · 🏢 ${record.organization}` : ""}` : t(isCourse ? "repo.newCourse" : category === "pickup" ? "repo.newPickup" : "repo.newDelivery")}</h2>
         <div className="row">
-          <a className="button" href="#/maps">
+          <a className="button" href={platform ? "#/platform" : "#/maps"}>
             {t("common.back")}
           </a>
           {canEdit && (
@@ -560,7 +582,7 @@ export function RepositoryRouteEditor({ routeId, newCategory, canEdit, features 
             </label>
           )}
           {record && (
-            <a className="button" href={`/api/repository/routes/${record.id}/gpx`} download>
+            <a className="button" href={`${apiBase}/${record.id}/gpx`} download>
               ⤓ GPX v{record.currentVersion}
             </a>
           )}

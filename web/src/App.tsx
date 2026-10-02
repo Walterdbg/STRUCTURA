@@ -88,6 +88,9 @@ export function App() {
     else if (route.name === "locations") body = <Locations canManage={can("inventory.manage")} />;
     else if (route.name === "movements") body = <MovementsList canMove={can("movement.post")} canCorrect={can("movement.correct")} />;
     else if (route.name === "movementNew") body = <MovementForm key={route.itemId ?? "any"} presetItemId={route.itemId} />;
+    else if (route.name === "platform" && me.user.platformAdmin) body = <RepositoryList canEdit={false} features={me.tenant.features ?? []} platform />;
+    else if (route.name === "platformRoute" && me.user.platformAdmin)
+      body = <RepositoryRouteEditor key={`p-${route.id}`} routeId={route.id} canEdit={false} features={me.tenant.features ?? []} platform />;
     else if (route.name === "maps") body = <RepositoryList canEdit={can("map.edit")} features={me.tenant.features ?? []} />;
     else if (route.name === "mapNew") body = <RepositoryRouteEditor key={`new-${route.category ?? ""}`} newCategory={route.category} canEdit={can("map.edit")} features={me.tenant.features ?? []} />;
     else if (route.name === "map") body = <RepositoryRouteEditor key={route.id} routeId={route.id} canEdit={can("map.edit")} features={me.tenant.features ?? []} />;
@@ -104,6 +107,8 @@ export function App() {
       ? "inventory"
       : route.name === "maps" || route.name === "mapNew" || route.name === "map"
         ? "maps"
+        : route.name === "platform" || route.name === "platformRoute"
+        ? "platform"
         : route.name === "members" || route.name === "dateRules"
         ? "organization"
         : route.name === "account"
@@ -157,6 +162,12 @@ export function App() {
               <a href="#/maps" className={section === "maps" ? "active" : ""}>
                 🗺 {t("nav.maps")}
               </a>
+              {/* DEC-039: only platform administrators. */}
+              {session.me.user.platformAdmin && (
+                <a href="#/platform" className={section === "platform" ? "active" : ""}>
+                  🌐 {t("nav.platform")}
+                </a>
+              )}
               {session.me.capabilities.includes("tenant.admin") && (
                 <a href="#/members" className={section === "organization" ? "active" : ""}>
                   ⚙️ {t("nav.organization")}

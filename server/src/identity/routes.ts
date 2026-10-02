@@ -108,7 +108,7 @@ export function identityRoutes(app: FastifyInstance, db: Db, config: Config): vo
     );
     const tenant = t.rows[0]!;
     return {
-      user: { id: auth.userId, email: auth.email, displayName: auth.displayName, locale: auth.locale },
+      user: { id: auth.userId, email: auth.email, displayName: auth.displayName, locale: auth.locale, platformAdmin: auth.platformAdmin },
       tenant: {
         id: auth.tenantId,
         name: tenant.display_name,
