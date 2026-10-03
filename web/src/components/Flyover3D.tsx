@@ -30,7 +30,15 @@ const line = (coords: number[][]) => ({
   properties: {},
   geometry: { type: "LineString" as const, coordinates: coords.map((c) => [c[0]!, c[1]!]) },
 });
-const point = (lng: number, lat: number) => ({ type: "Feature" as const, properties: {}, geometry: { type: "Point" as const, coordinates: [lng, lat] } });
+const point = (lng: number, lat: number, properties: Record<string, string> = {}) => ({ type: "Feature" as const, properties, geometry: { type: "Point" as const, coordinates: [lng, lat] } });
+
+// P-028: the runner's distance in both units, e.g. "3.20 km · 1.99 mi"
+// (some courses have no distance markers).
+const MILE = 1609.344;
+function bothUnits(m: number, locale: string): string {
+  const f = (v: number) => v.toLocaleString(locale === "es" ? "es-PA" : "en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return `${f(m / 1000)} km · ${f(m / MILE)} mi`;
+}
 
 // Compass direction from a to b ([lng, lat]), degrees.
 function bearing(a: number[], b: number[]): number {
@@ -107,13 +115,27 @@ export default function Flyover3D({ coords, name, unit, onClose }: { coords: num
           // The course: white with a glow; the part already run in yellow.
           m.addSource("course", { type: "geojson", data: line(coords) });
           m.addSource("done", { type: "geojson", data: line([]) });
-          m.addSource("head", { type: "geojson", data: point(coords[0]![0]!, coords[0]![1]!) });
+          m.addSource("head", { type: "geojson", data: point(coords[0]![0]!, coords[0]![1]!, { label: bothUnits(0, locale) }) });
           const round = { "line-join": "round", "line-cap": "round" } as const;
           m.addLayer({ id: "course-edge", type: "line", source: "course", layout: round, paint: { "line-color": "#3d4a66", "line-width": 10, "line-opacity": 0.85 } });
           m.addLayer({ id: "course-glow", type: "line", source: "course", layout: round, paint: { "line-color": "#ffffff", "line-width": 16, "line-blur": 10, "line-opacity": 0.5 } });
           m.addLayer({ id: "course", type: "line", source: "course", layout: round, paint: { "line-color": "#ffffff", "line-width": 6 } });
           m.addLayer({ id: "done", type: "line", source: "done", layout: round, paint: { "line-color": "#ffcc00", "line-width": 9 } });
           m.addLayer({ id: "head", type: "circle", source: "head", paint: { "circle-radius": 8, "circle-color": "#fc4c02", "circle-stroke-color": "#ffffff", "circle-stroke-width": 3 } });
+          m.addLayer({
+            id: "head-label",
+            type: "symbol",
+            source: "head",
+            layout: {
+              "text-field": ["get", "label"],
+              "text-size": 14,
+              "text-font": ["Noto Sans Bold"],
+              "text-offset": [0, -1.8],
+              "text-allow-overlap": true,
+              "text-ignore-placement": true,
+            },
+            paint: { "text-color": "#ffffff", "text-halo-color": "#fc4c02", "text-halo-width": 8 },
+          });
           // Distance markers along the course.
           const marks = markersAlong(coords, 1 * METERS[unit]);
           m.addSource("marks", {
@@ -162,7 +184,7 @@ export default function Flyover3D({ coords, name, unit, onClose }: { coords: num
     const d = p * tr.total;
     const here = at(tr, d);
     const [lat, lng] = here.ll;
-    (m.getSource("head") as GeoJSONSource | undefined)?.setData(point(lng, lat));
+    (m.getSource("head") as GeoJSONSource | undefined)?.setData(point(lng, lat, { label: bothUnits(d, locale) }));
     let i = 0;
     while (i < tr.cum.length - 1 && tr.cum[i + 1]! <= d) i++;
     (m.getSource("done") as GeoJSONSource | undefined)?.setData(line([...coords.slice(0, i + 1), [lng, lat]]));
@@ -299,7 +321,7 @@ export default function Flyover3D({ coords, name, unit, onClose }: { coords: num
             <span>⛰ {t("player.terrain")}</span>
           </label>
           <strong className="small">
-            {fmtDist(progress * tr.total, unit, locale)} / {fmtDist(tr.total, unit, locale)}
+            {bothUnits(progress * tr.total, locale)} / {fmtDist(tr.total, unit, locale)}
             {here.ele !== null ? ` · ${Math.round(here.ele)} m` : ""}
           </strong>
         </div>

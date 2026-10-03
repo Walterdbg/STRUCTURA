@@ -3,6 +3,18 @@
 Every entry gets an **Intent** and a **Result**. A Result is only marked
 confirmed once actually verified, and can honestly say FAILED.
 
+## 0.1.0-dev.37 — 2026-10-03 (player in full screen, 3D runner distance) — NOT YET TESTED BY WALTER
+
+**Intent:** Walter: the player controls must be inside the full-screen view
+on the regular maps (P-027); the 3D runner should show the current distance,
+in km and mi, because some courses have no markers (P-028).
+
+**Result:** On the Event map the player moved from the item panel to right
+under the map, so in full screen it floats over the map (as in Mapas). The 3D
+runner carries a label "3.20 km · 1.99 mi" that counts up; the 3D bar shows both
+units. Checked by Claude: type check, build, Docker dev.37 health. Not seen on
+screen (browser pane hidden).
+
 ## 0.1.0-dev.36 — 2026-10-02 (3D replay starts moving) — PLAYERS CONFIRMED BY WALTER ("the player works, both of them"); full retest pending
 
 **Intent:** Walter: the 3D map now shows, but Play never moves (D-026).

@@ -38,6 +38,23 @@ Roadmap section: Approved Decisions (DEC-046), Pending Decisions (P-011)
 
 ---
 
+[002]
+Time: 2026-10-03
+Area / feature: 0.1.0-dev.37 - player over the full-screen Event map (P-027), 3D runner distance in km and mi (P-028)
+Request or objective: Walter: "let's continue refining the tools" (P-027, P-028 requested 2026-10-02 for this session).
+Action taken: EventMap: the CoursePlayer moved out of the item panel to directly under the map (a direct child of the full-screen section), so the existing full-screen rule floats it over the top of the map, as in Mapas. Flyover3D: the runner point carries a label property updated every frame; a symbol layer shows it above the runner ("3.20 km · 1.99 mi", white on orange halo, always drawn); the bottom bar shows both units. Docker Desktop was not running on Walter's PC; started it from its install folder before deploying.
+Files created: None
+Files modified: web/src/pages/EventMap.tsx, web/src/components/Flyover3D.tsx, package files (0.1.0-dev.37), CHANGELOG.md, ROADMAP.md (v1.42.0), docs/USER_GUIDE.md
+Decision made: None (P-027, P-028 were Walter's requests)
+Verification performed: type check; build; Docker dev.37 health OK. NOT checked on screen (browser pane hidden).
+Result: PARTIAL
+Observed issue: Docker Desktop had been closed (STRUCTURA offline until started)
+Follow-up required: Walter checks T-026
+Roadmap update required: YES (done: v1.42.0)
+Roadmap section: Pending Decisions (P-027, P-028 built), Ready for test (T-026), Build status
+
+---
+
 
 DEFECTS DISCOVERED TODAY
 ========================
@@ -57,17 +74,17 @@ Roadmap update required: YES (done)
 DOCUMENT REGISTER
 =================
 
-docs/daily-logs/Working_Log_2026-10-03.txt | Daily working log | SUPPORTING | 001 | RETAIN
+docs/daily-logs/Working_Log_2026-10-03.txt | Daily working log | SUPPORTING | 001-002 | RETAIN
 
 
 DEPLOYMENT / BUILD RECORD
 =========================
 
-Deployment performed: NO (so far today)
-Build/version: 0.1.0-dev.36 (current)
+Deployment performed: YES (local development only)
+Build/version: 0.1.0-dev.37 (current)
 Environment: Development - Docker on Walter's PC, http://127.0.0.1:8095
-Deployment result: -
-Verification performed: -
+Deployment result: PASS (Claude's checks); NOT TESTED by Walter
+Verification performed: health 0.1.0-dev.37
 Rollback required: NO
 
 
